@@ -9,7 +9,11 @@ export default class ResultScene extends Phaser.Scene {
   create(data: Partial<GameResult>): void {
     const { width, height } = this.scale;
     this.add.rectangle(width / 2, height / 2, width, height, 0x050713, 0.96);
-    this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.46);
+    this.add.rectangle(width / 2, height / 2, 340, height, 0x09111f, 0.78);
+    this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.54);
+    for (let y = 16; y < height; y += 44) {
+      this.add.line(width / 2, y, -154, 0, 154, 0, 0x6ee7ff, 0.07);
+    }
 
     const title = data.title ?? 'RESULT';
     const titleColor = title === 'CLEAR' ? '#bbf7d0' : '#fecaca';
@@ -31,7 +35,11 @@ export default class ResultScene extends Phaser.Scene {
       lineSpacing: 6,
     }).setOrigin(0.5);
 
-    const panel = this.add.rectangle(width / 2, 352, 310, 212, 0x09111f, 0.86);
+    this.add.circle(width / 2, 164, 94, title === 'CLEAR' ? 0x22c55e : 0xef4444, 0.08);
+
+    const panelGlow = this.add.rectangle(width / 2, 352, 326, 226, 0x38bdf8, 0.08);
+    const panel = this.add.rectangle(width / 2, 352, 310, 212, 0x09111f, 0.9);
+    panelGlow.setStrokeStyle(1, 0x38bdf8, 0.18);
     panel.setStrokeStyle(2, 0x38bdf8, 0.36);
 
     const rows = [

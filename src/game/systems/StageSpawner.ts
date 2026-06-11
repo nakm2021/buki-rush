@@ -1,5 +1,5 @@
 import { ENEMY_VARIANTS, getEnemyVariant } from './EnemyCatalog';
-import { getElementByIndex } from './WeaponEvolution';
+import { getArchetypeByIndex, getElementByIndex, getModuleByIndex, getRarityByIndex } from './WeaponEvolution';
 import type { GateOption, StageStep } from '../types/GameTypes';
 
 export const INITIAL_STEP_INTERVAL = 1800;
@@ -7,6 +7,7 @@ export const LOOP_STEP_INTERVAL = 1650;
 export const BOSS_STEP_INTERVAL = 9;
 
 const goodColors = [0x22c55e, 0x38bdf8, 0x818cf8, 0x14b8a6, 0xa855f7, 0xfacc15];
+const premiumColors = [0xfb923c, 0x7dd3fc, 0xfef08a, 0xc084fc, 0xf0abfc, 0x99f6e4];
 const badColors = [0xef4444, 0xf43f5e, 0xdc2626];
 
 export const OPENING_STEPS: StageStep[] = [
@@ -31,8 +32,8 @@ export const OPENING_STEPS: StageStep[] = [
     time: 4600,
     gateLine: {
       y: -80,
-      left: { label: '火属性', kind: 'element', value: 2, color: 0xfb923c, good: true, element: 'fire' },
-      right: { label: 'ATK +3', kind: 'power', value: 3, color: 0xa855f7, good: true },
+      left: { label: '火進化', kind: 'element', value: 2, color: 0xfb923c, good: true, element: 'fire' },
+      right: { label: '分裂MOD', kind: 'module', value: 1, color: 0xa855f7, good: true, module: 'split' },
     },
     enemy: { x: 120, y: -190, hp: 14, variantId: 'frost-wisp' },
   },
@@ -74,6 +75,10 @@ function createGateLine(stepIndex: number): StageStep['gateLine'] {
     { label: '連射 +', kind: 'rapid', value: 1, color: goodA, good: true },
     { label: '進化 +', kind: 'tier', value: 1, color: goodB, good: true },
     createElementGate(stepIndex),
+    createArchetypeGate(stepIndex),
+    createModuleGate(stepIndex),
+    createRarityGate(stepIndex),
+    { label: '融合 +', kind: 'fusion', value: 2, color: premiumColors[stepIndex % premiumColors.length], good: true },
   ];
 
   const badOption: GateOption = {
@@ -109,11 +114,77 @@ function createElementGate(stepIndex: number): GateOption {
   };
 
   return {
-    label: labels[element],
+    label: `${labels[element]}進化`,
     kind: 'element',
     value: 2,
     color: goodColors[(stepIndex + ENEMY_VARIANTS.length) % goodColors.length],
     good: true,
     element,
+  };
+}
+
+function createArchetypeGate(stepIndex: number): GateOption {
+  const archetype = getArchetypeByIndex(stepIndex);
+  const labels = {
+    blaster: '砲型',
+    blade: '刃型',
+    orbit: '環型',
+    lance: '槍型',
+    drone: '機型',
+    rail: '軌型',
+    nova: '星型',
+    comet: '彗型',
+  };
+
+  return {
+    label: labels[archetype],
+    kind: 'archetype',
+    value: 2,
+    color: premiumColors[stepIndex % premiumColors.length],
+    good: true,
+    archetype,
+  };
+}
+
+function createModuleGate(stepIndex: number): GateOption {
+  const module = getModuleByIndex(stepIndex);
+  const labels = {
+    split: '分裂MOD',
+    pierce: '貫通MOD',
+    critical: '会心MOD',
+    overclock: '過速MOD',
+    shield: '装甲MOD',
+    magnet: '吸引MOD',
+    chain: '連鎖MOD',
+    focus: '集中MOD',
+  };
+
+  return {
+    label: labels[module],
+    kind: 'module',
+    value: 1,
+    color: premiumColors[(stepIndex + 2) % premiumColors.length],
+    good: true,
+    module,
+  };
+}
+
+function createRarityGate(stepIndex: number): GateOption {
+  const rarity = getRarityByIndex(stepIndex);
+  const labels = {
+    common: 'C昇格',
+    rare: 'R昇格',
+    epic: 'SR昇格',
+    legend: 'SSR昇格',
+    mythic: 'UR昇格',
+  };
+
+  return {
+    label: labels[rarity],
+    kind: 'rarity',
+    value: 1,
+    color: premiumColors[(stepIndex + 4) % premiumColors.length],
+    good: true,
+    rarity,
   };
 }

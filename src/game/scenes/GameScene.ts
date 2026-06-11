@@ -9,7 +9,7 @@ import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, saveBestDistance } from '../systems/RecordSystem';
 import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
-import { getWeaponColors, getWeaponName } from '../systems/WeaponEvolution';
+import { getBuildRank, getModuleProfile, getShotSpread, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
 import type { GateOption, PlayerStats, StageStep } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
@@ -23,7 +23,21 @@ export default class GameScene extends Phaser.Scene {
   private player!: PlayerWeapon;
   private playerBody!: Phaser.Physics.Arcade.Body;
   private inputController!: PlayerInputController;
-  private stats: PlayerStats = { weaponCount: 1, power: 1, level: 1, fireRate: 1, element: 'neutral', tier: 1 };
+  private stats: PlayerStats = {
+    weaponCount: 1,
+    power: 1,
+    level: 1,
+    fireRate: 1,
+    element: 'neutral',
+    archetype: 'blaster',
+    modules: [],
+    rarity: 'common',
+    tier: 1,
+    critRate: 0.04,
+    pierce: 0,
+    shield: 0,
+    synergy: 0,
+  };
   private bullets!: Phaser.GameObjects.Group;
   private gates!: Phaser.GameObjects.Group;
   private enemies!: Phaser.GameObjects.Group;
@@ -35,6 +49,8 @@ export default class GameScene extends Phaser.Scene {
   private distanceText!: Phaser.GameObjects.Text;
   private bestText!: Phaser.GameObjects.Text;
   private weaponNameText!: Phaser.GameObjects.Text;
+  private buildText!: Phaser.GameObjects.Text;
+  private moduleText!: Phaser.GameObjects.Text;
   private hpText!: Phaser.GameObjects.Text;
   private boss?: Boss;
   private bossHpBar!: Phaser.GameObjects.Rectangle;
@@ -56,6 +72,7 @@ export default class GameScene extends Phaser.Scene {
   private controlKeys!: ControlKeys;
   private weaponParts: Array<Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle> = [];
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
+  private auraRings: Phaser.GameObjects.Arc[] = [];
 
   constructor() {
     super('GameScene');
@@ -117,30 +134,45 @@ export default class GameScene extends Phaser.Scene {
 
   private drawTrack(width: number, height: number): void {
     this.add.rectangle(width / 2, height / 2, width, height, 0x050713, 1);
-    this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.52);
+    this.add.rectangle(width / 2, height / 2, 330, height, 0x09111f, 0.92);
+    this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.62);
+    this.add.rectangle(width / 2, height / 2, 214, height, 0x071a36, 0.34);
 
-    [64, 132, 200, 268, 336].forEach((x) => {
-      this.add.line(x, height / 2, 0, 0, 0, height, 0x4f8cff, x === 200 ? 0.13 : 0.09).setLineWidth(x === 200 ? 2 : 1);
-    });
-
-    for (let y = 0; y < height; y += 40) {
-      this.add.line(width / 2, y, -146, 0, 146, 0, 0x6ee7ff, 0.07).setLineWidth(1);
+    for (let i = 0; i < 9; i++) {
+      const y = 55 + i * 78;
+      const widthOffset = i % 2 === 0 ? 16 : -12;
+      this.add.rectangle(width / 2, y, 270 + widthOffset, 2, 0x38bdf8, 0.1).setAngle(i % 2 === 0 ? -5 : 5);
+      this.add.rectangle(width / 2, y + 26, 190 - widthOffset, 1, 0xc4b5fd, 0.08).setAngle(i % 2 === 0 ? 5 : -5);
     }
 
-    for (let i = 0; i < 18; i++) {
-      const x = 54 + (i % 6) * 58;
+    [64, 132, 200, 268, 336].forEach((x) => {
+      this.add.line(x, height / 2, 0, 0, 0, height, 0x4f8cff, x === 200 ? 0.18 : 0.11).setLineWidth(x === 200 ? 3 : 1);
+    });
+
+    this.add.line(34, height / 2, 0, 0, 52, height, 0x0ea5e9, 0.18).setLineWidth(4);
+    this.add.line(366, height / 2, 0, 0, -52, height, 0x0ea5e9, 0.18).setLineWidth(4);
+
+    for (let y = 0; y < height; y += 40) {
+      this.add.line(width / 2, y, -154, 0, 154, 0, 0x6ee7ff, 0.09).setLineWidth(1);
+    }
+
+    for (let i = 0; i < 34; i++) {
+      const x = 34 + (i % 8) * 48;
       const y = (i * 51) % height;
-      const line = this.add.rectangle(x, y, 2, 52 + (i % 3) * 18, 0x9bdcff, 0.11);
+      const color = i % 3 === 0 ? 0x9bdcff : i % 3 === 1 ? 0xc4b5fd : 0x86efac;
+      const line = this.add.rectangle(x, y, i % 4 === 0 ? 3 : 2, 48 + (i % 5) * 20, color, 0.1 + (i % 4) * 0.015);
       line.setAngle(i % 2 === 0 ? -8 : 8);
       this.speedLines.push(line);
     }
 
-    this.add.rectangle(width / 2, PLAYER_MIN_Y - 8, 328, 2, 0x38bdf8, 0.12);
-    this.add.rectangle(width / 2, PLAYER_MAX_Y + 8, 328, 2, 0x38bdf8, 0.12);
+    this.add.rectangle(width / 2, PLAYER_MIN_Y - 8, 328, 2, 0x38bdf8, 0.18);
+    this.add.rectangle(width / 2, PLAYER_MAX_Y + 8, 328, 2, 0x38bdf8, 0.18);
   }
 
   private createStatusPanel(): void {
-    const panel = this.add.rectangle(200, 58, 364, 88, 0x09111f, 0.86);
+    const panelGlow = this.add.rectangle(200, 62, 376, 108, 0x38bdf8, 0.1);
+    panelGlow.setDepth(7);
+    const panel = this.add.rectangle(200, 62, 364, 102, 0x09111f, 0.9);
     panel.setStrokeStyle(2, 0x38bdf8, 0.38);
     panel.setDepth(8);
 
@@ -159,9 +191,11 @@ export default class GameScene extends Phaser.Scene {
     this.powerText = this.add.text(154, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.levelText = this.add.text(248, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.hpText = this.add.text(334, 50, '5', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
-    this.weaponNameText = this.add.text(22, 82, '無-Runner Lv.1', { fontSize: '12px', color: '#e0f2fe', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
-    this.distanceText = this.add.text(274, 82, '0m', { fontSize: '12px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
-    this.bestText = this.add.text(378, 82, 'BEST 0m', { fontSize: '12px', color: '#fde68a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
+    this.weaponNameText = this.add.text(22, 77, 'C 無-Runner Blaster', { fontSize: '12px', color: '#e0f2fe', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
+    this.moduleText = this.add.text(22, 96, 'MOD: none', { fontSize: '10px', color: '#bae6fd', fontFamily: 'Arial, sans-serif' }).setOrigin(0, 0.5).setDepth(9);
+    this.buildText = this.add.text(210, 96, 'BUILD 0', { fontSize: '10px', color: '#fef3c7', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
+    this.distanceText = this.add.text(300, 77, '0m', { fontSize: '12px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
+    this.bestText = this.add.text(378, 77, 'BEST 0m', { fontSize: '12px', color: '#fde68a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
   }
 
   private createInput(): void {
@@ -300,15 +334,19 @@ export default class GameScene extends Phaser.Scene {
     const shotCount = Math.min(9, 1 + Math.floor(this.stats.weaponCount / 4));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
+    const spread = getShotSpread(this.stats);
+    const pierceLeft = this.stats.pierce + (this.stats.modules.includes('chain') ? 1 : 0);
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
       const color = i % 3 === 0 ? colors.bullet : i % 3 === 1 ? colors.primary : colors.secondary;
       const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color);
       bullet.setDepth(2);
-      bullet.setVelocity(440 + this.stats.power * 22);
+      bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4);
+      bullet.setScale(this.stats.modules.includes('focus') ? 1.28 : 1);
+      bullet.setData('pierceLeft', pierceLeft);
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.setVelocityX(offset * 24);
+      body.setVelocityX(offset * 24 * spread);
       body.setVelocityY(-440 - this.stats.power * 22);
       this.bullets.add(bullet);
     }
@@ -332,8 +370,12 @@ export default class GameScene extends Phaser.Scene {
     this.hpText.setText(`${this.playerHp}`);
     this.bestText.setText(`BEST ${Math.max(this.bestDistance, Math.floor(this.distance))}m`);
     this.weaponNameText.setText(getWeaponName(this.stats));
+    const modules = this.stats.modules.length > 0 ? this.stats.modules.map((module) => getModuleProfile(module).label).join(' / ') : 'none';
+    this.moduleText.setText(`MOD: ${modules}`);
+    this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
+    this.updateAuraRings(colors.aura);
   }
 
   private updateWeaponParts(delta: number): void {
@@ -382,11 +424,14 @@ export default class GameScene extends Phaser.Scene {
       color: Number(gateObject.getData('color') ?? 0x38bdf8),
       good: Boolean(gateObject.getData('good')),
       element: gateObject.getData('element') as GateOption['element'],
+      archetype: gateObject.getData('archetype') as GateOption['archetype'],
+      module: gateObject.getData('module') as GateOption['module'],
+      rarity: gateObject.getData('rarity') as GateOption['rarity'],
     };
 
     this.stats = applyGateEffect(this.stats, option);
     this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
-    this.showFlash(option.good ? `${option.label} UP` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
+    this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
 
     if (pair) {
       pair.left.destroy();
@@ -398,10 +443,15 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private handleEnemyCollision(enemyObject: Enemy): void {
-    this.stats = applyEnemyImpact(this.stats);
-    this.playerHp -= 1;
+    if (this.stats.shield > 0) {
+      this.stats = { ...this.stats, shield: this.stats.shield - 1 };
+      this.showFlash('SHIELD BLOCK', '#bae6fd', this.player.x, this.player.y - 72);
+    } else {
+      this.stats = applyEnemyImpact(this.stats);
+      this.playerHp -= 1;
+      this.showFlash('HIT -1', '#fecaca', this.player.x, this.player.y - 72);
+    }
     this.spawnBurst(enemyObject.x, enemyObject.y, 0xff4d6d, 16);
-    this.showFlash('HIT -1', '#fecaca', this.player.x, this.player.y - 72);
     enemyObject.destroy();
 
     if (this.playerHp <= 0) {
@@ -410,11 +460,17 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private hitEnemy(bulletObject: Bullet, enemyObject: Enemy): void {
-    const damage = Math.max(1, this.stats.power + this.stats.level);
-    this.spawnHitEffect(bulletObject.x, bulletObject.y, 0xfef08a);
+    const critical = Math.random() < this.stats.critRate;
+    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy) * getWeaponPowerMultiplier(this.stats) * (critical ? 1.8 : 1)));
+    this.spawnHitEffect(bulletObject.x, bulletObject.y, critical ? 0xffffff : 0xfef08a);
     if (enemyObject.damage(damage)) {
       this.spawnBurst(enemyObject.x, enemyObject.y, 0xffb020, 20);
       enemyObject.destroy();
+    }
+    const pierceLeft = Number(bulletObject.getData('pierceLeft') ?? 0);
+    if (pierceLeft > 0) {
+      bulletObject.setData('pierceLeft', pierceLeft - 1);
+      return;
     }
     bulletObject.destroy();
   }
@@ -425,7 +481,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const shot = bullet as Bullet;
-    const damage = Math.max(1, this.stats.power + this.stats.level * 2);
+    const critical = Math.random() < this.stats.critRate;
+    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level * 2 + this.stats.synergy) * getWeaponPowerMultiplier(this.stats) * (critical ? 1.7 : 1)));
     this.bossHp -= damage;
     this.spawnHitEffect(shot.x, shot.y, 0xfff1a8);
     shot.destroy();
@@ -439,6 +496,7 @@ export default class GameScene extends Phaser.Scene {
         power: Math.min(40, this.stats.power + 4),
         weaponCount: Math.min(80, this.stats.weaponCount + 10),
         tier: this.stats.tier + 1,
+        synergy: this.stats.synergy + 3,
       };
       this.boss.destroy();
       this.boss = undefined;
@@ -504,6 +562,21 @@ export default class GameScene extends Phaser.Scene {
       scale: 2.4,
       duration: 180,
       onComplete: () => spark.destroy(),
+    });
+  }
+
+  private updateAuraRings(color: number): void {
+    while (this.auraRings.length < 3) {
+      const ring = this.add.circle(this.player.x, this.player.y, 34 + this.auraRings.length * 10, color, 0).setStrokeStyle(2, color, 0.22);
+      ring.setDepth(1);
+      this.auraRings.push(ring);
+    }
+
+    this.auraRings.forEach((ring, index) => {
+      const pulse = Math.sin(this.stageTimer * 0.004 + index * 1.4) * 4;
+      ring.setPosition(this.player.x, this.player.y + 2);
+      ring.setRadius(34 + index * 12 + pulse + Math.min(20, this.stats.synergy * 0.45));
+      ring.setStrokeStyle(2, color, 0.1 + index * 0.045);
     });
   }
 

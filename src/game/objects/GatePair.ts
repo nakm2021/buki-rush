@@ -30,13 +30,17 @@ export class GatePair extends Phaser.GameObjects.Container {
     container.setData('good', option.good);
     container.setData('color', option.color);
     container.setData('element', option.element);
+    container.setData('archetype', option.archetype);
+    container.setData('module', option.module);
+    container.setData('rarity', option.rarity);
     container.setData('pair', this);
 
-    const glow = scene.add.rectangle(0, 0, 126, 78, option.color, option.good ? 0.18 : 0.12);
-    const body = scene.add.rectangle(0, 0, 116, 68, option.color, 0.88);
+    const glow = scene.add.rectangle(0, 0, 132, 84, option.color, option.good ? 0.24 : 0.14);
+    const shine = scene.add.rectangle(0, -21, 108, 12, 0xffffff, option.good ? 0.16 : 0.08);
+    const body = scene.add.rectangle(0, 0, 116, 68, option.color, 0.9);
     body.setStrokeStyle(3, option.good ? 0xe0f2fe : 0xfca5a5, 0.95);
     const text = scene.add.text(0, 0, option.label, {
-      fontSize: '25px',
+      fontSize: option.label.length > 5 ? '18px' : '24px',
       color: '#eff6ff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
@@ -44,7 +48,7 @@ export class GatePair extends Phaser.GameObjects.Container {
       strokeThickness: 4,
     }).setOrigin(0.5);
 
-    container.add([glow, body, text]);
+    container.add([glow, body, shine, text]);
     return container;
   }
 }

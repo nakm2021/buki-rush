@@ -1,6 +1,12 @@
 export type WeaponElement = 'neutral' | 'fire' | 'ice' | 'thunder' | 'wind' | 'light' | 'shadow' | 'crystal';
 
-export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'element' | 'tier' | 'rapid';
+export type WeaponArchetype = 'blaster' | 'blade' | 'orbit' | 'lance' | 'drone' | 'rail' | 'nova' | 'comet';
+
+export type WeaponModule = 'split' | 'pierce' | 'critical' | 'overclock' | 'shield' | 'magnet' | 'chain' | 'focus';
+
+export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
+
+export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion';
 
 export interface PlayerStats {
   weaponCount: number;
@@ -8,7 +14,14 @@ export interface PlayerStats {
   level: number;
   fireRate: number;
   element: WeaponElement;
+  archetype: WeaponArchetype;
+  modules: WeaponModule[];
+  rarity: WeaponRarity;
   tier: number;
+  critRate: number;
+  pierce: number;
+  shield: number;
+  synergy: number;
 }
 
 export interface GateOption {
@@ -18,6 +31,9 @@ export interface GateOption {
   color: number;
   good: boolean;
   element?: WeaponElement;
+  archetype?: WeaponArchetype;
+  module?: WeaponModule;
+  rarity?: WeaponRarity;
 }
 
 export interface GateLine {
