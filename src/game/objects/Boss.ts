@@ -8,7 +8,9 @@ export class Boss extends Phaser.GameObjects.Container {
 
     this.hp = hp;
 
-    const glow = scene.add.rectangle(0, 6, 170, 96, 0xff174d, 0.22);
+    const aura = scene.add.circle(0, 40, 190, 0xff174d, 0.14);
+    const image = scene.textures.exists('bossDragon') ? scene.add.image(0, 40, 'bossDragon').setDisplaySize(386, 748) : undefined;
+    const glow = scene.add.rectangle(0, 6, 220, 170, 0xff174d, 0.18);
     const wing = scene.add.rectangle(0, -22, 188, 20, 0xff5fa2, 0.88);
     const core = scene.add.rectangle(0, 0, 144, 84, 0xff315f, 0.97);
     core.setStrokeStyle(4, 0xfff1a8, 0.98);
@@ -22,12 +24,22 @@ export class Boss extends Phaser.GameObjects.Container {
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
 
-    this.add([glow, wing, core, eye, eye2, mouth, label]);
+    this.add(image ? [aura, glow, image, label] : [aura, glow, wing, core, eye, eye2, mouth, label]);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const bossBody = this.body as Phaser.Physics.Arcade.Body;
-    bossBody.setSize(160, 95);
-    bossBody.setOffset(-80, -48);
+    bossBody.setSize(230, 260);
+    bossBody.setOffset(-115, -90);
+
+    scene.tweens.add({
+      targets: this,
+      scaleX: 1.035,
+      scaleY: 1.025,
+      duration: 900,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   public getHp(): number {

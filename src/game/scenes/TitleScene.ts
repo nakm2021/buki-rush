@@ -24,15 +24,14 @@ export default class TitleScene extends Phaser.Scene {
       this.add.rectangle(42 + i * 26, 84 + (i % 5) * 86, 2, 72, i % 2 === 0 ? 0x38bdf8 : 0xc084fc, 0.12).setAngle(i % 2 === 0 ? -9 : 9);
     }
 
-    this.add.circle(width / 2, 262, 104, 0x38bdf8, 0.1);
-    this.add.circle(width / 2, 262, 72, 0xc084fc, 0.08);
-    this.add.triangle(width / 2 - 38, 270, 0, -24, 40, 20, 8, 36, 0x2563eb, 0.88);
-    this.add.triangle(width / 2 + 38, 270, 0, -24, 40, 20, 8, 36, 0x2563eb, 0.88);
-    this.add.rectangle(width / 2, 262, 44, 104, 0x22d3ee, 0.96);
-    this.add.rectangle(width / 2 - 30, 276, 11, 74, 0x93c5fd, 0.94);
-    this.add.rectangle(width / 2 + 30, 276, 11, 74, 0x93c5fd, 0.94);
-    this.add.circle(width / 2, 282, 18, 0x38bdf8, 0.98).setStrokeStyle(2, 0xe0f2fe, 0.9);
-    this.add.rectangle(width / 2, 205, 92, 12, 0xf8fafc, 0.94);
+    this.add.circle(width / 2, 262, 112, 0x38bdf8, 0.1);
+    this.add.circle(width / 2, 262, 78, 0xc084fc, 0.08);
+    if (this.textures.exists('weaponAnime')) {
+      this.add.image(width / 2, 274, 'weaponAnime').setDisplaySize(150, 274).setTint(0x67e8f9, 0xfacc15, 0xa78bfa, 0x67e8f9);
+    } else {
+      this.add.rectangle(width / 2, 262, 44, 104, 0x22d3ee, 0.96);
+      this.add.rectangle(width / 2, 205, 92, 12, 0xf8fafc, 0.94);
+    }
 
     this.add.text(width / 2, 140, 'ブキラッシュ', {
       fontSize: '40px',

@@ -5,15 +5,30 @@ import type { EnemyVariant } from '../types/GameTypes';
 export class Enemy extends Phaser.GameObjects.Container {
   private hp: number;
   private readonly label: Phaser.GameObjects.Text;
+  private readonly damageValue: number;
+  private readonly lethal: boolean;
 
   constructor(scene: Phaser.Scene, x: number, y: number, hp: number, variant: EnemyVariant = getEnemyVariant(0)) {
     super(scene, x, y);
 
     this.hp = hp;
+    this.damageValue = variant.damage;
+    this.lethal = Boolean(variant.lethal);
 
     const shadow = scene.add.circle(0, 7, variant.radius + 8, 0x020617, 0.32);
-    const glow = scene.add.circle(0, 0, variant.radius + 10, variant.bodyColor, 0.14);
-    const parts = this.createBody(scene, variant);
+    const glow = scene.add.circle(0, 0, variant.radius + 10, variant.lethal ? 0xff174d : variant.bodyColor, variant.lethal ? 0.28 : 0.14);
+    const image = variant.lethal && scene.textures.exists('eliteReaper') ? scene.add.image(0, 0, 'eliteReaper').setDisplaySize(variant.radius * 5.4, variant.radius * 10.4) : undefined;
+    const parts = image ? [image] : this.createBody(scene, variant);
+    const warning = variant.lethal
+      ? scene.add.text(0, -variant.radius - 18, '!!', {
+          fontSize: '17px',
+          color: '#fecaca',
+          fontStyle: 'bold',
+          fontFamily: 'Arial, sans-serif',
+          stroke: '#020617',
+          strokeThickness: 4,
+        }).setOrigin(0.5)
+      : undefined;
     this.label = scene.add.text(0, 1, String(hp), {
       fontSize: '12px',
       color: '#fff7ed',
@@ -23,7 +38,7 @@ export class Enemy extends Phaser.GameObjects.Container {
       strokeThickness: 3,
     }).setOrigin(0.5);
 
-    this.add([shadow, glow, ...parts, this.label]);
+    this.add(warning ? [shadow, glow, ...parts, warning, this.label] : [shadow, glow, ...parts, this.label]);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const enemyBody = this.body as Phaser.Physics.Arcade.Body;
@@ -33,6 +48,14 @@ export class Enemy extends Phaser.GameObjects.Container {
 
   public getHp(): number {
     return this.hp;
+  }
+
+  public getDamage(): number {
+    return this.damageValue;
+  }
+
+  public isLethal(): boolean {
+    return this.lethal;
   }
 
   public damage(amount: number): boolean {

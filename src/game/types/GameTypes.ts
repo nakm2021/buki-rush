@@ -46,6 +46,7 @@ export interface StageStep {
   time: number;
   gateLine?: GateLine;
   enemy?: { x: number; y: number; hp?: number; variantId?: string };
+  enemies?: Array<{ x: number; y: number; hp?: number; variantId?: string }>;
   obstacle?: { x: number; y: number; width: number; height: number };
 }
 
@@ -69,4 +70,6 @@ export interface EnemyVariant {
   shape: 'orb' | 'horn' | 'wing' | 'slime' | 'golem' | 'wisp' | 'wyrm' | 'mask';
   hpScale: number;
   radius: number;
+  damage: number;
+  lethal?: boolean;
 }

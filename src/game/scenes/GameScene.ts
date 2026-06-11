@@ -56,11 +56,14 @@ export default class GameScene extends Phaser.Scene {
   private bossHpBar!: Phaser.GameObjects.Rectangle;
   private bossHpFill!: Phaser.GameObjects.Rectangle;
   private bossHpText!: Phaser.GameObjects.Text;
+  private pauseButton!: Phaser.GameObjects.Text;
+  private pauseOverlay?: Phaser.GameObjects.Container;
   private bossMaxHp = createBossHp(0);
   private bossHp = this.bossMaxHp;
   private playerHp = 5;
   private fireTimer = 0;
   private isGameOver = false;
+  private isPaused = false;
   private stageTimer = 0;
   private nextStageIndex = 0;
   private nextLoopSpawnTime = 0;
@@ -73,6 +76,7 @@ export default class GameScene extends Phaser.Scene {
   private weaponParts: Array<Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle> = [];
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
   private auraRings: Phaser.GameObjects.Arc[] = [];
+  private audioContext?: AudioContext;
 
   constructor() {
     super('GameScene');
@@ -97,6 +101,7 @@ export default class GameScene extends Phaser.Scene {
     this.effects = this.add.group();
 
     this.createStatusPanel();
+    this.createPauseButton();
     this.createInput();
     this.bestDistance = loadBestDistance();
 
@@ -106,7 +111,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(_time: number, delta: number): void {
-    if (this.isGameOver) {
+    if (this.isGameOver || this.isPaused) {
       return;
     }
 
@@ -198,6 +203,23 @@ export default class GameScene extends Phaser.Scene {
     this.bestText = this.add.text(378, 77, 'BEST 0m', { fontSize: '12px', color: '#fde68a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
   }
 
+  private createPauseButton(): void {
+    const bg = this.add.circle(370, 126, 20, 0x09111f, 0.92).setDepth(12);
+    bg.setStrokeStyle(2, 0x38bdf8, 0.6);
+    this.pauseButton = this.add.text(370, 126, 'II', {
+      fontSize: '17px',
+      color: '#f8fafc',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5).setDepth(13);
+    bg.setInteractive({ useHandCursor: true });
+    bg.on('pointerdown', () => this.togglePause());
+    this.pauseButton.setInteractive({ useHandCursor: true });
+    this.pauseButton.on('pointerdown', () => this.togglePause());
+    this.input.keyboard?.on('keydown-ESC', () => this.togglePause());
+    this.input.keyboard?.on('keydown-P', () => this.togglePause());
+  }
+
   private createInput(): void {
     this.controlKeys = this.input.keyboard!.addKeys('W,S,A,D,UP,DOWN,LEFT,RIGHT') as ControlKeys;
     this.inputController = new PlayerInputController(this);
@@ -246,10 +268,10 @@ export default class GameScene extends Phaser.Scene {
       this.gates.add(pair.right);
     }
 
-    if (step.enemy) {
-      const enemy = new Enemy(this, step.enemy.x, step.enemy.y, step.enemy.hp ?? 10, findEnemyVariant(step.enemy.variantId));
-      enemy.setDepth(2);
-      this.enemies.add(enemy);
+    if (step.enemies) {
+      step.enemies.forEach((enemyData) => this.spawnEnemy(enemyData));
+    } else if (step.enemy) {
+      this.spawnEnemy(step.enemy);
     }
 
     if (step.obstacle) {
@@ -258,6 +280,18 @@ export default class GameScene extends Phaser.Scene {
       this.physics.add.existing(obstacle);
       const body = obstacle.body as Phaser.Physics.Arcade.Body;
       body.setImmovable(true);
+    }
+  }
+
+  private spawnEnemy(enemyData: { x: number; y: number; hp?: number; variantId?: string }): void {
+    const variant = findEnemyVariant(enemyData.variantId);
+    const enemy = new Enemy(this, enemyData.x, enemyData.y, enemyData.hp ?? 10, variant);
+    enemy.setDepth(variant.lethal ? 4 : 2);
+    this.enemies.add(enemy);
+
+    if (variant.lethal) {
+      this.spawnBurst(enemy.x, enemy.y, 0xff174d, 28);
+      this.showFlash('DANGER', '#fecaca', enemy.x, enemy.y + 44);
     }
   }
 
@@ -417,6 +451,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const pair = gateObject.getData('pair') as GatePair | undefined;
+    const previousRarity = this.stats.rarity;
     const option: GateOption = {
       label: String(gateObject.getData('label') ?? 'OK'),
       kind: gateObject.getData('kind') as GateOption['kind'],
@@ -432,6 +467,14 @@ export default class GameScene extends Phaser.Scene {
     this.stats = applyGateEffect(this.stats, option);
     this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
     this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
+    if (option.good) {
+      this.playUpgradeSound(option.kind);
+      this.animateWeaponUpgrade(option.color);
+    }
+    if (option.kind === 'rarity' || option.kind === 'fusion' || previousRarity !== this.stats.rarity) {
+      this.playRareSound();
+      this.showRareEvolution(option.color);
+    }
 
     if (pair) {
       pair.left.destroy();
@@ -443,13 +486,17 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private handleEnemyCollision(enemyObject: Enemy): void {
-    if (this.stats.shield > 0) {
+    if (enemyObject.isLethal()) {
+      this.playerHp = 0;
+      this.spawnBurst(enemyObject.x, enemyObject.y, 0xff174d, 34);
+      this.showFlash('INSTANT BREAK', '#fecaca', this.player.x, this.player.y - 78);
+    } else if (this.stats.shield > 0) {
       this.stats = { ...this.stats, shield: this.stats.shield - 1 };
       this.showFlash('SHIELD BLOCK', '#bae6fd', this.player.x, this.player.y - 72);
     } else {
       this.stats = applyEnemyImpact(this.stats);
-      this.playerHp -= 1;
-      this.showFlash('HIT -1', '#fecaca', this.player.x, this.player.y - 72);
+      this.playerHp -= enemyObject.getDamage();
+      this.showFlash(`HIT -${enemyObject.getDamage()}`, '#fecaca', this.player.x, this.player.y - 72);
     }
     this.spawnBurst(enemyObject.x, enemyObject.y, 0xff4d6d, 16);
     enemyObject.destroy();
@@ -525,6 +572,8 @@ export default class GameScene extends Phaser.Scene {
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5).setDepth(9);
+    this.playRareSound();
+    this.spawnBurst(200, 148, 0xfb7185, 34);
     this.showFlash('BOSS INCOMING', '#fda4af', 200, 148);
   }
 
@@ -578,6 +627,110 @@ export default class GameScene extends Phaser.Scene {
       ring.setRadius(34 + index * 12 + pulse + Math.min(20, this.stats.synergy * 0.45));
       ring.setStrokeStyle(2, color, 0.1 + index * 0.045);
     });
+  }
+
+  private togglePause(): void {
+    if (this.isGameOver) {
+      return;
+    }
+
+    this.isPaused = !this.isPaused;
+    this.pauseButton.setText(this.isPaused ? '▶' : 'II');
+
+    if (this.isPaused) {
+      this.physics.pause();
+      const panel = this.add.rectangle(200, 360, 292, 150, 0x020617, 0.84);
+      panel.setStrokeStyle(2, 0x38bdf8, 0.65);
+      const title = this.add.text(200, 334, 'PAUSED', {
+        fontSize: '34px',
+        color: '#f8fafc',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#020617',
+        strokeThickness: 5,
+      }).setOrigin(0.5);
+      const resume = this.add.text(200, 386, 'タップで再開', {
+        fontSize: '16px',
+        color: '#bae6fd',
+        fontFamily: 'Arial, sans-serif',
+      }).setOrigin(0.5);
+      this.pauseOverlay = this.add.container(0, 0, [panel, title, resume]).setDepth(30);
+      panel.setInteractive({ useHandCursor: true });
+      panel.on('pointerdown', () => this.togglePause());
+      return;
+    }
+
+    this.physics.resume();
+    this.pauseOverlay?.destroy();
+    this.pauseOverlay = undefined;
+  }
+
+  private animateWeaponUpgrade(color: number): void {
+    this.tweens.add({
+      targets: this.player,
+      scale: 1.18,
+      angle: 4,
+      yoyo: true,
+      duration: 150,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        this.player.setScale(1);
+        this.player.setAngle(0);
+      },
+    });
+    this.spawnBurst(this.player.x, this.player.y - 20, color, 24);
+  }
+
+  private showRareEvolution(color: number): void {
+    const { width, height } = this.scale;
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, color, 0.18).setDepth(28);
+    const ring = this.add.circle(this.player.x, this.player.y, 42, color, 0).setStrokeStyle(4, color, 0.9).setDepth(29);
+    this.showFlash('RARE EVOLUTION', '#fef3c7', this.player.x, this.player.y - 104);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      duration: 420,
+      onComplete: () => flash.destroy(),
+    });
+    this.tweens.add({
+      targets: ring,
+      scale: 3.3,
+      alpha: 0,
+      duration: 520,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+  }
+
+  private playUpgradeSound(kind: GateOption['kind']): void {
+    const base = kind === 'rarity' || kind === 'fusion' ? 660 : kind === 'module' ? 520 : 420;
+    this.playTone(base, 0.055, 0.035);
+    this.time.delayedCall(70, () => this.playTone(base * 1.5, 0.055, 0.028));
+  }
+
+  private playRareSound(): void {
+    [523, 659, 784, 1046].forEach((frequency, index) => {
+      this.time.delayedCall(index * 58, () => this.playTone(frequency, 0.08, 0.04));
+    });
+  }
+
+  private playTone(frequency: number, duration: number, volume: number): void {
+    try {
+      this.audioContext ??= new AudioContext();
+      const oscillator = this.audioContext.createOscillator();
+      const gain = this.audioContext.createGain();
+      oscillator.type = 'triangle';
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, this.audioContext.currentTime + duration);
+      oscillator.connect(gain);
+      gain.connect(this.audioContext.destination);
+      oscillator.start();
+      oscillator.stop(this.audioContext.currentTime + duration + 0.02);
+    } catch {
+      // 音が使えない環境では演出だけ続行
+    }
   }
 
   private showFlash(text: string, color: string, x: number, y: number): void {
