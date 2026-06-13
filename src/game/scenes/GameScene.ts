@@ -60,7 +60,7 @@ export default class GameScene extends Phaser.Scene {
   private pauseOverlay?: Phaser.GameObjects.Container;
   private bossMaxHp = createBossHp(0);
   private bossHp = this.bossMaxHp;
-  private playerHp = 5;
+  private playerHp = 3;
   private fireTimer = 0;
   private isGameOver = false;
   private isPaused = false;
@@ -74,6 +74,7 @@ export default class GameScene extends Phaser.Scene {
   private pointerTarget: Phaser.Math.Vector2 | null = null;
   private controlKeys!: ControlKeys;
   private weaponParts: Array<Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle> = [];
+  private squadUnits: Phaser.GameObjects.Container[] = [];
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
   private auraRings: Phaser.GameObjects.Arc[] = [];
   private audioContext?: AudioContext;
@@ -118,7 +119,7 @@ export default class GameScene extends Phaser.Scene {
     const smoothDelta = Math.min(delta, 33);
     this.stageTimer += smoothDelta;
     this.fireTimer += delta;
-    this.distance += (smoothDelta / 1000) * (18 + this.stats.level * 1.5);
+    this.distance += (smoothDelta / 1000) * 22;
 
     this.spawnStageEvents();
     this.updateMovement(smoothDelta);
@@ -138,40 +139,32 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private drawTrack(width: number, height: number): void {
-    this.add.rectangle(width / 2, height / 2, width, height, 0x050713, 1);
-    this.add.rectangle(width / 2, height / 2, 330, height, 0x09111f, 0.92);
-    this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.62);
-    this.add.rectangle(width / 2, height / 2, 214, height, 0x071a36, 0.34);
+    this.add.rectangle(width / 2, height / 2, width, height, 0x1c140f, 1);
+    this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], 0xd6d8dd, 1);
+    this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], 0xbfc3ca, 1);
+    this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0xe5e7eb, 0.92);
 
-    for (let i = 0; i < 9; i++) {
-      const y = 55 + i * 78;
-      const widthOffset = i % 2 === 0 ? 16 : -12;
-      this.add.rectangle(width / 2, y, 270 + widthOffset, 2, 0x38bdf8, 0.1).setAngle(i % 2 === 0 ? -5 : 5);
-      this.add.rectangle(width / 2, y + 26, 190 - widthOffset, 1, 0xc4b5fd, 0.08).setAngle(i % 2 === 0 ? 5 : -5);
+    for (let y = -40; y < height + 80; y += 86) {
+      this.add.rectangle(width / 2, y, 250, 4, 0xffffff, 0.2).setAngle(-1);
+      this.add.rectangle(width / 2, y + 38, 210, 2, 0x8b8f98, 0.18).setAngle(1);
     }
 
-    [64, 132, 200, 268, 336].forEach((x) => {
-      this.add.line(x, height / 2, 0, 0, 0, height, 0x4f8cff, x === 200 ? 0.18 : 0.11).setLineWidth(x === 200 ? 3 : 1);
+    [90, 310].forEach((x) => {
+      this.add.rectangle(x, height / 2, 18, height, 0x8a8f99, 0.95);
+      this.add.rectangle(x, height / 2, 5, height, 0x6b7280, 0.9);
+      this.add.rectangle(x + (x < 200 ? -16 : 16), height / 2, 3, height, 0xf8fafc, 0.38);
     });
 
-    this.add.line(34, height / 2, 0, 0, 52, height, 0x0ea5e9, 0.18).setLineWidth(4);
-    this.add.line(366, height / 2, 0, 0, -52, height, 0x0ea5e9, 0.18).setLineWidth(4);
+    [146, 200, 254].forEach((x) => {
+      this.add.line(x, height / 2, 0, 0, 0, height, 0xffffff, 0.18).setLineWidth(2);
+    });
 
-    for (let y = 0; y < height; y += 40) {
-      this.add.line(width / 2, y, -154, 0, 154, 0, 0x6ee7ff, 0.09).setLineWidth(1);
-    }
-
-    for (let i = 0; i < 34; i++) {
-      const x = 34 + (i % 8) * 48;
-      const y = (i * 51) % height;
-      const color = i % 3 === 0 ? 0x9bdcff : i % 3 === 1 ? 0xc4b5fd : 0x86efac;
-      const line = this.add.rectangle(x, y, i % 4 === 0 ? 3 : 2, 48 + (i % 5) * 20, color, 0.1 + (i % 4) * 0.015);
-      line.setAngle(i % 2 === 0 ? -8 : 8);
+    for (let i = 0; i < 22; i++) {
+      const x = 102 + (i % 5) * 48;
+      const y = (i * 64) % height;
+      const line = this.add.rectangle(x, y, 2, 38 + (i % 3) * 14, 0xffffff, 0.14);
       this.speedLines.push(line);
     }
-
-    this.add.rectangle(width / 2, PLAYER_MIN_Y - 8, 328, 2, 0x38bdf8, 0.18);
-    this.add.rectangle(width / 2, PLAYER_MAX_Y + 8, 328, 2, 0x38bdf8, 0.18);
   }
 
   private createStatusPanel(): void {
@@ -195,7 +188,7 @@ export default class GameScene extends Phaser.Scene {
     this.weaponText = this.add.text(58, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.powerText = this.add.text(154, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.levelText = this.add.text(248, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
-    this.hpText = this.add.text(334, 50, '5', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
+    this.hpText = this.add.text(334, 50, '3', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.weaponNameText = this.add.text(22, 77, 'C 無-Runner Blaster', { fontSize: '12px', color: '#e0f2fe', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
     this.moduleText = this.add.text(22, 96, 'MOD: none', { fontSize: '10px', color: '#bae6fd', fontFamily: 'Arial, sans-serif' }).setOrigin(0, 0.5).setDepth(9);
     this.buildText = this.add.text(210, 96, 'BUILD 0', { fontSize: '10px', color: '#fef3c7', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
@@ -322,7 +315,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateSpeedLines(delta: number): void {
-    const move = (190 + this.stats.level * 14) * (delta / 1000);
+    const move = 170 * (delta / 1000);
     this.speedLines.forEach((line, index) => {
       line.y += move + (index % 3) * 1.6;
       if (line.y > 760) {
@@ -332,7 +325,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private moveFlowingObjects(delta: number): void {
-    const speed = 140 + this.stats.level * 8 + Math.min(90, this.distance * 0.035);
+    const speed = 150;
 
     this.gates.getChildren().forEach((child) => {
       const gate = child as Phaser.GameObjects.Container;
@@ -343,9 +336,11 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.getChildren().forEach((enemy) => {
       const obj = enemy as Enemy;
-      obj.y += (speed + 8) * (delta / 1000);
+      obj.y += speed * (delta / 1000);
       (obj.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
-      if (obj.y > 790) obj.destroy();
+      if (obj.y > 790) {
+        this.handleEnemyLeak(obj);
+      }
     });
 
     this.obstacles.getChildren().forEach((obstacle) => {
@@ -365,7 +360,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private fireWeapons(): void {
-    const shotCount = Math.min(9, 1 + Math.floor(this.stats.weaponCount / 4));
+    const shotCount = Math.min(7, 1 + Math.floor(this.stats.weaponCount / 5));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
@@ -409,7 +404,14 @@ export default class GameScene extends Phaser.Scene {
     this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
+    const skinIndex = this.stats.rarity === 'mythic' || this.stats.element === 'fire'
+      ? 1
+      : this.stats.rarity === 'legend' || this.stats.element === 'ice' || this.stats.element === 'crystal'
+        ? 2
+        : 0;
+    this.player.setWeaponSkin(skinIndex);
     this.updateAuraRings(colors.aura);
+    this.updateSquadUnits(colors.primary, colors.secondary);
   }
 
   private updateWeaponParts(delta: number): void {
@@ -443,6 +445,41 @@ export default class GameScene extends Phaser.Scene {
     if (delta > 0) {
       this.player.setGlow(0.82 + Math.sin(this.stageTimer * 0.01) * 0.12);
     }
+  }
+
+  private updateSquadUnits(primary: number, secondary: number): void {
+    const maxShown = Math.min(36, Math.max(8, this.stats.weaponCount));
+    while (this.squadUnits.length < maxShown) {
+      const unit = this.add.container(this.player.x, this.player.y + 34);
+      const shadow = this.add.ellipse(0, 11, 16, 8, 0x1f2937, 0.28);
+      const legs = this.add.rectangle(0, 9, 9, 10, 0x1e3a8a, 0.95);
+      const body = this.add.rectangle(0, 2, 12, 15, 0x2563eb, 0.98);
+      body.setStrokeStyle(1, 0xeff6ff, 0.5);
+      const helmet = this.add.circle(0, -8, 7, 0x38bdf8, 0.98);
+      helmet.setStrokeStyle(1, 0xffffff, 0.7);
+      const visor = this.add.rectangle(0, -9, 9, 3, 0x0f172a, 0.8);
+      unit.add([shadow, legs, body, helmet, visor]);
+      unit.setDepth(2.6);
+      this.squadUnits.push(unit);
+    }
+
+    this.squadUnits.forEach((unit, index) => {
+      if (index >= maxShown) {
+        unit.setVisible(false);
+        return;
+      }
+      const cols = Math.min(6, Math.ceil(Math.sqrt(maxShown)));
+      const col = index % cols;
+      const row = Math.floor(index / cols);
+      const x = this.player.x + (col - (cols - 1) / 2) * 19;
+      const y = this.player.y + 46 + row * 18 + Math.sin(this.stageTimer * 0.014 + index) * 1.2;
+      unit.setVisible(true);
+      unit.setPosition(clamp(x, PLAYER_MIN_X + 8, PLAYER_MAX_X - 8), clamp(y, PLAYER_MIN_Y, PLAYER_MAX_Y + 34));
+      const body = unit.getAt(2) as Phaser.GameObjects.Rectangle;
+      const helmet = unit.getAt(3) as Phaser.GameObjects.Arc;
+      body.setFillStyle(primary, 0.98);
+      helmet.setFillStyle(secondary, 0.98);
+    });
   }
 
   private handleGateCollision(gateObject: Phaser.GameObjects.Container): void {
@@ -506,9 +543,21 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private handleEnemyLeak(enemyObject: Enemy): void {
+    const damage = enemyObject.isLethal() ? 2 : Math.max(1, enemyObject.getDamage());
+    this.playerHp -= damage;
+    this.spawnBurst(enemyObject.x, 680, enemyObject.isLethal() ? 0xff174d : 0xef4444, enemyObject.isLethal() ? 26 : 16);
+    this.showFlash(`突破 -${damage}`, '#fecaca', clamp(enemyObject.x, 80, 320), 620);
+    enemyObject.destroy();
+
+    if (this.playerHp <= 0) {
+      this.finish('GAME OVER');
+    }
+  }
+
   private hitEnemy(bulletObject: Bullet, enemyObject: Enemy): void {
     const critical = Math.random() < this.stats.critRate;
-    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy) * getWeaponPowerMultiplier(this.stats) * (critical ? 1.8 : 1)));
+    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
     this.spawnHitEffect(bulletObject.x, bulletObject.y, critical ? 0xffffff : 0xfef08a);
     if (enemyObject.damage(damage)) {
       this.spawnBurst(enemyObject.x, enemyObject.y, 0xffb020, 20);
@@ -529,7 +578,7 @@ export default class GameScene extends Phaser.Scene {
 
     const shot = bullet as Bullet;
     const critical = Math.random() < this.stats.critRate;
-    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level * 2 + this.stats.synergy) * getWeaponPowerMultiplier(this.stats) * (critical ? 1.7 : 1)));
+    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1)));
     this.bossHp -= damage;
     this.spawnHitEffect(shot.x, shot.y, 0xfff1a8);
     shot.destroy();
@@ -557,7 +606,7 @@ export default class GameScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.bossMaxHp = createBossHp(this.bossLoopIndex);
     this.bossHp = this.bossMaxHp;
-    this.boss = new Boss(this, 200, -130, this.bossHp);
+    this.boss = new Boss(this, 200, -130, this.bossHp, this.bossLoopIndex % 2 === 0 ? 'bossDragon' : 'bossTitan');
     this.boss.setDepth(2);
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);

@@ -7,7 +7,7 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   private readonly muzzle: Phaser.GameObjects.Rectangle;
   private readonly fins: Phaser.GameObjects.Triangle[];
   private readonly energyCells: Phaser.GameObjects.Arc[];
-  private readonly animeSprite?: Phaser.GameObjects.Image;
+  private readonly animeSprites: Phaser.GameObjects.Image[] = [];
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -31,13 +31,18 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
       scene.add.circle(8, 8, 3, 0xf8fafc, 0.94),
       scene.add.circle(0, -7, 3, 0xf8fafc, 0.94),
     ];
-    this.animeSprite = scene.textures.exists('weaponAnime') ? scene.add.image(0, -20, 'weaponAnime').setDisplaySize(104, 190) : undefined;
-    this.animeSprite?.setAlpha(0.98);
+    const spriteKeys = ['weaponAnime', 'weaponPhoenix', 'weaponCrystal'];
+    spriteKeys.forEach((key, index) => {
+      if (!scene.textures.exists(key)) {
+        return;
+      }
+      const sprite = scene.add.image(0, -20, key).setDisplaySize(104, 190).setAlpha(index === 0 ? 0.98 : 0);
+      sprite.setVisible(index === 0);
+      this.animeSprites.push(sprite);
+    });
 
     this.add([glow, backGlow, leftWing, rightWing, grip, leftBarrel, rightBarrel, this.barrel, this.muzzle, this.core, ...this.energyCells]);
-    if (this.animeSprite) {
-      this.add(this.animeSprite);
-    }
+    this.animeSprites.forEach((sprite) => this.add(sprite));
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -47,7 +52,11 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
 
   public setGlow(alpha: number): void {
     this.core.setAlpha(alpha);
-    this.animeSprite?.setAlpha(Math.min(1, alpha + 0.08));
+    this.animeSprites.forEach((sprite) => {
+      if (sprite.visible) {
+        sprite.setAlpha(Math.min(1, alpha + 0.08));
+      }
+    });
   }
 
   public setPalette(primary: number, secondary: number): void {
@@ -57,6 +66,17 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
     this.muzzle.setFillStyle(secondary, 0.92);
     this.fins.forEach((fin) => fin.setFillStyle(secondary, 0.82));
     this.energyCells.forEach((cell) => cell.setFillStyle(primary, 0.94));
-    this.animeSprite?.setTint(primary, secondary, primary, secondary);
+    this.animeSprites.forEach((sprite) => sprite.setTint(primary, secondary, primary, secondary));
+  }
+
+  public setWeaponSkin(index: number): void {
+    if (this.animeSprites.length === 0) {
+      return;
+    }
+    const selectedIndex = index % this.animeSprites.length;
+    this.animeSprites.forEach((sprite, spriteIndex) => {
+      sprite.setVisible(spriteIndex === selectedIndex);
+      sprite.setAlpha(spriteIndex === selectedIndex ? 1 : 0);
+    });
   }
 }

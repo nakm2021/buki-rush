@@ -1,5 +1,5 @@
 import { ENEMY_VARIANTS, getEnemyVariant } from './EnemyCatalog';
-import { getArchetypeByIndex, getElementByIndex, getModuleByIndex, getRarityByIndex } from './WeaponEvolution';
+import { getArchetypeByIndex, getArchetypeProfile, getElementByIndex, getModuleByIndex, getModuleProfile, getRarityByIndex } from './WeaponEvolution';
 import type { GateOption, StageStep } from '../types/GameTypes';
 
 export const INITIAL_STEP_INTERVAL = 650;
@@ -52,7 +52,7 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
   const dangerVariant = stepIndex % 7 === 3 ? 'doom-reaper' : stepIndex % 5 === 2 ? 'red-comet' : undefined;
   const lanes = [92, 148, 205, 258, 310];
   const lane = lanes[stepIndex % lanes.length];
-  const hp = Math.round((12 + stepIndex * 1.9 + difficulty * 7) * variant.hpScale);
+  const hp = Math.round((18 + stepIndex * 2.8 + difficulty * 11) * variant.hpScale);
   const enemyCount = stepIndex < 3 ? 2 : 3 + Math.min(2, Math.floor(difficulty / 2));
   const enemies = Array.from({ length: enemyCount }, (_, index) => {
     const selectedVariant = index === 0 && dangerVariant ? dangerVariant : index === 0 ? variant.id : secondVariant.id;
@@ -81,7 +81,7 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
 }
 
 export function createBossHp(loopIndex: number): number {
-  return 190 + loopIndex * 90;
+  return 360 + loopIndex * 140;
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {
@@ -148,19 +148,9 @@ function createElementGate(stepIndex: number): GateOption {
 
 function createArchetypeGate(stepIndex: number): GateOption {
   const archetype = getArchetypeByIndex(stepIndex);
-  const labels = {
-    blaster: '砲型',
-    blade: '刃型',
-    orbit: '環型',
-    lance: '槍型',
-    drone: '機型',
-    rail: '軌型',
-    nova: '星型',
-    comet: '彗型',
-  };
 
   return {
-    label: labels[archetype],
+    label: `${getArchetypeProfile(archetype).label}型`,
     kind: 'archetype',
     value: 2,
     color: premiumColors[stepIndex % premiumColors.length],
@@ -171,19 +161,9 @@ function createArchetypeGate(stepIndex: number): GateOption {
 
 function createModuleGate(stepIndex: number): GateOption {
   const module = getModuleByIndex(stepIndex);
-  const labels = {
-    split: '分裂MOD',
-    pierce: '貫通MOD',
-    critical: '会心MOD',
-    overclock: '過速MOD',
-    shield: '装甲MOD',
-    magnet: '吸引MOD',
-    chain: '連鎖MOD',
-    focus: '集中MOD',
-  };
 
   return {
-    label: labels[module],
+    label: `${getModuleProfile(module).label}MOD`,
     kind: 'module',
     value: 1,
     color: premiumColors[(stepIndex + 2) % premiumColors.length],

@@ -3,13 +3,13 @@ import Phaser from 'phaser';
 export class Boss extends Phaser.GameObjects.Container {
   private hp: number;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, hp: number) {
+  constructor(scene: Phaser.Scene, x: number, y: number, hp: number, textureKey = 'bossDragon') {
     super(scene, x, y);
 
     this.hp = hp;
 
     const aura = scene.add.circle(0, 40, 190, 0xff174d, 0.14);
-    const image = scene.textures.exists('bossDragon') ? scene.add.image(0, 40, 'bossDragon').setDisplaySize(386, 748) : undefined;
+    const image = scene.textures.exists(textureKey) ? scene.add.image(0, 40, textureKey).setDisplaySize(textureKey === 'bossTitan' ? 360 : 386, textureKey === 'bossTitan' ? 520 : 748) : undefined;
     const glow = scene.add.rectangle(0, 6, 220, 170, 0xff174d, 0.18);
     const wing = scene.add.rectangle(0, -22, 188, 20, 0xff5fa2, 0.88);
     const core = scene.add.rectangle(0, 0, 144, 84, 0xff315f, 0.97);

@@ -1,8 +1,8 @@
 export type WeaponElement = 'neutral' | 'fire' | 'ice' | 'thunder' | 'wind' | 'light' | 'shadow' | 'crystal';
 
-export type WeaponArchetype = 'blaster' | 'blade' | 'orbit' | 'lance' | 'drone' | 'rail' | 'nova' | 'comet';
+export type WeaponArchetype = string;
 
-export type WeaponModule = 'split' | 'pierce' | 'critical' | 'overclock' | 'shield' | 'magnet' | 'chain' | 'focus';
+export type WeaponModule = string;
 
 export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
 
