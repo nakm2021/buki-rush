@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { WEAPON_IMAGE_ASSETS } from '../systems/AssetCatalog';
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -26,8 +27,9 @@ export default class TitleScene extends Phaser.Scene {
 
     this.add.circle(width / 2, 262, 112, 0x38bdf8, 0.1);
     this.add.circle(width / 2, 262, 78, 0xc084fc, 0.08);
-    if (this.textures.exists('weaponAnime')) {
-      this.add.image(width / 2, 274, 'weaponAnime').setDisplaySize(150, 274).setTint(0x67e8f9, 0xfacc15, 0xa78bfa, 0x67e8f9);
+    const titleWeaponKey = WEAPON_IMAGE_ASSETS[0].key;
+    if (this.textures.exists(titleWeaponKey)) {
+      this.add.image(width / 2, 274, titleWeaponKey).setDisplaySize(150, 274).setTint(0x67e8f9, 0xfacc15, 0xa78bfa, 0x67e8f9);
     } else {
       this.add.rectangle(width / 2, 262, 44, 104, 0x22d3ee, 0.96);
       this.add.rectangle(width / 2, 205, 92, 12, 0xf8fafc, 0.94);

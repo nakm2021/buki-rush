@@ -4,6 +4,7 @@ import { Bullet } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
+import { getBossAssetByLoop, selectWeaponAssetKey } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, saveBestDistance } from '../systems/RecordSystem';
@@ -86,6 +87,8 @@ export default class GameScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
 
+    this.resetRunState();
+    this.physics.resume();
     this.drawTrack(width, height);
 
     this.player = new PlayerWeapon(this, width / 2, 600);
@@ -109,6 +112,43 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.gates, (_player, gateObject) => this.handleGateCollision(gateObject as Phaser.GameObjects.Container), undefined, this);
     this.physics.add.overlap(this.player, this.enemies, (_player, enemyObject) => this.handleEnemyCollision(enemyObject as Enemy), undefined, this);
     this.physics.add.overlap(this.bullets, this.enemies, (bulletObject, enemyObject) => this.hitEnemy(bulletObject as Bullet, enemyObject as Enemy), undefined, this);
+  }
+
+  private resetRunState(): void {
+    this.stats = {
+      weaponCount: 1,
+      power: 1,
+      level: 1,
+      fireRate: 1,
+      element: 'neutral',
+      archetype: 'blaster',
+      modules: [],
+      rarity: 'common',
+      tier: 1,
+      critRate: 0.04,
+      pierce: 0,
+      shield: 0,
+      synergy: 0,
+    };
+    this.boss = undefined;
+    this.bossMaxHp = createBossHp(0);
+    this.bossHp = this.bossMaxHp;
+    this.playerHp = 3;
+    this.fireTimer = 0;
+    this.isGameOver = false;
+    this.isPaused = false;
+    this.stageTimer = 0;
+    this.nextStageIndex = 0;
+    this.nextLoopSpawnTime = 0;
+    this.loopStepIndex = 0;
+    this.bossLoopIndex = 0;
+    this.distance = 0;
+    this.pointerTarget = null;
+    this.weaponParts = [];
+    this.squadUnits = [];
+    this.speedLines = [];
+    this.auraRings = [];
+    this.pauseOverlay = undefined;
   }
 
   update(_time: number, delta: number): void {
@@ -339,7 +379,7 @@ export default class GameScene extends Phaser.Scene {
       obj.y += speed * (delta / 1000);
       (obj.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
       if (obj.y > 790) {
-        this.handleEnemyLeak(obj);
+        obj.destroy();
       }
     });
 
@@ -404,12 +444,7 @@ export default class GameScene extends Phaser.Scene {
     this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
-    const skinIndex = this.stats.rarity === 'mythic' || this.stats.element === 'fire'
-      ? 1
-      : this.stats.rarity === 'legend' || this.stats.element === 'ice' || this.stats.element === 'crystal'
-        ? 2
-        : 0;
-    this.player.setWeaponSkin(skinIndex);
+    this.player.setWeaponSkin(selectWeaponAssetKey(this.stats));
     this.updateAuraRings(colors.aura);
     this.updateSquadUnits(colors.primary, colors.secondary);
   }
@@ -543,18 +578,6 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private handleEnemyLeak(enemyObject: Enemy): void {
-    const damage = enemyObject.isLethal() ? 2 : Math.max(1, enemyObject.getDamage());
-    this.playerHp -= damage;
-    this.spawnBurst(enemyObject.x, 680, enemyObject.isLethal() ? 0xff174d : 0xef4444, enemyObject.isLethal() ? 26 : 16);
-    this.showFlash(`突破 -${damage}`, '#fecaca', clamp(enemyObject.x, 80, 320), 620);
-    enemyObject.destroy();
-
-    if (this.playerHp <= 0) {
-      this.finish('GAME OVER');
-    }
-  }
-
   private hitEnemy(bulletObject: Bullet, enemyObject: Enemy): void {
     const critical = Math.random() < this.stats.critRate;
     const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
@@ -606,7 +629,7 @@ export default class GameScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.bossMaxHp = createBossHp(this.bossLoopIndex);
     this.bossHp = this.bossMaxHp;
-    this.boss = new Boss(this, 200, -130, this.bossHp, this.bossLoopIndex % 2 === 0 ? 'bossDragon' : 'bossTitan');
+    this.boss = new Boss(this, 200, -130, this.bossHp, getBossAssetByLoop(this.bossLoopIndex).key);
     this.boss.setDepth(2);
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);

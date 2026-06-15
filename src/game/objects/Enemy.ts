@@ -42,8 +42,9 @@ export class Enemy extends Phaser.GameObjects.Container {
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const enemyBody = this.body as Phaser.Physics.Arcade.Body;
-    enemyBody.setCircle(variant.radius + 4);
-    enemyBody.setOffset(-(variant.radius + 4), -(variant.radius + 4));
+    const hitRadius = Math.max(11, variant.radius - (variant.lethal ? 7 : 4));
+    enemyBody.setCircle(hitRadius);
+    enemyBody.setOffset(-hitRadius, -hitRadius);
   }
 
   public getHp(): number {

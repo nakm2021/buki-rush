@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getWeaponAssetKeys } from '../systems/AssetCatalog';
 
 export class PlayerWeapon extends Phaser.GameObjects.Container {
   private readonly core: Phaser.GameObjects.Arc;
@@ -7,7 +8,7 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   private readonly muzzle: Phaser.GameObjects.Rectangle;
   private readonly fins: Phaser.GameObjects.Triangle[];
   private readonly energyCells: Phaser.GameObjects.Arc[];
-  private readonly animeSprites: Phaser.GameObjects.Image[] = [];
+  private readonly animeSprites = new Map<string, Phaser.GameObjects.Image>();
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -31,14 +32,13 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
       scene.add.circle(8, 8, 3, 0xf8fafc, 0.94),
       scene.add.circle(0, -7, 3, 0xf8fafc, 0.94),
     ];
-    const spriteKeys = ['weaponAnime', 'weaponPhoenix', 'weaponCrystal'];
-    spriteKeys.forEach((key, index) => {
+    getWeaponAssetKeys().forEach((key, index) => {
       if (!scene.textures.exists(key)) {
         return;
       }
       const sprite = scene.add.image(0, -20, key).setDisplaySize(104, 190).setAlpha(index === 0 ? 0.98 : 0);
       sprite.setVisible(index === 0);
-      this.animeSprites.push(sprite);
+      this.animeSprites.set(key, sprite);
     });
 
     this.add([glow, backGlow, leftWing, rightWing, grip, leftBarrel, rightBarrel, this.barrel, this.muzzle, this.core, ...this.energyCells]);
@@ -69,14 +69,14 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
     this.animeSprites.forEach((sprite) => sprite.setTint(primary, secondary, primary, secondary));
   }
 
-  public setWeaponSkin(index: number): void {
-    if (this.animeSprites.length === 0) {
+  public setWeaponSkin(key: string): void {
+    if (this.animeSprites.size === 0) {
       return;
     }
-    const selectedIndex = index % this.animeSprites.length;
-    this.animeSprites.forEach((sprite, spriteIndex) => {
-      sprite.setVisible(spriteIndex === selectedIndex);
-      sprite.setAlpha(spriteIndex === selectedIndex ? 1 : 0);
+    const selectedKey = this.animeSprites.has(key) ? key : getWeaponAssetKeys()[0];
+    this.animeSprites.forEach((sprite, spriteKey) => {
+      sprite.setVisible(spriteKey === selectedKey);
+      sprite.setAlpha(spriteKey === selectedKey ? 1 : 0);
     });
   }
 }
