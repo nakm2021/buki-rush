@@ -26,6 +26,9 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponWind', path: 'assets/generated/weapon-wind.png', match: { elements: ['wind'] } },
   { key: 'weaponSeraph', path: 'assets/generated/weapon-seraph.png', match: { elements: ['light'], archetypes: ['seraph'] } },
   { key: 'weaponSamurai', path: 'assets/generated/weapon-samurai.png', match: { archetypes: ['samurai', 'saber', 'blade'] } },
+  { key: 'weaponThunder', path: 'assets/generated/weapon-thunder.png', match: { elements: ['thunder'], archetypes: ['levin', 'rail'] } },
+  { key: 'weaponVoid', path: 'assets/generated/weapon-void.png', match: { elements: ['shadow'], archetypes: ['onyx', 'phantom'] } },
+  { key: 'weaponDragon', path: 'assets/generated/weapon-dragon.png', match: { archetypes: ['dragon', 'hydra', 'gigas'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [

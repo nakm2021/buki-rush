@@ -67,7 +67,7 @@ export interface EnemyVariant {
   bodyColor: number;
   accentColor: number;
   coreColor: number;
-  shape: 'orb' | 'horn' | 'wing' | 'slime' | 'golem' | 'wisp' | 'wyrm' | 'mask';
+  shape: 'orb' | 'horn' | 'wing' | 'slime' | 'golem' | 'wisp' | 'wyrm' | 'mask' | 'beast' | 'knight' | 'plant' | 'spider';
   hpScale: number;
   radius: number;
   damage: number;
