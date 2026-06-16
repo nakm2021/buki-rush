@@ -29,6 +29,8 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponThunder', path: 'assets/generated/weapon-thunder.png', match: { elements: ['thunder'], archetypes: ['levin', 'rail'] } },
   { key: 'weaponVoid', path: 'assets/generated/weapon-void.png', match: { elements: ['shadow'], archetypes: ['onyx', 'phantom'] } },
   { key: 'weaponDragon', path: 'assets/generated/weapon-dragon.png', match: { archetypes: ['dragon', 'hydra', 'gigas'] } },
+  { key: 'weaponFrost', path: 'assets/generated/weapon-frost.png', match: { elements: ['ice'], archetypes: ['aurora', 'geode'] } },
+  { key: 'weaponNova', path: 'assets/generated/weapon-nova.png', match: { archetypes: ['nova', 'meteor', 'chrono', 'nebula'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -37,6 +39,8 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossHydra', path: 'assets/generated/boss-hydra.png', width: 390, height: 590 },
   { key: 'bossPhoenix', path: 'assets/generated/boss-phoenix.png', width: 390, height: 560 },
   { key: 'bossDemon', path: 'assets/generated/boss-demon.png', width: 380, height: 560 },
+  { key: 'bossLeviathan', path: 'assets/generated/boss-leviathan.png', width: 390, height: 560 },
+  { key: 'bossVoid', path: 'assets/generated/boss-void.png', width: 390, height: 560 },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [

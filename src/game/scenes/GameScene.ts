@@ -78,6 +78,9 @@ export default class GameScene extends Phaser.Scene {
   private squadUnits: Phaser.GameObjects.Container[] = [];
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
   private auraRings: Phaser.GameObjects.Arc[] = [];
+  private backgroundTint!: Phaser.GameObjects.Rectangle;
+  private trackGlow!: Phaser.GameObjects.Polygon;
+  private laneLights: Phaser.GameObjects.Rectangle[] = [];
   private audioContext?: AudioContext;
 
   constructor() {
@@ -148,6 +151,7 @@ export default class GameScene extends Phaser.Scene {
     this.squadUnits = [];
     this.speedLines = [];
     this.auraRings = [];
+    this.laneLights = [];
     this.pauseOverlay = undefined;
   }
 
@@ -180,9 +184,13 @@ export default class GameScene extends Phaser.Scene {
 
   private drawTrack(width: number, height: number): void {
     this.add.rectangle(width / 2, height / 2, width, height, 0x1c140f, 1);
+    this.backgroundTint = this.add.rectangle(width / 2, height / 2, width, height, 0x38bdf8, 0.08).setBlendMode(Phaser.BlendModes.ADD);
+    this.backgroundTint.setDepth(0.05);
     this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], 0xd6d8dd, 1);
     this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], 0xbfc3ca, 1);
     this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0xe5e7eb, 0.92);
+    this.trackGlow = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0x38bdf8, 0.08);
+    this.trackGlow.setBlendMode(Phaser.BlendModes.ADD);
 
     for (let y = -40; y < height + 80; y += 86) {
       this.add.rectangle(width / 2, y, 250, 4, 0xffffff, 0.2).setAngle(-1);
@@ -197,6 +205,8 @@ export default class GameScene extends Phaser.Scene {
 
     [146, 200, 254].forEach((x) => {
       this.add.line(x, height / 2, 0, 0, 0, height, 0xffffff, 0.18).setLineWidth(2);
+      const laneLight = this.add.rectangle(x, height / 2, 5, height, 0x38bdf8, 0.12).setBlendMode(Phaser.BlendModes.ADD);
+      this.laneLights.push(laneLight);
     });
 
     for (let i = 0; i < 22; i++) {
@@ -445,8 +455,20 @@ export default class GameScene extends Phaser.Scene {
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
     this.player.setWeaponSkin(selectWeaponAssetKey(this.stats));
+    this.updateStageMood(colors.primary, colors.secondary, colors.aura);
     this.updateAuraRings(colors.aura);
     this.updateSquadUnits(colors.primary, colors.secondary);
+  }
+
+  private updateStageMood(primary: number, secondary: number, aura: number): void {
+    this.backgroundTint.setFillStyle(aura, 0.06 + Math.min(0.08, this.stats.tier * 0.006));
+    this.trackGlow.setFillStyle(primary, 0.05 + Math.min(0.1, this.stats.level * 0.003));
+    this.laneLights.forEach((line, index) => {
+      line.setFillStyle(index % 2 === 0 ? primary : secondary, 0.1 + Math.sin(this.stageTimer * 0.004 + index) * 0.035);
+    });
+    this.speedLines.forEach((line, index) => {
+      line.setFillStyle(index % 2 === 0 ? primary : secondary, 0.12 + Math.min(0.08, this.stats.fireRate * 0.01));
+    });
   }
 
   private updateWeaponParts(delta: number): void {

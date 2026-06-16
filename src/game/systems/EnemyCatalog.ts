@@ -62,6 +62,18 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'gold-reaper', name: 'Gold Reaper', bodyColor: 0x451a03, accentColor: 0xfacc15, coreColor: 0xffffff, shape: 'mask', hpScale: 3.1, radius: 25, damage: 99, lethal: true },
   { id: 'black-meteor', name: 'Black Meteor', bodyColor: 0x030712, accentColor: 0xfb7185, coreColor: 0xf8fafc, shape: 'wyrm', hpScale: 2.35, radius: 24, damage: 3 },
   { id: 'mirror-fiend', name: 'Mirror Fiend', bodyColor: 0xe0e7ff, accentColor: 0x818cf8, coreColor: 0x312e81, shape: 'mask', hpScale: 1.42, radius: 20, damage: 2 },
+  { id: 'frost-knight', name: 'Frost Knight', bodyColor: 0xbfdbfe, accentColor: 0xf8fafc, coreColor: 0x1d4ed8, shape: 'knight', hpScale: 1.82, radius: 22, damage: 2 },
+  { id: 'plasma-mantis', name: 'Plasma Mantis', bodyColor: 0x22d3ee, accentColor: 0xf0fdfa, coreColor: 0x164e63, shape: 'spider', hpScale: 1.28, radius: 20, damage: 2 },
+  { id: 'ember-lion', name: 'Ember Lion', bodyColor: 0xf97316, accentColor: 0xfef3c7, coreColor: 0x7c2d12, shape: 'beast', hpScale: 1.58, radius: 22, damage: 2 },
+  { id: 'void-stalker', name: 'Void Stalker', bodyColor: 0x312e81, accentColor: 0xc084fc, coreColor: 0x020617, shape: 'beast', hpScale: 1.72, radius: 23, damage: 3 },
+  { id: 'crystal-bloom', name: 'Crystal Bloom', bodyColor: 0x99f6e4, accentColor: 0xf0abfc, coreColor: 0x134e4a, shape: 'plant', hpScale: 1.34, radius: 20, damage: 1 },
+  { id: 'golden-paladin', name: 'Golden Paladin', bodyColor: 0xfacc15, accentColor: 0xffffff, coreColor: 0x713f12, shape: 'knight', hpScale: 2.05, radius: 24, damage: 3 },
+  { id: 'nebula-wisp', name: 'Nebula Wisp', bodyColor: 0x7c3aed, accentColor: 0x67e8f9, coreColor: 0x020617, shape: 'wisp', hpScale: 1.18, radius: 19, damage: 2 },
+  { id: 'toxic-vine', name: 'Toxic Vine', bodyColor: 0x65a30d, accentColor: 0xd9f99d, coreColor: 0x1a2e05, shape: 'plant', hpScale: 1.46, radius: 21, damage: 2 },
+  { id: 'scarlet-lancer', name: 'Scarlet Lancer', bodyColor: 0xdc2626, accentColor: 0xfecaca, coreColor: 0x450a0a, shape: 'knight', hpScale: 1.65, radius: 21, damage: 3 },
+  { id: 'star-scorpion', name: 'Star Scorpion', bodyColor: 0x1e3a8a, accentColor: 0xfef08a, coreColor: 0x0f172a, shape: 'spider', hpScale: 1.7, radius: 23, damage: 3 },
+  { id: 'aurora-harpy', name: 'Aurora Harpy', bodyColor: 0x5eead4, accentColor: 0xe9d5ff, coreColor: 0x0f766e, shape: 'wing', hpScale: 1.22, radius: 19, damage: 1 },
+  { id: 'onyx-idol', name: 'Onyx Idol', bodyColor: 0x18181b, accentColor: 0xa1a1aa, coreColor: 0xfb7185, shape: 'mask', hpScale: 1.92, radius: 23, damage: 2 },
 ];
 
 export function getEnemyVariant(index: number): EnemyVariant {
