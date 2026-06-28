@@ -59,6 +59,12 @@ export interface GameResult {
   distance: number;
   bestDistance: number;
   weaponName: string;
+  medals: number;
+  defeatedBosses: number;
+  totalBosses: number;
+  relics: string[];
+  codexBosses: number;
+  codexWeapons: number;
 }
 
 export interface EnemyVariant {

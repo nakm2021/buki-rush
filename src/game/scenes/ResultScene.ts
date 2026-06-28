@@ -45,14 +45,17 @@ export default class ResultScene extends Phaser.Scene {
     const rows = [
       `距離        ${data.distance ?? 0}m`,
       `最高記録    ${data.bestDistance ?? 0}m`,
+      `討伐BOSS    ${data.defeatedBosses ?? 0} / 累計 ${data.totalBosses ?? 0}`,
+      `メダル      ${data.medals ?? 0}`,
       `最終武器数  ${data.weaponCount ?? 1}`,
       `最終攻撃力  ${data.power ?? 1}`,
       `レベル      ${data.level ?? 1}`,
       `武器        ${data.weaponName ?? '無-Runner Lv.1'}`,
+      `図鑑        B${data.codexBosses ?? 0} / W${data.codexWeapons ?? 0}`,
     ];
 
     rows.forEach((row, index) => {
-      this.add.text(width / 2, 270 + index * 32, row, {
+      this.add.text(width / 2, 246 + index * 27, row, {
         fontSize: index === rows.length - 1 ? '15px' : '17px',
         color: '#f8fafc',
         fontStyle: 'bold',

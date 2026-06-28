@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { WEAPON_IMAGE_ASSETS } from '../systems/AssetCatalog';
+import { loadPlayerMeta } from '../systems/RecordSystem';
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -8,6 +9,7 @@ export default class TitleScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
+    const meta = loadPlayerMeta();
     this.add.rectangle(width / 2, height / 2, width, height, 0x050713, 1);
     this.add.rectangle(width / 2, height / 2, 340, height, 0x09111f, 0.92);
     this.add.rectangle(width / 2, height / 2, 292, height, 0x0d1631, 0.64);
@@ -52,7 +54,7 @@ export default class TitleScene extends Phaser.Scene {
 
     const infoPanel = this.add.rectangle(width / 2, 410, 286, 88, 0x09111f, 0.72);
     infoPanel.setStrokeStyle(1, 0x38bdf8, 0.28);
-    this.add.text(width / 2, 402, 'PC: 矢印/WASD\nスマホ: ドラッグで移動', {
+    this.add.text(width / 2, 402, `PC: 矢印/WASD / ダブルタップ必殺\nスマホ: ドラッグで移動\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}  図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
       fontSize: '16px',
       color: '#e0f2fe',
       align: 'center',
