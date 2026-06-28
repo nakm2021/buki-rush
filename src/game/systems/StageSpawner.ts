@@ -1,5 +1,5 @@
-import { ENEMY_VARIANTS, getEnemyVariant } from './EnemyCatalog';
-import { getArchetypeByIndex, getArchetypeProfile, getElementByIndex, getModuleByIndex, getModuleProfile, getRarityByIndex } from './WeaponEvolution';
+import { getEnemyVariant } from './EnemyCatalog';
+import { getModuleByIndex, getModuleProfile } from './WeaponEvolution';
 import type { GateOption, StageStep } from '../types/GameTypes';
 
 export const INITIAL_STEP_INTERVAL = 650;
@@ -35,7 +35,7 @@ export const OPENING_STEPS: StageStep[] = [
     time: 4600,
     gateLine: {
       y: -80,
-      left: { label: '火進化', kind: 'element', value: 2, color: 0xfb923c, good: true, element: 'fire' },
+      left: { label: 'ATK +5', kind: 'power', value: 5, color: 0xfb923c, good: true },
       right: { label: '分裂MOD', kind: 'module', value: 1, color: 0xa855f7, good: true, module: 'split' },
     },
     enemies: [
@@ -81,8 +81,8 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
 }
 
 export function createBossHp(loopIndex: number): number {
-  const lateBossBonus = Math.max(0, loopIndex - 1) * 95;
-  return Math.round(520 + loopIndex * 210 + lateBossBonus + loopIndex * loopIndex * 28);
+  const lateBossBonus = Math.max(0, loopIndex - 1) * 180;
+  return Math.round(620 + loopIndex * 310 + lateBossBonus + loopIndex * loopIndex * 72);
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {
@@ -99,10 +99,7 @@ function createGateLine(stepIndex: number): StageStep['gateLine'] {
     { label: 'Lv +1', kind: 'level', value: 1, color: goodB, good: true },
     { label: '連射 +', kind: 'rapid', value: 1, color: goodA, good: true },
     { label: '進化 +', kind: 'tier', value: 1, color: goodB, good: true },
-    createElementGate(stepIndex),
-    createArchetypeGate(stepIndex),
     createModuleGate(stepIndex),
-    createRarityGate(stepIndex),
     { label: '融合 +', kind: 'fusion', value: 2, color: premiumColors[stepIndex % premiumColors.length], good: true },
   ];
 
@@ -125,42 +122,6 @@ function createGateLine(stepIndex: number): StageStep['gateLine'] {
   };
 }
 
-function createElementGate(stepIndex: number): GateOption {
-  const element = getElementByIndex(stepIndex);
-  const labels = {
-    fire: '火属性',
-    ice: '氷属性',
-    thunder: '雷属性',
-    wind: '風属性',
-    light: '光属性',
-    shadow: '影属性',
-    crystal: '晶属性',
-    neutral: '無属性',
-  };
-
-  return {
-    label: `${labels[element]}進化`,
-    kind: 'element',
-    value: 2,
-    color: goodColors[(stepIndex + ENEMY_VARIANTS.length) % goodColors.length],
-    good: true,
-    element,
-  };
-}
-
-function createArchetypeGate(stepIndex: number): GateOption {
-  const archetype = getArchetypeByIndex(stepIndex);
-
-  return {
-    label: `${getArchetypeProfile(archetype).label}型`,
-    kind: 'archetype',
-    value: 2,
-    color: premiumColors[stepIndex % premiumColors.length],
-    good: true,
-    archetype,
-  };
-}
-
 function createModuleGate(stepIndex: number): GateOption {
   const module = getModuleByIndex(stepIndex);
 
@@ -171,25 +132,5 @@ function createModuleGate(stepIndex: number): GateOption {
     color: premiumColors[(stepIndex + 2) % premiumColors.length],
     good: true,
     module,
-  };
-}
-
-function createRarityGate(stepIndex: number): GateOption {
-  const rarity = getRarityByIndex(stepIndex);
-  const labels = {
-    common: 'C昇格',
-    rare: 'R昇格',
-    epic: 'SR昇格',
-    legend: 'SSR昇格',
-    mythic: 'UR昇格',
-  };
-
-  return {
-    label: labels[rarity],
-    kind: 'rarity',
-    value: 1,
-    color: premiumColors[(stepIndex + 4) % premiumColors.length],
-    good: true,
-    rarity,
   };
 }

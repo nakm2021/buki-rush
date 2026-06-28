@@ -157,13 +157,13 @@ export default class GameScene extends Phaser.Scene {
       weaponCount: 1,
       power: 1 + Math.floor(this.permanentRank / 2),
       level: 1 + Math.floor(this.permanentRank / 4),
-      fireRate: 1 + Math.min(0.8, this.permanentRank * 0.03),
+      fireRate: 1 + this.permanentRank * 0.03,
       element: 'neutral',
       archetype: 'blaster',
       modules: [],
       rarity: 'common',
       tier: 1,
-      critRate: 0.04 + Math.min(0.08, this.permanentRank * 0.004),
+      critRate: 0.04 + this.permanentRank * 0.004,
       pierce: 0,
       shield: 0,
       synergy: 0,
@@ -171,7 +171,7 @@ export default class GameScene extends Phaser.Scene {
     this.boss = undefined;
     this.bossMaxHp = createBossHp(0);
     this.bossHp = this.bossMaxHp;
-    this.playerHp = 3 + Math.min(2, Math.floor(this.permanentRank / 7));
+    this.playerHp = 3 + Math.floor(this.permanentRank / 7);
     this.fireTimer = 0;
     this.isGameOver = false;
     this.isPaused = false;
@@ -228,7 +228,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossBar();
     this.updateStatusPanel();
 
-    const fireInterval = Math.max(90, 265 - this.stats.fireRate * 38 - Math.min(this.stats.weaponCount, 32) * 4);
+    const fireInterval = Math.max(45, 265 - this.stats.fireRate * 38 - Math.min(this.stats.weaponCount, 60) * 3);
     if (this.fireTimer >= fireInterval) {
       this.fireTimer = 0;
       this.fireWeapons();
@@ -493,7 +493,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private fireWeapons(): void {
-    const shotCount = Math.min(7, 1 + Math.floor(this.stats.weaponCount / 5));
+    const shotCount = Math.min(13, 1 + Math.floor(this.stats.weaponCount / 5));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
@@ -534,13 +534,13 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.bossAttackTimer <= 0) {
       this.fireBossPattern(this.currentBossTheme);
-      const loopPressure = Math.min(260, this.bossLoopIndex * 34);
-      this.bossAttackTimer = Math.max(430, 1180 - loopPressure - this.bossPhase * 110 - Phaser.Math.Between(0, 180));
+      const loopPressure = this.bossLoopIndex * 44;
+      this.bossAttackTimer = Math.max(260, 1180 - loopPressure - this.bossPhase * 110 - Phaser.Math.Between(0, 180));
     }
 
     if (this.bossSpecialTimer <= 0) {
       this.castBossSpecial(this.currentBossTheme);
-      this.bossSpecialTimer = Math.max(4200, 7600 - this.bossLoopIndex * 260);
+      this.bossSpecialTimer = Math.max(1800, 7600 - this.bossLoopIndex * 310);
     }
   }
 
@@ -612,7 +612,7 @@ export default class GameScene extends Phaser.Scene {
         }
         const angle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y + 40, this.player.x, this.player.y);
         const speed = 210 + this.bossLoopIndex * 18 + this.bossPhase * 18;
-        this.spawnBossProjectile(this.boss.x, this.boss.y + 72, Math.cos(angle) * speed, Math.sin(angle) * speed, 9, theme.primary, 1, 'orb');
+        this.spawnBossProjectile(this.boss.x, this.boss.y + 72, Math.cos(angle) * speed, Math.sin(angle) * speed, 9, theme.primary, this.getBossDamage(1), 'orb');
       });
     }
   }
@@ -629,7 +629,7 @@ export default class GameScene extends Phaser.Scene {
       const t = fanCount === 1 ? 0.5 : i / (fanCount - 1);
       const angle = baseAngle - spread / 2 + spread * t;
       const speed = 175 + this.bossLoopIndex * 14 + (i % 2) * 28 + this.bossPhase * 16;
-      this.spawnBossProjectile(this.boss.x, this.boss.y + 70, Math.cos(angle) * speed, Math.sin(angle) * speed, 7, i % 2 === 0 ? theme.secondary : theme.accent, 1, 'diamond');
+      this.spawnBossProjectile(this.boss.x, this.boss.y + 70, Math.cos(angle) * speed, Math.sin(angle) * speed, 7, i % 2 === 0 ? theme.secondary : theme.accent, this.getBossDamage(1), 'diamond');
     }
     this.spawnBurst(this.boss.x, this.boss.y + 76, theme.secondary, 18);
   }
@@ -655,7 +655,7 @@ export default class GameScene extends Phaser.Scene {
           const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.68 : 0.46).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           this.tweens.add({ targets: beam, alpha: 0, scaleX: 1.7, duration: 310, ease: 'Quad.easeOut', onComplete: () => beam.destroy() });
           if (Math.abs(this.player.x - x) < (empowered ? 34 : 26)) {
-            this.damagePlayer(empowered ? 2 : 1, empowered ? 'BOSS SPECIAL HIT' : 'BOSS HIT', theme.accent);
+            this.damagePlayer(this.getBossDamage(empowered ? 2 : 1), empowered ? 'BOSS SPECIAL HIT' : 'BOSS HIT', theme.accent);
           }
         },
       });
@@ -696,7 +696,7 @@ export default class GameScene extends Phaser.Scene {
       const angle = Phaser.Math.DegToRad(32 + (360 / count) * i);
       const speed = 135 + (i % 3) * 38 + this.bossLoopIndex * 9;
       const vy = Math.max(72, Math.sin(angle) * speed);
-      this.spawnBossProjectile(originX, originY, Math.cos(angle) * speed, vy, i % 2 === 0 ? 8 : 6, i % 2 === 0 ? theme.accent : theme.primary, 1, i % 2 === 0 ? 'orb' : 'diamond');
+      this.spawnBossProjectile(originX, originY, Math.cos(angle) * speed, vy, i % 2 === 0 ? 8 : 6, i % 2 === 0 ? theme.accent : theme.primary, this.getBossDamage(1), i % 2 === 0 ? 'orb' : 'diamond');
     }
     this.spawnBurst(originX, originY, theme.accent, 36);
   }
@@ -726,6 +726,10 @@ export default class GameScene extends Phaser.Scene {
       body.setSize(radius * 1.5, radius * 1.5);
       body.setOffset(-radius * 0.75, -radius * 0.75);
     }
+  }
+
+  private getBossDamage(baseDamage: number): number {
+    return Math.max(1, Math.floor(baseDamage + this.bossPhase - 1 + this.bossLoopIndex * 0.45));
   }
 
   private updateStatusPanel(): void {
@@ -807,7 +811,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateWeaponParts(delta: number): void {
-    const maxShown = Math.min(22, Math.max(0, this.stats.weaponCount - 1));
+    const maxShown = Math.min(40, Math.max(0, this.stats.weaponCount - 1));
     while (this.weaponParts.length < maxShown) {
       const index = this.weaponParts.length;
       const part = index % 3 === 0
@@ -840,7 +844,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateSquadUnits(primary: number, secondary: number): void {
-    const maxShown = Math.min(36, Math.max(8, this.stats.weaponCount));
+    const maxShown = Math.min(64, Math.max(8, this.stats.weaponCount));
     while (this.squadUnits.length < maxShown) {
       const unit = this.add.container(this.player.x, this.player.y + 34);
       const shadow = this.add.ellipse(0, 11, 16, 8, 0x1f2937, 0.28);
@@ -897,7 +901,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.stats = applyGateEffect(this.stats, option);
     if (option.kind === 'heal' && option.good) {
-      this.playerHp = Math.min(5, this.playerHp + option.value);
+      this.playerHp += option.value;
     }
     this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
     this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
@@ -1013,12 +1017,12 @@ export default class GameScene extends Phaser.Scene {
       this.stats = {
         ...this.stats,
         level: this.stats.level + 1,
-        power: Math.min(40, this.stats.power + 4),
-        weaponCount: Math.min(80, this.stats.weaponCount + 10),
+        power: this.stats.power + 4 + this.bossLoopIndex,
+        weaponCount: this.stats.weaponCount + 10 + this.bossLoopIndex,
         tier: this.stats.tier + 1,
         synergy: this.stats.synergy + 3,
       };
-      this.playerHp = Math.min(5, this.playerHp + 1);
+      this.playerHp += 1;
       this.showStatGainFeedback(previousStats, previousHp, { label: 'BOSS BONUS', kind: 'fusion', value: 1, color: 0xfef3c7, good: true });
       this.boss.destroy();
       this.boss = undefined;
@@ -1049,44 +1053,44 @@ export default class GameScene extends Phaser.Scene {
       {
         id: 'phoenix-core',
         title: '鳳凰コア',
-        description: '耐久+1 / 炎と復活力を強化',
+        description: '武器変更チャンス: 炎 / 耐久+1',
         color: 0xfb923c,
-        apply: (stats) => ({ ...stats, power: Math.min(48, stats.power + 3), tier: stats.tier + 1, element: stats.element === 'neutral' ? 'fire' : stats.element }),
+        apply: (stats) => ({ ...stats, power: stats.power + 3, tier: stats.tier + 1, element: 'fire', archetype: stats.archetype === 'blaster' ? 'phoenix' : stats.archetype }),
       },
       {
         id: 'titan-plate',
         title: '巨神装甲',
-        description: 'シールド+2 / 被弾に強くなる',
+        description: '防御特化 / シールド+2',
         color: 0x94a3b8,
-        apply: (stats) => ({ ...stats, shield: Math.min(8, stats.shield + 2), power: Math.min(48, stats.power + 1) }),
+        apply: (stats) => ({ ...stats, shield: stats.shield + 2, power: stats.power + 1 }),
       },
       {
         id: 'hydra-heart',
         title: '多頭の心臓',
-        description: '武器数+8 / 分裂シナジー',
+        description: '武器変更チャンス: 多頭 / 武器数+8',
         color: 0x22c55e,
-        apply: (stats) => ({ ...stats, weaponCount: Math.min(96, stats.weaponCount + 8), synergy: stats.synergy + 2, archetype: stats.archetype === 'blaster' ? 'hydra' : stats.archetype }),
+        apply: (stats) => ({ ...stats, weaponCount: stats.weaponCount + 8, synergy: stats.synergy + 2, archetype: 'hydra' }),
       },
       {
         id: 'storm-engine',
         title: '雷鳴機関',
-        description: '連射+ / 会心率アップ',
+        description: '武器変更チャンス: 雷 / 連射+',
         color: 0xfacc15,
-        apply: (stats) => ({ ...stats, fireRate: Math.min(6, stats.fireRate + 0.45), critRate: Math.min(0.55, stats.critRate + 0.05), element: stats.element === 'neutral' ? 'thunder' : stats.element }),
+        apply: (stats) => ({ ...stats, fireRate: stats.fireRate + 0.45, critRate: stats.critRate + 0.05, element: 'thunder', archetype: stats.archetype === 'blaster' ? 'levin' : stats.archetype }),
       },
       {
         id: 'royal-crown',
         title: '王冠レリック',
-        description: 'レベル+2 / レア度を底上げ',
+        description: '武器変更チャンス: レア度 / レベル+2',
         color: 0xfef3c7,
         apply: (stats) => ({ ...stats, level: stats.level + 2, tier: stats.tier + 1, rarity: stats.rarity === 'common' ? 'rare' : stats.rarity }),
       },
       {
         id: 'void-contract',
         title: '虚無契約',
-        description: '攻撃大幅+ / 耐久を代償にする',
+        description: '武器変更チャンス: 影 / 攻撃大幅+',
         color: 0x8b5cf6,
-        apply: (stats) => ({ ...stats, power: Math.min(54, stats.power + 7), synergy: stats.synergy + 4, element: 'shadow' }),
+        apply: (stats) => ({ ...stats, power: stats.power + 7, synergy: stats.synergy + 4, element: 'shadow', archetype: stats.archetype === 'blaster' ? 'phantom' : stats.archetype }),
       },
     ];
 
@@ -1144,7 +1148,7 @@ export default class GameScene extends Phaser.Scene {
     const previousHp = this.playerHp;
     this.stats = option.apply(this.stats);
     if (option.id === 'phoenix-core') {
-      this.playerHp = Math.min(5, this.playerHp + 1);
+      this.playerHp += 1;
     }
     if (option.id === 'void-contract') {
       this.playerHp = Math.max(1, this.playerHp - 1);
@@ -1349,7 +1353,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if ((specialStyle === 'rune' || specialStyle === 'phoenix') && this.specialPulseTimer === 0 && Math.random() < (specialStyle === 'phoenix' ? 0.22 : 0.34)) {
-      this.playerHp = Math.min(5, this.playerHp + 1);
+      this.playerHp += 1;
       this.showFlash(specialStyle === 'phoenix' ? 'REBIRTH' : 'RUNE HEAL', '#dcfce7', this.player.x, this.player.y - 124);
     }
 

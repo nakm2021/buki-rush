@@ -52,14 +52,14 @@ export default class TitleScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
 
-    const infoPanel = this.add.rectangle(width / 2, 410, 286, 88, 0x09111f, 0.72);
+    const infoPanel = this.add.rectangle(width / 2, 414, 306, 126, 0x09111f, 0.72);
     infoPanel.setStrokeStyle(1, 0x38bdf8, 0.28);
-    this.add.text(width / 2, 402, `PC: 矢印/WASD / ダブルタップ必殺\nスマホ: ドラッグで移動\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}  図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
-      fontSize: '16px',
+    this.add.text(width / 2, 410, `PC: 矢印/WASD / スマホ: ドラッグ移動\nダブルタップで必殺技 LIFE OVERDRIVE\n武器変更はBOSS撃破後のRELICで発生\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}  図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
+      fontSize: '13px',
       color: '#e0f2fe',
       align: 'center',
       fontFamily: 'Arial, sans-serif',
-      lineSpacing: 8,
+      lineSpacing: 7,
     }).setOrigin(0.5);
 
     const button = this.add.rectangle(width / 2, height - 132, 236, 60, 0x12233f, 0.96);

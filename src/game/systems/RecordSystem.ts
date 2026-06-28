@@ -72,7 +72,7 @@ export function recordRun(update: RunRecordUpdate): PlayerMeta {
   const meta = loadPlayerMeta();
   const medalsEarned = Math.max(0, Math.floor(update.medals));
   const totalMedals = meta.medals + medalsEarned;
-  const permanentRank = Math.max(meta.permanentRank, Math.min(20, Math.floor(totalMedals / 12)));
+  const permanentRank = Math.max(meta.permanentRank, Math.floor(totalMedals / 12));
   return savePlayerMeta({
     medals: totalMedals,
     permanentRank,
