@@ -81,7 +81,8 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
 }
 
 export function createBossHp(loopIndex: number): number {
-  return 360 + loopIndex * 140;
+  const lateBossBonus = Math.max(0, loopIndex - 1) * 95;
+  return Math.round(520 + loopIndex * 210 + lateBossBonus + loopIndex * loopIndex * 28);
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {
@@ -94,6 +95,7 @@ function createGateLine(stepIndex: number): StageStep['gateLine'] {
     { label: `+${6 + (stepIndex % 7)}`, kind: 'add', value: 6 + (stepIndex % 7), color: goodA, good: true },
     { label: '×2', kind: 'multiply', value: 2, color: goodB, good: true },
     { label: `ATK +${3 + (stepIndex % 5)}`, kind: 'power', value: 3 + (stepIndex % 5), color: goodA, good: true },
+    { label: '耐久 +1', kind: 'heal', value: 1, color: 0xfda4af, good: true },
     { label: 'Lv +1', kind: 'level', value: 1, color: goodB, good: true },
     { label: '連射 +', kind: 'rapid', value: 1, color: goodA, good: true },
     { label: '進化 +', kind: 'tier', value: 1, color: goodB, good: true },

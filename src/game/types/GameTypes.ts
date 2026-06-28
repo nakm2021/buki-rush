@@ -6,7 +6,7 @@ export type WeaponModule = string;
 
 export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
 
-export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion';
+export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion';
 
 export interface PlayerStats {
   weaponCount: number;

@@ -4,7 +4,7 @@ import { Bullet } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, selectWeaponAssetKey } from '../systems/AssetCatalog';
+import { getBossAssetByLoop, getBossTheme, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, saveBestDistance } from '../systems/RecordSystem';
@@ -44,6 +44,7 @@ export default class GameScene extends Phaser.Scene {
   private enemies!: Phaser.GameObjects.Group;
   private obstacles!: Phaser.GameObjects.Group;
   private effects!: Phaser.GameObjects.Group;
+  private bossProjectiles!: Phaser.GameObjects.Group;
   private weaponText!: Phaser.GameObjects.Text;
   private powerText!: Phaser.GameObjects.Text;
   private levelText!: Phaser.GameObjects.Text;
@@ -53,6 +54,7 @@ export default class GameScene extends Phaser.Scene {
   private buildText!: Phaser.GameObjects.Text;
   private moduleText!: Phaser.GameObjects.Text;
   private hpText!: Phaser.GameObjects.Text;
+  private hpPips: Phaser.GameObjects.Arc[] = [];
   private boss?: Boss;
   private bossHpBar!: Phaser.GameObjects.Rectangle;
   private bossHpFill!: Phaser.GameObjects.Rectangle;
@@ -79,9 +81,21 @@ export default class GameScene extends Phaser.Scene {
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
   private auraRings: Phaser.GameObjects.Arc[] = [];
   private backgroundTint!: Phaser.GameObjects.Rectangle;
+  private bossBackdrop!: Phaser.GameObjects.Rectangle;
+  private bossAurora!: Phaser.GameObjects.Rectangle;
+  private bossSigils: Phaser.GameObjects.Arc[] = [];
+  private bossMotes: Phaser.GameObjects.Rectangle[] = [];
+  private currentBossTheme?: BossTheme;
   private trackGlow!: Phaser.GameObjects.Polygon;
   private laneLights: Phaser.GameObjects.Rectangle[] = [];
   private audioContext?: AudioContext;
+  private specialActive = false;
+  private specialTimer = 0;
+  private specialDrainTimer = 0;
+  private specialPulseTimer = 0;
+  private bossAttackTimer = 0;
+  private bossSpecialTimer = 0;
+  private bossPatternIndex = 0;
 
   constructor() {
     super('GameScene');
@@ -106,6 +120,7 @@ export default class GameScene extends Phaser.Scene {
     this.enemies = this.add.group();
     this.obstacles = this.add.group();
     this.effects = this.add.group();
+    this.bossProjectiles = this.add.group();
 
     this.createStatusPanel();
     this.createPauseButton();
@@ -115,6 +130,7 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.gates, (_player, gateObject) => this.handleGateCollision(gateObject as Phaser.GameObjects.Container), undefined, this);
     this.physics.add.overlap(this.player, this.enemies, (_player, enemyObject) => this.handleEnemyCollision(enemyObject as Enemy), undefined, this);
     this.physics.add.overlap(this.bullets, this.enemies, (bulletObject, enemyObject) => this.hitEnemy(bulletObject as Bullet, enemyObject as Enemy), undefined, this);
+    this.physics.add.overlap(this.player, this.bossProjectiles, (_player, projectile) => this.handleBossProjectileCollision(projectile as Phaser.GameObjects.GameObject), undefined, this);
   }
 
   private resetRunState(): void {
@@ -152,6 +168,16 @@ export default class GameScene extends Phaser.Scene {
     this.speedLines = [];
     this.auraRings = [];
     this.laneLights = [];
+    this.bossSigils = [];
+    this.bossMotes = [];
+    this.currentBossTheme = undefined;
+    this.specialActive = false;
+    this.specialTimer = 0;
+    this.specialDrainTimer = 0;
+    this.specialPulseTimer = 0;
+    this.bossAttackTimer = 0;
+    this.bossSpecialTimer = 0;
+    this.bossPatternIndex = 0;
     this.pauseOverlay = undefined;
   }
 
@@ -169,7 +195,11 @@ export default class GameScene extends Phaser.Scene {
     this.updateMovement(smoothDelta);
     this.updateSpeedLines(smoothDelta);
     this.updateBullets(smoothDelta);
+    this.updateSpecial(smoothDelta);
+    this.updateBossAttacks(smoothDelta);
+    this.updateBossProjectiles(smoothDelta);
     this.moveFlowingObjects(smoothDelta);
+    this.updateBossBackdrop(smoothDelta);
     this.updateBossBar();
     this.updateStatusPanel();
 
@@ -186,6 +216,9 @@ export default class GameScene extends Phaser.Scene {
     this.add.rectangle(width / 2, height / 2, width, height, 0x1c140f, 1);
     this.backgroundTint = this.add.rectangle(width / 2, height / 2, width, height, 0x38bdf8, 0.08).setBlendMode(Phaser.BlendModes.ADD);
     this.backgroundTint.setDepth(0.05);
+    this.bossBackdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0).setDepth(0.055);
+    this.bossAurora = this.add.rectangle(width / 2, height / 2, width * 0.72, height, 0x38bdf8, 0).setBlendMode(Phaser.BlendModes.ADD);
+    this.bossAurora.setDepth(0.07);
     this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], 0xd6d8dd, 1);
     this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], 0xbfc3ca, 1);
     this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0xe5e7eb, 0.92);
@@ -215,6 +248,20 @@ export default class GameScene extends Phaser.Scene {
       const line = this.add.rectangle(x, y, 2, 38 + (i % 3) * 14, 0xffffff, 0.14);
       this.speedLines.push(line);
     }
+
+    for (let i = 0; i < 5; i++) {
+      const sigil = this.add.circle(76 + i * 62, 118 + (i % 2) * 56, 26 + (i % 3) * 7, 0xffffff, 0);
+      sigil.setStrokeStyle(2, 0x38bdf8, 0);
+      sigil.setDepth(0.08);
+      this.bossSigils.push(sigil);
+    }
+
+    for (let i = 0; i < 28; i++) {
+      const mote = this.add.rectangle(42 + (i * 53) % 320, (i * 91) % height, 3 + (i % 3), 18 + (i % 4) * 9, 0xffffff, 0);
+      mote.setBlendMode(Phaser.BlendModes.ADD);
+      mote.setDepth(0.09);
+      this.bossMotes.push(mote);
+    }
   }
 
   private createStatusPanel(): void {
@@ -239,6 +286,12 @@ export default class GameScene extends Phaser.Scene {
     this.powerText = this.add.text(154, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.levelText = this.add.text(248, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.hpText = this.add.text(334, 50, '3', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
+    this.hpPips = Array.from({ length: 5 }, (_, index) => {
+      const pip = this.add.circle(306 + index * 14, 68, 4, 0xfb7185, index < this.playerHp ? 0.98 : 0.18);
+      pip.setStrokeStyle(1, 0xffd5da, 0.75);
+      pip.setDepth(9);
+      return pip;
+    });
     this.weaponNameText = this.add.text(22, 77, 'C 無-Runner Blaster', { fontSize: '12px', color: '#e0f2fe', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
     this.moduleText = this.add.text(22, 96, 'MOD: none', { fontSize: '10px', color: '#bae6fd', fontFamily: 'Arial, sans-serif' }).setOrigin(0, 0.5).setDepth(9);
     this.buildText = this.add.text(210, 96, 'BUILD 0', { fontSize: '10px', color: '#fef3c7', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0, 0.5).setDepth(9);
@@ -274,6 +327,10 @@ export default class GameScene extends Phaser.Scene {
 
     this.events.on('player-pointer-release', () => {
       this.pointerTarget = null;
+    });
+
+    this.events.on('player-special-trigger', () => {
+      this.activateSpecial();
     });
   }
 
@@ -441,12 +498,200 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  private updateBossAttacks(delta: number): void {
+    if (!this.boss || !this.currentBossTheme || this.boss.y < 116) {
+      return;
+    }
+
+    this.bossAttackTimer -= delta;
+    this.bossSpecialTimer -= delta;
+
+    if (this.bossAttackTimer <= 0) {
+      this.fireBossPattern(this.currentBossTheme);
+      const loopPressure = Math.min(260, this.bossLoopIndex * 34);
+      this.bossAttackTimer = Math.max(520, 1180 - loopPressure - Phaser.Math.Between(0, 180));
+    }
+
+    if (this.bossSpecialTimer <= 0) {
+      this.castBossSpecial(this.currentBossTheme);
+      this.bossSpecialTimer = Math.max(4200, 7600 - this.bossLoopIndex * 260);
+    }
+  }
+
+  private updateBossProjectiles(delta: number): void {
+    this.bossProjectiles.getChildren().forEach((child) => {
+      const projectile = child as Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle;
+      projectile.x += Number(projectile.getData('vx') ?? 0) * (delta / 1000);
+      projectile.y += Number(projectile.getData('vy') ?? 0) * (delta / 1000);
+      projectile.setRotation(projectile.rotation + Number(projectile.getData('spin') ?? 0) * (delta / 1000));
+      (projectile.body as Phaser.Physics.Arcade.Body | undefined)?.updateFromGameObject();
+
+      if (projectile.y > 780 || projectile.y < -120 || projectile.x < -80 || projectile.x > 480) {
+        projectile.destroy();
+      }
+    });
+  }
+
+  private fireBossPattern(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const pattern = this.bossPatternIndex % 3;
+    this.bossPatternIndex += 1;
+
+    if (pattern === 0) {
+      this.spawnBossAimedShot(theme);
+      return;
+    }
+
+    if (pattern === 1) {
+      this.spawnBossFanShot(theme);
+      return;
+    }
+
+    this.spawnBossLaneStrike(theme, false);
+  }
+
+  private spawnBossAimedShot(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const count = 2 + Math.min(3, Math.floor(this.bossLoopIndex / 2));
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * 95, () => {
+        if (!this.boss) {
+          return;
+        }
+        const angle = Phaser.Math.Angle.Between(this.boss.x, this.boss.y + 40, this.player.x, this.player.y);
+        const speed = 210 + this.bossLoopIndex * 18;
+        this.spawnBossProjectile(this.boss.x, this.boss.y + 72, Math.cos(angle) * speed, Math.sin(angle) * speed, 9, theme.primary, 1, 'orb');
+      });
+    }
+  }
+
+  private spawnBossFanShot(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const fanCount = 7 + Math.min(4, this.bossLoopIndex);
+    const spread = Phaser.Math.DegToRad(68);
+    const baseAngle = Math.PI / 2;
+    for (let i = 0; i < fanCount; i++) {
+      const t = fanCount === 1 ? 0.5 : i / (fanCount - 1);
+      const angle = baseAngle - spread / 2 + spread * t;
+      const speed = 175 + this.bossLoopIndex * 14 + (i % 2) * 28;
+      this.spawnBossProjectile(this.boss.x, this.boss.y + 70, Math.cos(angle) * speed, Math.sin(angle) * speed, 7, i % 2 === 0 ? theme.secondary : theme.accent, 1, 'diamond');
+    }
+    this.spawnBurst(this.boss.x, this.boss.y + 76, theme.secondary, 18);
+  }
+
+  private spawnBossLaneStrike(theme: BossTheme, empowered: boolean): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const laneXs = empowered ? [86, 146, 200, 254, 314] : [112, 200, 288];
+    const selected = laneXs.filter((_, index) => empowered || (index + this.bossPatternIndex) % 2 === 0);
+    selected.forEach((x, index) => {
+      const warning = this.add.rectangle(x, 395, empowered ? 38 : 30, 670, theme.primary, empowered ? 0.2 : 0.14).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      warning.setStrokeStyle(2, theme.accent, empowered ? 0.82 : 0.52);
+      this.tweens.add({
+        targets: warning,
+        alpha: empowered ? 0.42 : 0.3,
+        yoyo: true,
+        repeat: 2,
+        duration: 120,
+        onComplete: () => {
+          warning.destroy();
+          const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.68 : 0.46).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          this.tweens.add({ targets: beam, alpha: 0, scaleX: 1.7, duration: 310, ease: 'Quad.easeOut', onComplete: () => beam.destroy() });
+          if (Math.abs(this.player.x - x) < (empowered ? 34 : 26)) {
+            this.damagePlayer(empowered ? 2 : 1, empowered ? 'BOSS SPECIAL HIT' : 'BOSS HIT', theme.accent);
+          }
+        },
+      });
+      this.time.delayedCall(index * 55, () => this.playTone(190 + index * 30, 0.05, 0.025));
+    });
+  }
+
+  private castBossSpecial(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    this.showFlash('BOSS SPECIAL', '#fecaca', this.boss.x, this.boss.y - 104);
+    this.cameras.main.shake(520, 0.007);
+    this.playRareSound();
+
+    const { width, height } = this.scale;
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.2).setDepth(24).setBlendMode(Phaser.BlendModes.ADD);
+    const sigil = this.add.circle(this.boss.x, this.boss.y + 44, 74, theme.secondary, 0).setStrokeStyle(6, theme.accent, 0.92).setDepth(25);
+    this.tweens.add({ targets: veil, alpha: 0, duration: 900, onComplete: () => veil.destroy() });
+    this.tweens.add({ targets: sigil, scale: 2.8, angle: 220, alpha: 0, duration: 940, ease: 'Cubic.easeOut', onComplete: () => sigil.destroy() });
+
+    this.time.delayedCall(620, () => {
+      this.spawnBossLaneStrike(theme, true);
+      this.spawnBossNova(theme);
+    });
+  }
+
+  private spawnBossNova(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const count = 18 + Math.min(10, this.bossLoopIndex * 2);
+    const originX = this.boss.x;
+    const originY = this.boss.y + 66;
+    for (let i = 0; i < count; i++) {
+      const angle = Phaser.Math.DegToRad(32 + (360 / count) * i);
+      const speed = 135 + (i % 3) * 38 + this.bossLoopIndex * 9;
+      const vy = Math.max(72, Math.sin(angle) * speed);
+      this.spawnBossProjectile(originX, originY, Math.cos(angle) * speed, vy, i % 2 === 0 ? 8 : 6, i % 2 === 0 ? theme.accent : theme.primary, 1, i % 2 === 0 ? 'orb' : 'diamond');
+    }
+    this.spawnBurst(originX, originY, theme.accent, 36);
+  }
+
+  private spawnBossProjectile(x: number, y: number, vx: number, vy: number, radius: number, color: number, damage: number, shape: 'orb' | 'diamond'): void {
+    const projectile = shape === 'orb'
+      ? this.add.circle(x, y, radius, color, 0.96)
+      : this.add.rectangle(x, y, radius * 1.8, radius * 1.8, color, 0.94);
+    projectile.setDepth(12);
+    projectile.setBlendMode(Phaser.BlendModes.ADD);
+    projectile.setData('vx', vx);
+    projectile.setData('vy', vy);
+    projectile.setData('damage', damage);
+    projectile.setData('spin', shape === 'diamond' ? 4.6 : 0.8);
+    projectile.setStrokeStyle(2, 0xffffff, 0.55);
+    if (shape === 'diamond') {
+      projectile.setAngle(45);
+    }
+    this.bossProjectiles.add(projectile);
+    this.physics.add.existing(projectile);
+    const body = projectile.body as Phaser.Physics.Arcade.Body;
+    body.setAllowGravity(false);
+    if (shape === 'orb') {
+      body.setCircle(radius);
+      body.setOffset(-radius, -radius);
+    } else {
+      body.setSize(radius * 1.5, radius * 1.5);
+      body.setOffset(-radius * 0.75, -radius * 0.75);
+    }
+  }
+
   private updateStatusPanel(): void {
     this.weaponText.setText(`${this.stats.weaponCount}`);
     this.powerText.setText(`${this.stats.power}`);
     this.levelText.setText(`${this.stats.level}`);
     this.distanceText.setText(`${Math.floor(this.distance)}m`);
     this.hpText.setText(`${this.playerHp}`);
+    this.hpPips.forEach((pip, index) => {
+      pip.setFillStyle(index < this.playerHp ? 0xfb7185 : 0x450a12, index < this.playerHp ? 0.98 : 0.26);
+      pip.setScale(index < this.playerHp ? 1 : 0.82);
+    });
     this.bestText.setText(`BEST ${Math.max(this.bestDistance, Math.floor(this.distance))}m`);
     this.weaponNameText.setText(getWeaponName(this.stats));
     const modules = this.stats.modules.length > 0 ? this.stats.modules.map((module) => getModuleProfile(module).label).join(' / ') : 'none';
@@ -461,6 +706,11 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateStageMood(primary: number, secondary: number, aura: number): void {
+    if (this.currentBossTheme) {
+      primary = this.currentBossTheme.primary;
+      secondary = this.currentBossTheme.secondary;
+      aura = this.currentBossTheme.accent;
+    }
     this.backgroundTint.setFillStyle(aura, 0.06 + Math.min(0.08, this.stats.tier * 0.006));
     this.trackGlow.setFillStyle(primary, 0.05 + Math.min(0.1, this.stats.level * 0.003));
     this.laneLights.forEach((line, index) => {
@@ -468,6 +718,44 @@ export default class GameScene extends Phaser.Scene {
     });
     this.speedLines.forEach((line, index) => {
       line.setFillStyle(index % 2 === 0 ? primary : secondary, 0.12 + Math.min(0.08, this.stats.fireRate * 0.01));
+    });
+  }
+
+  private updateBossBackdrop(delta: number): void {
+    const theme = this.currentBossTheme;
+    if (!theme) {
+      this.bossBackdrop?.setAlpha(Phaser.Math.Linear(this.bossBackdrop.alpha, 0, 0.08));
+      this.bossAurora?.setAlpha(Phaser.Math.Linear(this.bossAurora.alpha, 0, 0.08));
+      this.bossSigils.forEach((sigil) => sigil.setAlpha(Phaser.Math.Linear(sigil.alpha, 0, 0.08)));
+      this.bossMotes.forEach((mote) => mote.setAlpha(Phaser.Math.Linear(mote.alpha, 0, 0.08)));
+      return;
+    }
+
+    this.bossBackdrop.setFillStyle(theme.darkness, 0.34);
+    this.bossBackdrop.setAlpha(Phaser.Math.Linear(this.bossBackdrop.alpha, 1, 0.06));
+    this.bossAurora.setFillStyle(theme.primary, 0.28);
+    this.bossAurora.setAlpha(Phaser.Math.Linear(this.bossAurora.alpha, 1, 0.06));
+    this.bossAurora.setAngle(Math.sin(this.stageTimer * 0.0014) * 7);
+    this.bossAurora.setScale(1 + Math.sin(this.stageTimer * 0.002) * 0.08, 1);
+
+    this.bossSigils.forEach((sigil, index) => {
+      const pulse = 0.34 + Math.sin(this.stageTimer * 0.004 + index * 1.7) * 0.13;
+      sigil.setFillStyle(index % 2 === 0 ? theme.primary : theme.secondary, pulse * 0.22);
+      sigil.setStrokeStyle(2, index % 2 === 0 ? theme.accent : theme.secondary, pulse);
+      sigil.setAlpha(Phaser.Math.Linear(sigil.alpha, 1, 0.08));
+      sigil.setRotation(sigil.rotation + delta * 0.00045 * (index % 2 === 0 ? 1 : -1));
+      sigil.y += Math.sin(this.stageTimer * 0.003 + index) * 0.18;
+    });
+
+    this.bossMotes.forEach((mote, index) => {
+      mote.setFillStyle(index % 2 === 0 ? theme.accent : theme.primary, 0.22 + (index % 4) * 0.04);
+      mote.setAlpha(Phaser.Math.Linear(mote.alpha, 1, 0.08));
+      mote.y += (72 + (index % 5) * 16) * (delta / 1000);
+      mote.x += Math.sin(this.stageTimer * 0.004 + index) * 0.35;
+      mote.setAngle(mote.angle + (index % 2 === 0 ? 0.4 : -0.35));
+      if (mote.y > 750) {
+        mote.y = -30;
+      }
     });
   }
 
@@ -546,6 +834,8 @@ export default class GameScene extends Phaser.Scene {
 
     const pair = gateObject.getData('pair') as GatePair | undefined;
     const previousRarity = this.stats.rarity;
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
     const option: GateOption = {
       label: String(gateObject.getData('label') ?? 'OK'),
       kind: gateObject.getData('kind') as GateOption['kind'],
@@ -559,8 +849,12 @@ export default class GameScene extends Phaser.Scene {
     };
 
     this.stats = applyGateEffect(this.stats, option);
+    if (option.kind === 'heal' && option.good) {
+      this.playerHp = Math.min(5, this.playerHp + option.value);
+    }
     this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
     this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
+    this.showStatGainFeedback(previousStats, previousHp, option);
     if (option.good) {
       this.playUpgradeSound(option.kind);
       this.animateWeaponUpgrade(option.color);
@@ -587,14 +881,49 @@ export default class GameScene extends Phaser.Scene {
     } else if (this.stats.shield > 0) {
       this.stats = { ...this.stats, shield: this.stats.shield - 1 };
       this.showFlash('SHIELD BLOCK', '#bae6fd', this.player.x, this.player.y - 72);
+      this.pulseStatusText(this.hpText, 0x38bdf8);
     } else {
       this.stats = applyEnemyImpact(this.stats);
       this.playerHp -= enemyObject.getDamage();
       this.showFlash(`HIT -${enemyObject.getDamage()}`, '#fecaca', this.player.x, this.player.y - 72);
+      this.pulseStatusText(this.hpText, 0xfb7185);
     }
     this.spawnBurst(enemyObject.x, enemyObject.y, 0xff4d6d, 16);
     enemyObject.destroy();
 
+    if (this.playerHp <= 0) {
+      this.finish('GAME OVER');
+    }
+  }
+
+  private handleBossProjectileCollision(projectile: Phaser.GameObjects.GameObject): void {
+    if (!projectile.active) {
+      return;
+    }
+
+    const damage = Number(projectile.getData('damage') ?? 1);
+    const color = this.currentBossTheme?.accent ?? 0xfb7185;
+    const x = 'x' in projectile ? Number(projectile.x) : this.player.x;
+    const y = 'y' in projectile ? Number(projectile.y) : this.player.y;
+    this.spawnBurst(x, y, color, 18);
+    projectile.destroy();
+    this.damagePlayer(damage, `BOSS HIT -${damage}`, color);
+  }
+
+  private damagePlayer(amount: number, label: string, color: number): void {
+    if (this.stats.shield > 0) {
+      this.stats = { ...this.stats, shield: Math.max(0, this.stats.shield - amount) };
+      this.showFlash('SHIELD BLOCK', '#bae6fd', this.player.x, this.player.y - 72);
+      this.pulseStatusText(this.hpText, 0x38bdf8);
+      this.spawnBurst(this.player.x, this.player.y, 0x38bdf8, 18);
+      return;
+    }
+
+    this.stats = applyEnemyImpact(this.stats);
+    this.playerHp -= amount;
+    this.showFlash(label, '#fecaca', this.player.x, this.player.y - 74);
+    this.pulseStatusText(this.hpText, color);
+    this.cameras.main.shake(170 + amount * 80, 0.003 + amount * 0.001);
     if (this.playerHp <= 0) {
       this.finish('GAME OVER');
     }
@@ -631,6 +960,8 @@ export default class GameScene extends Phaser.Scene {
     if (this.bossHp <= 0 && this.boss) {
       this.spawnBurst(this.boss.x, this.boss.y, 0xfef3c7, 42);
       this.showFlash('BOSS BREAK +Lv', '#fef3c7', this.boss.x, this.boss.y - 70);
+      const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+      const previousHp = this.playerHp;
       this.stats = {
         ...this.stats,
         level: this.stats.level + 1,
@@ -639,8 +970,14 @@ export default class GameScene extends Phaser.Scene {
         tier: this.stats.tier + 1,
         synergy: this.stats.synergy + 3,
       };
+      this.playerHp = Math.min(5, this.playerHp + 1);
+      this.showStatGainFeedback(previousStats, previousHp, { label: 'BOSS BONUS', kind: 'fusion', value: 1, color: 0xfef3c7, good: true });
       this.boss.destroy();
       this.boss = undefined;
+      this.currentBossTheme = undefined;
+      this.bossProjectiles.clear(true, true);
+      this.bossAttackTimer = 0;
+      this.bossSpecialTimer = 0;
       this.bossLoopIndex += 1;
       this.bossHpBar.setVisible(false);
       this.bossHpFill.setVisible(false);
@@ -651,8 +988,13 @@ export default class GameScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.bossMaxHp = createBossHp(this.bossLoopIndex);
     this.bossHp = this.bossMaxHp;
-    this.boss = new Boss(this, 200, -130, this.bossHp, getBossAssetByLoop(this.bossLoopIndex).key);
+    const bossAsset = getBossAssetByLoop(this.bossLoopIndex);
+    this.currentBossTheme = getBossTheme(bossAsset.key);
+    this.boss = new Boss(this, 200, -130, this.bossHp, bossAsset.key);
     this.boss.setDepth(2);
+    this.bossAttackTimer = 1200;
+    this.bossSpecialTimer = 4300 + Phaser.Math.Between(0, 1200);
+    this.bossPatternIndex = this.bossLoopIndex;
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);
 
@@ -668,6 +1010,7 @@ export default class GameScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(9);
     this.playRareSound();
     this.spawnBurst(200, 148, 0xfb7185, 34);
+    this.spawnBossArrivalEffect(this.currentBossTheme);
     this.showFlash('BOSS INCOMING', '#fda4af', 200, 148);
   }
 
@@ -679,6 +1022,182 @@ export default class GameScene extends Phaser.Scene {
     const hpRatio = clamp(this.bossHp / this.bossMaxHp, 0, 1);
     this.bossHpFill.displayWidth = Math.max(0, hpRatio * 180);
     this.bossHpText.setText(`BOSS ${Math.max(0, this.bossHp)} HP`);
+  }
+
+  private activateSpecial(): void {
+    if (this.isGameOver || this.isPaused) {
+      return;
+    }
+
+    if (this.playerHp <= 1) {
+      this.showFlash('耐久不足', '#fecaca', this.player.x, this.player.y - 92);
+      this.pulseStatusText(this.hpText, 0xfb7185);
+      this.spawnBurst(this.player.x, this.player.y, 0xfb7185, 16);
+      return;
+    }
+
+    const colors = getWeaponColors(this.stats);
+    this.specialActive = true;
+    this.specialTimer = 2600 + Math.min(1100, this.stats.synergy * 42 + this.stats.level * 18);
+    this.specialDrainTimer = this.getSpecialDrainInterval() * 0.42;
+    this.specialPulseTimer = 0;
+    this.showSpecialOpening(colors.primary, colors.secondary, colors.aura);
+    this.playRareSound();
+    this.cameras.main.shake(420, 0.006);
+  }
+
+  private updateSpecial(delta: number): void {
+    if (!this.specialActive) {
+      return;
+    }
+
+    this.specialTimer -= delta;
+    this.specialDrainTimer += delta;
+    this.specialPulseTimer += delta;
+
+    const drainInterval = this.getSpecialDrainInterval();
+    if (this.specialDrainTimer >= drainInterval) {
+      this.specialDrainTimer = 0;
+      this.playerHp -= 1;
+      this.pulseStatusText(this.hpText, 0xfb7185);
+      this.showFlash('LIFE BURN', '#fecaca', this.player.x, this.player.y - 118);
+      this.spawnBurst(this.player.x, this.player.y, 0xfb7185, 20);
+      if (this.playerHp <= 0) {
+        this.finish('GAME OVER');
+        return;
+      }
+    }
+
+    if (this.specialPulseTimer >= 125) {
+      this.specialPulseTimer = 0;
+      this.emitSpecialPulse();
+    }
+
+    if (this.specialTimer <= 0) {
+      this.specialActive = false;
+      this.showFlash('OVERDRIVE END', '#e0f2fe', this.player.x, this.player.y - 104);
+    }
+  }
+
+  private getSpecialDrainInterval(): number {
+    const heavyArchetypes = ['anchor', 'gigas', 'atlas', 'hammer', 'magnum', 'rail', 'meteor', 'dragon'];
+    const efficientArchetypes = ['drone', 'hydra', 'wasp', 'wind', 'orbit', 'lotus', 'seraph', 'rune'];
+    const heavyCost = heavyArchetypes.includes(this.stats.archetype) ? -170 : 0;
+    const efficientBonus = efficientArchetypes.includes(this.stats.archetype) ? 150 : 0;
+    const rarityCost = this.stats.rarity === 'mythic' ? -110 : this.stats.rarity === 'legend' ? -70 : this.stats.rarity === 'epic' ? -35 : 0;
+    const buildCost = Math.min(180, this.stats.power * 5 + this.stats.weaponCount * 2);
+    return clamp(1040 + efficientBonus + heavyCost + rarityCost - buildCost, 620, 1180);
+  }
+
+  private showSpecialOpening(primary: number, secondary: number, aura: number): void {
+    const { width, height } = this.scale;
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, aura, 0.42).setDepth(35).setBlendMode(Phaser.BlendModes.ADD);
+    const crown = this.add.circle(this.player.x, this.player.y, 48, primary, 0).setStrokeStyle(7, secondary, 1).setDepth(36);
+    const halo = this.add.circle(this.player.x, this.player.y, 78, secondary, 0).setStrokeStyle(3, aura, 0.9).setDepth(36);
+    const title = this.add.text(width / 2, height * 0.36, 'LIFE OVERDRIVE', {
+      fontSize: '34px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(37);
+    const subtitle = this.add.text(width / 2, height * 0.42, getWeaponName(this.stats), {
+      fontSize: '13px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(37);
+
+    for (let i = 0; i < 18; i++) {
+      const angle = (Math.PI * 2 * i) / 18;
+      const ray = this.add.rectangle(this.player.x, this.player.y, 5, 150, i % 2 === 0 ? primary : secondary, 0.46).setDepth(34);
+      ray.setBlendMode(Phaser.BlendModes.ADD);
+      ray.setRotation(angle);
+      this.tweens.add({
+        targets: ray,
+        alpha: 0,
+        scaleY: 2.2,
+        duration: 760,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ray.destroy(),
+      });
+    }
+
+    this.tweens.add({ targets: flash, alpha: 0, duration: 680, onComplete: () => flash.destroy() });
+    this.tweens.add({ targets: [crown, halo], scale: 4.2, alpha: 0, duration: 880, ease: 'Cubic.easeOut', onComplete: () => { crown.destroy(); halo.destroy(); } });
+    this.tweens.add({ targets: [title, subtitle], y: '-=28', alpha: 0, duration: 1180, ease: 'Sine.easeOut', onComplete: () => { title.destroy(); subtitle.destroy(); } });
+  }
+
+  private emitSpecialPulse(): void {
+    const colors = getWeaponColors(this.stats);
+    const damage = Math.max(12, Math.round((this.stats.power + this.stats.level * 2 + this.stats.weaponCount * 0.45) * getWeaponPowerMultiplier(this.stats) * 1.12));
+    const beamCount = 5 + Math.min(6, Math.floor(this.stats.weaponCount / 12));
+    const baseX = this.player.x;
+
+    for (let i = 0; i < beamCount; i++) {
+      const offset = i - (beamCount - 1) / 2;
+      const beam = this.add.rectangle(baseX + offset * 32, this.player.y - 150, 8, 520, i % 2 === 0 ? colors.bullet : colors.primary, 0.58).setDepth(14);
+      beam.setBlendMode(Phaser.BlendModes.ADD);
+      beam.setAngle(offset * 3.5);
+      this.tweens.add({
+        targets: beam,
+        alpha: 0,
+        scaleX: 3.1,
+        duration: 220,
+        ease: 'Quad.easeOut',
+        onComplete: () => beam.destroy(),
+      });
+    }
+
+    const ring = this.add.circle(this.player.x, this.player.y, 34, colors.aura, 0).setStrokeStyle(4, colors.bullet, 0.92).setDepth(15);
+    this.tweens.add({
+      targets: ring,
+      scale: 5.4,
+      alpha: 0,
+      duration: 360,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy(),
+    });
+
+    this.enemies.getChildren().forEach((enemy) => {
+      const enemyObject = enemy as Enemy;
+      const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemyObject.x, enemyObject.y);
+      if (distance < 460 && enemyObject.damage(damage * 2)) {
+        this.spawnBurst(enemyObject.x, enemyObject.y, colors.secondary, 28);
+        enemyObject.destroy();
+      } else if (distance < 460) {
+        this.spawnHitEffect(enemyObject.x, enemyObject.y, colors.bullet);
+      }
+    });
+
+    if (this.boss) {
+      this.bossHp -= damage;
+      this.spawnHitEffect(this.boss.x + Phaser.Math.Between(-86, 86), this.boss.y + Phaser.Math.Between(-40, 80), colors.bullet);
+      if (this.bossHp <= 0) {
+        this.hitBoss(new Bullet(this, this.boss.x, this.boss.y, colors.bullet));
+      }
+    }
+  }
+
+  private spawnBossArrivalEffect(theme: BossTheme): void {
+    const { width, height } = this.scale;
+    const omen = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.24).setDepth(20).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: omen, alpha: 0, duration: 760, onComplete: () => omen.destroy() });
+    for (let i = 0; i < 9; i++) {
+      const ring = this.add.circle(200, 148, 42 + i * 18, theme.primary, 0).setStrokeStyle(2 + (i % 3), i % 2 === 0 ? theme.accent : theme.secondary, 0.78).setDepth(21);
+      this.tweens.add({
+        targets: ring,
+        scale: 1.8 + i * 0.13,
+        alpha: 0,
+        duration: 520 + i * 70,
+        ease: 'Cubic.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+    this.cameras.main.shake(360, 0.004);
   }
 
   private spawnBurst(x: number, y: number, color: number, size: number): void {
@@ -705,6 +1224,80 @@ export default class GameScene extends Phaser.Scene {
       scale: 2.4,
       duration: 180,
       onComplete: () => spark.destroy(),
+    });
+  }
+
+  private showStatGainFeedback(previousStats: PlayerStats, previousHp: number, option: GateOption): void {
+    const gains: Array<{ label: string; target: Phaser.GameObjects.Text; color: number }> = [];
+    const weaponDelta = this.stats.weaponCount - previousStats.weaponCount;
+    const powerDelta = this.stats.power - previousStats.power;
+    const levelDelta = this.stats.level - previousStats.level;
+    const hpDelta = this.playerHp - previousHp;
+
+    if (weaponDelta !== 0) {
+      gains.push({ label: `武器 ${weaponDelta > 0 ? '+' : ''}${weaponDelta}`, target: this.weaponText, color: weaponDelta > 0 ? 0x86efac : 0xfb7185 });
+    }
+    if (powerDelta > 0) {
+      gains.push({ label: `攻撃力 +${powerDelta}`, target: this.powerText, color: 0x93c5fd });
+    }
+    if (levelDelta > 0) {
+      gains.push({ label: `レベル +${levelDelta}`, target: this.levelText, color: 0xd8b4fe });
+    }
+    if (hpDelta > 0) {
+      gains.push({ label: `耐久 +${hpDelta}`, target: this.hpText, color: 0xfb7185 });
+    }
+
+    if (option.good && gains.length === 0) {
+      gains.push({ label: option.label, target: this.buildText, color: option.color });
+    }
+
+    gains.slice(0, 3).forEach((gain, index) => {
+      this.pulseStatusText(gain.target, gain.color);
+      const text = this.add.text(this.player.x, this.player.y - 92 - index * 26, gain.label, {
+        fontSize: index === 0 ? '24px' : '18px',
+        color: `#${gain.color.toString(16).padStart(6, '0')}`,
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#020617',
+        strokeThickness: 5,
+      }).setOrigin(0.5).setDepth(16);
+      this.tweens.add({
+        targets: text,
+        y: text.y - 42,
+        alpha: 0,
+        scale: 1.16,
+        duration: 760,
+        ease: 'Cubic.easeOut',
+        onComplete: () => text.destroy(),
+      });
+    });
+
+    if (gains.length > 0) {
+      const color = option.good ? option.color : 0xff4d6d;
+      const ring = this.add.circle(this.player.x, this.player.y, 34, color, 0).setStrokeStyle(5, color, 0.95).setDepth(15);
+      this.tweens.add({
+        targets: ring,
+        scale: 2.7,
+        alpha: 0,
+        duration: 520,
+        ease: 'Quad.easeOut',
+        onComplete: () => ring.destroy(),
+      });
+    }
+  }
+
+  private pulseStatusText(target: Phaser.GameObjects.Text, color: number): void {
+    target.setTint(color);
+    this.tweens.add({
+      targets: target,
+      scale: 1.42,
+      duration: 130,
+      yoyo: true,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        target.setScale(1);
+        target.clearTint();
+      },
     });
   }
 

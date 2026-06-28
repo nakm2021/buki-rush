@@ -21,6 +21,10 @@ export function applyGateEffect(stats: PlayerStats, gate: GateOption): PlayerSta
     case 'power':
       next.power = Math.min(40, next.power + gate.value);
       break;
+    case 'heal':
+      next.shield = Math.min(5, next.shield + 1);
+      next.synergy += 1;
+      break;
     case 'element':
       next.element = gate.element ?? next.element;
       next.power = Math.min(40, next.power + Math.max(1, gate.value));
