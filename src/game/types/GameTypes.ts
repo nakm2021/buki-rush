@@ -6,6 +6,8 @@ export type WeaponModule = string;
 
 export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
 
+export type StatusEffect = 'poison' | 'paralyze' | 'freeze' | 'curse' | 'burn';
+
 export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion';
 
 export interface PlayerStats {
@@ -78,5 +80,7 @@ export interface EnemyVariant {
   radius: number;
   damage: number;
   imageKey?: string;
+  statusEffect?: StatusEffect;
+  statusChance?: number;
   lethal?: boolean;
 }

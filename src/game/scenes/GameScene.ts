@@ -11,10 +11,31 @@ import { loadBestDistance, loadPlayerMeta, recordRun, saveBestDistance } from '.
 import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
 import { getBuildRank, getModuleProfile, getShotSpread, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
-import type { GateOption, PlayerStats, StageStep } from '../types/GameTypes';
+import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
 type RelicId = 'phoenix-core' | 'titan-plate' | 'hydra-heart' | 'storm-engine' | 'royal-crown' | 'void-contract';
+
+interface PlayerStatusState {
+  poisonMs: number;
+  poisonTickMs: number;
+  paralyzeMs: number;
+  freezeMs: number;
+  burnMs: number;
+  burnTickMs: number;
+  curseMs: number;
+}
+
+interface StageTheme {
+  name: string;
+  sky: number;
+  ground: number;
+  trackOuter: number;
+  trackMid: number;
+  trackInner: number;
+  lane: number;
+  accent: number;
+}
 
 interface RelicOption {
   id: RelicId;
@@ -28,6 +49,14 @@ const PLAYER_MIN_X = 40;
 const PLAYER_MAX_X = 360;
 const PLAYER_MIN_Y = 360;
 const PLAYER_MAX_Y = 660;
+
+const STAGE_THEMES: StageTheme[] = [
+  { name: 'STRAWBERRY DAWN', sky: 0x2a0d08, ground: 0x1c140f, trackOuter: 0xd6d8dd, trackMid: 0xbfc3ca, trackInner: 0xe5e7eb, lane: 0xffffff, accent: 0xfb7185 },
+  { name: 'NEON CIRCUIT', sky: 0x051923, ground: 0x06232c, trackOuter: 0x0f766e, trackMid: 0x164e63, trackInner: 0xd9f99d, lane: 0x67e8f9, accent: 0x22d3ee },
+  { name: 'TOXIC GARDEN', sky: 0x17210b, ground: 0x0f1f0c, trackOuter: 0x365314, trackMid: 0x65a30d, trackInner: 0xecfccb, lane: 0xd9f99d, accent: 0x84cc16 },
+  { name: 'FROST FORGE', sky: 0x082f49, ground: 0x0c1f2e, trackOuter: 0x075985, trackMid: 0x7dd3fc, trackInner: 0xf0f9ff, lane: 0xe0f2fe, accent: 0x38bdf8 },
+  { name: 'VOID RELIC', sky: 0x09051a, ground: 0x120a24, trackOuter: 0x312e81, trackMid: 0x6d28d9, trackInner: 0xe9d5ff, lane: 0xf0abfc, accent: 0xa855f7 },
+];
 
 export default class GameScene extends Phaser.Scene {
   private player!: PlayerWeapon;
@@ -89,11 +118,18 @@ export default class GameScene extends Phaser.Scene {
   private squadUnits: Phaser.GameObjects.Container[] = [];
   private speedLines: Phaser.GameObjects.Rectangle[] = [];
   private auraRings: Phaser.GameObjects.Arc[] = [];
+  private stageThemeIndex = 0;
+  private stageGround!: Phaser.GameObjects.Rectangle;
   private backgroundTint!: Phaser.GameObjects.Rectangle;
+  private trackOuter!: Phaser.GameObjects.Polygon;
+  private trackMid!: Phaser.GameObjects.Polygon;
+  private trackInner!: Phaser.GameObjects.Polygon;
   private bossBackdrop!: Phaser.GameObjects.Rectangle;
   private bossAurora!: Phaser.GameObjects.Rectangle;
   private bossSigils: Phaser.GameObjects.Arc[] = [];
   private bossMotes: Phaser.GameObjects.Rectangle[] = [];
+  private stageMarkers: Phaser.GameObjects.Rectangle[] = [];
+  private stageThemeText!: Phaser.GameObjects.Text;
   private currentBossTheme?: BossTheme;
   private trackGlow!: Phaser.GameObjects.Polygon;
   private laneLights: Phaser.GameObjects.Rectangle[] = [];
@@ -109,6 +145,15 @@ export default class GameScene extends Phaser.Scene {
   private defeatedBossKeys: string[] = [];
   private activeRelics: RelicId[] = [];
   private relicOverlay?: Phaser.GameObjects.Container;
+  private playerStatuses: PlayerStatusState = {
+    poisonMs: 0,
+    poisonTickMs: 0,
+    paralyzeMs: 0,
+    freezeMs: 0,
+    burnMs: 0,
+    burnTickMs: 0,
+    curseMs: 0,
+  };
   private medalCount = 0;
   private permanentRank = 0;
   private bossPhaseText!: Phaser.GameObjects.Text;
@@ -189,6 +234,8 @@ export default class GameScene extends Phaser.Scene {
     this.laneLights = [];
     this.bossSigils = [];
     this.bossMotes = [];
+    this.stageMarkers = [];
+    this.stageThemeIndex = 0;
     this.currentBossTheme = undefined;
     this.specialActive = false;
     this.specialTimer = 0;
@@ -204,6 +251,15 @@ export default class GameScene extends Phaser.Scene {
     this.medalCount = 0;
     this.stageBranchOffset = 0;
     this.pauseOverlay = undefined;
+    this.playerStatuses = {
+      poisonMs: 0,
+      poisonTickMs: 0,
+      paralyzeMs: 0,
+      freezeMs: 0,
+      burnMs: 0,
+      burnTickMs: 0,
+      curseMs: 0,
+    };
   }
 
   update(_time: number, delta: number): void {
@@ -217,6 +273,8 @@ export default class GameScene extends Phaser.Scene {
     this.distance += (smoothDelta / 1000) * 22;
 
     this.spawnStageEvents();
+    this.updatePlayerStatuses(smoothDelta);
+    this.updateEnemyStatuses(smoothDelta);
     this.updateMovement(smoothDelta);
     this.updateSpeedLines(smoothDelta);
     this.updateBullets(smoothDelta);
@@ -225,6 +283,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossProjectiles(smoothDelta);
     this.moveFlowingObjects(smoothDelta);
     this.updateBossBackdrop(smoothDelta);
+    this.updateStageBackground();
     this.updateBossBar();
     this.updateStatusPanel();
 
@@ -238,15 +297,16 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private drawTrack(width: number, height: number): void {
-    this.add.rectangle(width / 2, height / 2, width, height, 0x1c140f, 1);
+    const theme = STAGE_THEMES[0];
+    this.stageGround = this.add.rectangle(width / 2, height / 2, width, height, theme.ground, 1);
     this.backgroundTint = this.add.rectangle(width / 2, height / 2, width, height, 0x38bdf8, 0.08).setBlendMode(Phaser.BlendModes.ADD);
     this.backgroundTint.setDepth(0.05);
     this.bossBackdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0).setDepth(0.055);
     this.bossAurora = this.add.rectangle(width / 2, height / 2, width * 0.72, height, 0x38bdf8, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.bossAurora.setDepth(0.07);
-    this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], 0xd6d8dd, 1);
-    this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], 0xbfc3ca, 1);
-    this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0xe5e7eb, 0.92);
+    this.trackOuter = this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], theme.trackOuter, 1);
+    this.trackMid = this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], theme.trackMid, 1);
+    this.trackInner = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], theme.trackInner, 0.92);
     this.trackGlow = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0x38bdf8, 0.08);
     this.trackGlow.setBlendMode(Phaser.BlendModes.ADD);
 
@@ -287,6 +347,23 @@ export default class GameScene extends Phaser.Scene {
       mote.setDepth(0.09);
       this.bossMotes.push(mote);
     }
+
+    for (let i = 0; i < 18; i++) {
+      const marker = this.add.rectangle(34 + (i * 71) % 332, (i * 117) % height, 8 + (i % 3) * 3, 56 + (i % 4) * 12, theme.accent, 0.1);
+      marker.setAngle(i % 2 === 0 ? -11 : 11);
+      marker.setBlendMode(Phaser.BlendModes.ADD);
+      marker.setDepth(0.06);
+      this.stageMarkers.push(marker);
+    }
+
+    this.stageThemeText = this.add.text(22, 128, theme.name, {
+      fontSize: '10px',
+      color: '#fef3c7',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#020617',
+      strokeThickness: 3,
+    }).setOrigin(0, 0.5).setAlpha(0.72).setDepth(9);
   }
 
   private createStatusPanel(): void {
@@ -433,12 +510,12 @@ export default class GameScene extends Phaser.Scene {
 
     if (moveX !== 0 || moveY !== 0) {
       const length = Math.hypot(moveX, moveY);
-      const speed = 315;
+      const speed = 315 * this.getPlayerMoveMultiplier();
       this.player.x += (moveX / length) * speed * dt;
       this.player.y += (moveY / length) * speed * dt;
       this.pointerTarget = null;
     } else if (this.pointerTarget) {
-      const follow = 1 - Math.pow(0.0018, dt);
+      const follow = 1 - Math.pow(0.0018, dt * this.getPlayerMoveMultiplier());
       this.player.x = Phaser.Math.Linear(this.player.x, this.pointerTarget.x, follow);
       this.player.y = Phaser.Math.Linear(this.player.y, this.pointerTarget.y, follow);
     }
@@ -469,7 +546,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.enemies.getChildren().forEach((enemy) => {
       const obj = enemy as Enemy;
-      obj.y += speed * (delta / 1000);
+      const slowMultiplier = Number(obj.getData('slowMultiplier') ?? 1);
+      obj.y += speed * slowMultiplier * (delta / 1000);
       (obj.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
       if (obj.y > 790) {
         obj.destroy();
@@ -507,6 +585,10 @@ export default class GameScene extends Phaser.Scene {
       bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4);
       bullet.setScale(this.stats.modules.includes('focus') ? 1.28 : 1);
       bullet.setData('pierceLeft', pierceLeft);
+      const shotStatus = this.getPlayerShotStatus();
+      if (shotStatus && Math.random() < shotStatus.chance) {
+        bullet.setData('statusEffect', shotStatus.effect);
+      }
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.setVelocityX(offset * 24 * spread);
       body.setVelocityY(-440 - this.stats.power * 22);
@@ -522,6 +604,158 @@ export default class GameScene extends Phaser.Scene {
         bullet.destroy();
       }
     });
+  }
+
+  private updatePlayerStatuses(delta: number): void {
+    const statuses = this.playerStatuses;
+    if (statuses.poisonMs > 0) {
+      statuses.poisonMs = Math.max(0, statuses.poisonMs - delta);
+      statuses.poisonTickMs += delta;
+      if (statuses.poisonTickMs >= 900) {
+        statuses.poisonTickMs = 0;
+        this.playerHp -= 1;
+        this.showFlash('POISON -1', '#bef264', this.player.x, this.player.y - 94);
+        this.spawnBurst(this.player.x, this.player.y, 0x84cc16, 14);
+      }
+    }
+    if (statuses.burnMs > 0) {
+      statuses.burnMs = Math.max(0, statuses.burnMs - delta);
+      statuses.burnTickMs += delta;
+      if (statuses.burnTickMs >= 700) {
+        statuses.burnTickMs = 0;
+        this.playerHp -= 1;
+        this.showFlash('BURN -1', '#fed7aa', this.player.x, this.player.y - 94);
+        this.spawnBurst(this.player.x, this.player.y, 0xfb923c, 14);
+      }
+    }
+    statuses.paralyzeMs = Math.max(0, statuses.paralyzeMs - delta);
+    statuses.freezeMs = Math.max(0, statuses.freezeMs - delta);
+    statuses.curseMs = Math.max(0, statuses.curseMs - delta);
+
+    if (this.playerHp <= 0) {
+      this.finish('GAME OVER');
+    }
+  }
+
+  private updateEnemyStatuses(delta: number): void {
+    this.enemies.getChildren().forEach((child) => {
+      const enemy = child as Enemy;
+      const poisonMs = Math.max(0, Number(enemy.getData('poisonMs') ?? 0) - delta);
+      if (poisonMs > 0) {
+        const tick = Number(enemy.getData('poisonTickMs') ?? 0) + delta;
+        if (tick >= 420) {
+          enemy.setData('poisonTickMs', 0);
+          const poisonDamage = Math.max(2, Math.round(this.stats.power * 0.45 + this.stats.level));
+          if (enemy.damage(poisonDamage)) {
+            this.spawnBurst(enemy.x, enemy.y, 0x84cc16, 20);
+            enemy.destroy();
+            return;
+          }
+          this.spawnHitEffect(enemy.x, enemy.y, 0x84cc16);
+        } else {
+          enemy.setData('poisonTickMs', tick);
+        }
+      }
+      enemy.setData('poisonMs', poisonMs);
+
+      const slowMs = Math.max(0, Number(enemy.getData('slowMs') ?? 0) - delta);
+      enemy.setData('slowMs', slowMs);
+      enemy.setData('slowMultiplier', slowMs > 0 ? Number(enemy.getData('slowPower') ?? 0.45) : 1);
+    });
+  }
+
+  private getPlayerMoveMultiplier(): number {
+    let multiplier = 1;
+    if (this.playerStatuses.paralyzeMs > 0) multiplier *= 0.58;
+    if (this.playerStatuses.freezeMs > 0) multiplier *= 0.7;
+    if (this.playerStatuses.curseMs > 0) multiplier *= 0.84;
+    return multiplier;
+  }
+
+  private getPlayerShotStatus(): { effect: StatusEffect; chance: number } | undefined {
+    if (this.stats.modules.includes('poison') || this.stats.element === 'shadow') {
+      return { effect: 'poison', chance: 0.34 + Math.min(0.16, this.stats.synergy * 0.01) };
+    }
+    if (this.stats.modules.includes('volt') || this.stats.element === 'thunder') {
+      return { effect: 'paralyze', chance: 0.28 };
+    }
+    if (this.stats.modules.includes('freeze') || this.stats.element === 'ice') {
+      return { effect: 'freeze', chance: 0.3 };
+    }
+    if (this.stats.modules.includes('flare') || this.stats.element === 'fire') {
+      return { effect: 'burn', chance: 0.24 };
+    }
+    return undefined;
+  }
+
+  private applyEnemyStatus(enemy: Enemy, effect?: StatusEffect): void {
+    if (!effect) {
+      return;
+    }
+
+    switch (effect) {
+      case 'poison':
+        enemy.setData('poisonMs', 2600);
+        enemy.setData('poisonTickMs', Number(enemy.getData('poisonTickMs') ?? 0));
+        this.showFlash('POISON', '#bef264', enemy.x, enemy.y - 36);
+        break;
+      case 'paralyze':
+        enemy.setData('slowMs', 1600);
+        enemy.setData('slowPower', 0.2);
+        this.showFlash('STUN', '#fef08a', enemy.x, enemy.y - 36);
+        break;
+      case 'freeze':
+        enemy.setData('slowMs', 2200);
+        enemy.setData('slowPower', 0.34);
+        this.showFlash('FREEZE', '#bae6fd', enemy.x, enemy.y - 36);
+        break;
+      case 'burn':
+        enemy.damage(Math.max(3, Math.round(this.stats.power * 0.55)));
+        this.spawnBurst(enemy.x, enemy.y, 0xfb923c, 16);
+        break;
+      case 'curse':
+        enemy.setData('slowMs', 1800);
+        enemy.setData('slowPower', 0.55);
+        this.showFlash('CURSE', '#e9d5ff', enemy.x, enemy.y - 36);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private applyPlayerStatus(effect?: StatusEffect, chance = 0): void {
+    if (!effect || Math.random() > chance) {
+      return;
+    }
+
+    switch (effect) {
+      case 'poison':
+        this.playerStatuses.poisonMs = Math.max(this.playerStatuses.poisonMs, 3600);
+        this.playerStatuses.poisonTickMs = 0;
+        this.showFlash('POISONED', '#bef264', this.player.x, this.player.y - 102);
+        break;
+      case 'paralyze':
+        this.playerStatuses.paralyzeMs = Math.max(this.playerStatuses.paralyzeMs, 2200);
+        this.showFlash('PARALYZE', '#fef08a', this.player.x, this.player.y - 102);
+        break;
+      case 'freeze':
+        this.playerStatuses.freezeMs = Math.max(this.playerStatuses.freezeMs, 2600);
+        this.showFlash('SLOWED', '#bae6fd', this.player.x, this.player.y - 102);
+        break;
+      case 'curse':
+        this.playerStatuses.curseMs = Math.max(this.playerStatuses.curseMs, 3400);
+        this.stats = { ...this.stats, fireRate: Math.max(0.8, this.stats.fireRate - 0.18), power: Math.max(1, this.stats.power - 1) };
+        this.showFlash('CURSE DOWN', '#e9d5ff', this.player.x, this.player.y - 102);
+        break;
+      case 'burn':
+        this.playerStatuses.burnMs = Math.max(this.playerStatuses.burnMs, 2400);
+        this.playerStatuses.burnTickMs = 0;
+        this.showFlash('BURNING', '#fed7aa', this.player.x, this.player.y - 102);
+        break;
+      default:
+        break;
+    }
+    this.cameras.main.shake(150, 0.0025);
   }
 
   private updateBossAttacks(delta: number): void {
@@ -772,6 +1006,30 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  private updateStageBackground(): void {
+    const nextIndex = Math.floor(this.distance / 360) % STAGE_THEMES.length;
+    const theme = STAGE_THEMES[nextIndex];
+    if (nextIndex !== this.stageThemeIndex) {
+      this.stageThemeIndex = nextIndex;
+      this.showFlash(theme.name, '#fef3c7', 200, 164);
+      this.spawnBurst(200, 220, theme.accent, 34);
+    }
+
+    this.stageGround.setFillStyle(theme.ground, 1);
+    this.trackOuter.setFillStyle(theme.trackOuter, 1);
+    this.trackMid.setFillStyle(theme.trackMid, 1);
+    this.trackInner.setFillStyle(theme.trackInner, 0.92);
+    this.stageThemeText.setText(theme.name);
+    this.stageThemeText.setColor(`#${theme.accent.toString(16).padStart(6, '0')}`);
+    this.stageMarkers.forEach((marker, index) => {
+      marker.setFillStyle(index % 2 === 0 ? theme.accent : theme.lane, 0.1 + Math.sin(this.stageTimer * 0.003 + index) * 0.04);
+      marker.y += (26 + (index % 4) * 5) * (1 / 60);
+      if (marker.y > 750) {
+        marker.y = -50;
+      }
+    });
+  }
+
   private updateBossBackdrop(delta: number): void {
     const theme = this.currentBossTheme;
     if (!theme) {
@@ -939,6 +1197,7 @@ export default class GameScene extends Phaser.Scene {
       this.showFlash(`HIT -${enemyObject.getDamage()}`, '#fecaca', this.player.x, this.player.y - 72);
       this.pulseStatusText(this.hpText, 0xfb7185);
     }
+    this.applyPlayerStatus(enemyObject.getStatusEffect(), enemyObject.getStatusChance());
     this.spawnBurst(enemyObject.x, enemyObject.y, 0xff4d6d, 16);
     enemyObject.destroy();
 
@@ -984,6 +1243,7 @@ export default class GameScene extends Phaser.Scene {
     const critical = Math.random() < this.stats.critRate;
     const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
     this.spawnHitEffect(bulletObject.x, bulletObject.y, critical ? 0xffffff : 0xfef08a);
+    this.applyEnemyStatus(enemyObject, bulletObject.getData('statusEffect') as StatusEffect | undefined);
     if (enemyObject.damage(damage)) {
       this.spawnBurst(enemyObject.x, enemyObject.y, 0xffb020, 20);
       enemyObject.destroy();

@@ -9,6 +9,8 @@ export class Enemy extends Phaser.GameObjects.Container {
   private readonly hpFill: Phaser.GameObjects.Rectangle;
   private readonly damageValue: number;
   private readonly lethal: boolean;
+  private readonly statusEffect?: EnemyVariant['statusEffect'];
+  private readonly statusChance: number;
 
   constructor(scene: Phaser.Scene, x: number, y: number, hp: number, variant: EnemyVariant = getEnemyVariant(0)) {
     super(scene, x, y);
@@ -17,6 +19,8 @@ export class Enemy extends Phaser.GameObjects.Container {
     this.maxHp = hp;
     this.damageValue = variant.damage;
     this.lethal = Boolean(variant.lethal);
+    this.statusEffect = variant.statusEffect;
+    this.statusChance = variant.statusChance ?? 0.55;
 
     const shadow = scene.add.ellipse(0, variant.radius + 10, variant.radius * 2.4, 13, 0x020617, 0.32);
     const glow = scene.add.circle(0, 0, variant.radius + 12, variant.lethal ? 0xff174d : variant.bodyColor, variant.lethal ? 0.28 : 0.13);
@@ -37,6 +41,16 @@ export class Enemy extends Phaser.GameObjects.Container {
           strokeThickness: 4,
         }).setOrigin(0.5)
       : undefined;
+    const statusBadge = variant.statusEffect
+      ? scene.add.text(variant.radius + 11, -variant.radius - 9, this.getStatusIcon(variant.statusEffect), {
+          fontSize: '14px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+          fontFamily: 'Arial, sans-serif',
+          stroke: '#020617',
+          strokeThickness: 3,
+        }).setOrigin(0.5)
+      : undefined;
     const hpBack = scene.add.rectangle(0, -variant.radius - 14, 46, 10, 0x020617, 0.82);
     hpBack.setStrokeStyle(1, variant.accentColor, 0.72);
     this.hpFill = scene.add.rectangle(-21, -variant.radius - 14, 42, 6, variant.lethal ? 0xff174d : variant.accentColor, 0.95).setOrigin(0, 0.5);
@@ -49,7 +63,11 @@ export class Enemy extends Phaser.GameObjects.Container {
       strokeThickness: 2,
     }).setOrigin(0.5);
 
-    this.add(warning ? [shadow, glow, ...parts, warning, hpBack, this.hpFill, this.label] : [shadow, glow, ...parts, hpBack, this.hpFill, this.label]);
+    const children = warning ? [shadow, glow, ...parts, warning, hpBack, this.hpFill, this.label] : [shadow, glow, ...parts, hpBack, this.hpFill, this.label];
+    if (statusBadge) {
+      children.push(statusBadge);
+    }
+    this.add(children);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const enemyBody = this.body as Phaser.Physics.Arcade.Body;
@@ -68,6 +86,14 @@ export class Enemy extends Phaser.GameObjects.Container {
 
   public isLethal(): boolean {
     return this.lethal;
+  }
+
+  public getStatusEffect(): EnemyVariant['statusEffect'] | undefined {
+    return this.statusEffect;
+  }
+
+  public getStatusChance(): number {
+    return this.statusChance;
   }
 
   public damage(amount: number): boolean {
@@ -185,6 +211,23 @@ export class Enemy extends Phaser.GameObjects.Container {
           footL,
           footR,
         ];
+    }
+  }
+
+  private getStatusIcon(effect: NonNullable<EnemyVariant['statusEffect']>): string {
+    switch (effect) {
+      case 'poison':
+        return 'PO';
+      case 'paralyze':
+        return 'ST';
+      case 'freeze':
+        return 'FR';
+      case 'curse':
+        return 'CU';
+      case 'burn':
+        return 'BR';
+      default:
+        return '!';
     }
   }
 }

@@ -36,37 +36,37 @@ export class GatePair extends Phaser.GameObjects.Container {
     container.setData('pair', this);
 
     const mainColor = option.good ? option.color : 0xef4444;
-    const darkColor = option.good ? 0x0f172a : 0x450a0a;
+    const darkColor = option.good ? 0x111827 : 0x450a0a;
     const icon = this.getIcon(option);
-    const shadow = scene.add.ellipse(6, 45, 132, 26, 0x020617, 0.34);
-    const glow = scene.add.circle(0, 0, option.good ? 58 : 52, mainColor, option.good ? 0.2 : 0.22);
+    const shadow = scene.add.ellipse(5, 47, 140, 25, 0x020617, 0.36);
+    const glow = scene.add.circle(0, 0, option.good ? 64 : 58, mainColor, option.good ? 0.24 : 0.26);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    const backPlate = scene.add.polygon(0, 0, [-50, -34, 48, -34, 62, 0, 48, 34, -50, 34, -62, 0], darkColor, 0.95);
-    backPlate.setStrokeStyle(2, 0x020617, 0.45);
-    const body = scene.add.polygon(0, 0, [-42, -29, 42, -29, 54, 0, 42, 29, -42, 29, -54, 0], mainColor, 0.96);
-    body.setStrokeStyle(4, option.good ? 0xf8fafc : 0xfee2e2, 0.95);
-    const topBevel = scene.add.polygon(0, -12, [-34, -13, 28, -13, 42, 0, 27, 8, -31, 6, -43, -1], 0xffffff, option.good ? 0.28 : 0.13);
-    const bottomBevel = scene.add.polygon(0, 16, [-38, 2, 37, 2, 48, 12, 33, 18, -34, 18, -48, 8], 0x020617, 0.18);
-    const leftPost = scene.add.triangle(-58, 28, 0, 0, 13, 8, 6, 36, option.good ? 0x334155 : 0x7f1d1d, 0.95);
-    const rightPost = scene.add.triangle(58, 28, 13, 0, 0, 8, 7, 36, option.good ? 0x334155 : 0x7f1d1d, 0.95);
-    const iconBack = option.good
-      ? scene.add.star(-39, -1, 7, 12, 21, 0x020617, 0.34)
-      : scene.add.circle(-39, -1, 20, 0x020617, 0.48);
-    iconBack.setStrokeStyle(2, option.good ? 0xffffff : 0xffd5da, 0.45);
-    const iconText = scene.add.text(-39, -2, icon, {
-      fontSize: '18px',
+    const rail = scene.add.rectangle(0, 0, 136, 76, 0x020617, 0.44);
+    rail.setStrokeStyle(2, mainColor, 0.5);
+    const leftBlade = scene.add.triangle(-71, -1, 0, 0, 28, -42, 28, 42, mainColor, 0.82);
+    const rightBlade = scene.add.triangle(71, -1, 28, 0, 0, -42, 0, 42, mainColor, 0.82);
+    const body = scene.add.rectangle(0, 0, 108, 58, darkColor, 0.94);
+    body.setStrokeStyle(4, option.good ? mainColor : 0xffd5da, 0.95);
+    const core = scene.add.rectangle(-4, 0, 84, 42, mainColor, option.good ? 0.88 : 0.72);
+    core.setStrokeStyle(2, 0xffffff, option.good ? 0.8 : 0.48);
+    const capsule = scene.add.ellipse(-37, 0, 42, 52, 0x020617, 0.58);
+    capsule.setStrokeStyle(3, option.good ? 0xffffff : 0xffd5da, 0.6);
+    const weaponHandle = scene.add.rectangle(-37, 12, 8, 26, 0xe5e7eb, option.good ? 0.9 : 0.54);
+    const weaponBarrel = scene.add.rectangle(-37, -12, 20, 8, 0xf8fafc, option.good ? 0.94 : 0.62);
+    const weaponCore = scene.add.circle(-37, 0, 8, mainColor, 0.95);
+    const circuitA = scene.add.line(0, 0, -6, -20, 34, -20, 0xffffff, 0.42).setLineWidth(2);
+    const circuitB = scene.add.line(0, 0, -6, 20, 38, 20, 0x020617, 0.26).setLineWidth(3);
+    const chipA = scene.add.rectangle(43, -23, 10, 5, 0xffffff, option.good ? 0.66 : 0.38);
+    const chipB = scene.add.rectangle(49, 23, 7, 7, 0xffffff, option.good ? 0.52 : 0.32);
+    const iconText = scene.add.text(-37, -1, icon, {
+      fontSize: icon.length > 2 ? '11px' : '16px',
       color: '#ffffff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#020617',
       strokeThickness: 3,
     }).setOrigin(0.5);
-    const trimA = scene.add.circle(45, -24, 5, option.good ? 0xffffff : 0xff174d, option.good ? 0.7 : 0.95);
-    const trimB = scene.add.circle(45, 24, 5, option.good ? 0xffffff : 0xff174d, option.good ? 0.45 : 0.75);
-    const enemyEye = scene.add.circle(24, -14, 4, 0xffffff, option.good ? 0 : 0.95);
-    const enemyEye2 = scene.add.circle(40, -14, 4, 0xffffff, option.good ? 0 : 0.95);
-    const enemyMouth = scene.add.triangle(32, 16, 0, 0, 18, 0, 9, 10, 0x020617, option.good ? 0 : 0.9);
-    const text = scene.add.text(14, 0, option.label, {
+    const text = scene.add.text(20, 0, option.label, {
       fontSize: option.label.length > 5 ? '18px' : '24px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -74,9 +74,9 @@ export class GatePair extends Phaser.GameObjects.Container {
       stroke: '#111827',
       strokeThickness: 5,
     }).setOrigin(0.5);
-    const arrow = scene.add.triangle(41, 30, 0, 0, 12, 7, 0, 14, option.good ? 0xffffff : 0xfee2e2, 0.75);
+    const arrow = scene.add.triangle(55, 32, 0, 0, 14, 7, 0, 14, option.good ? 0xffffff : 0xfee2e2, 0.78);
 
-    container.add([shadow, glow, leftPost, rightPost, backPlate, body, topBevel, bottomBevel, iconBack, iconText, trimA, trimB, enemyEye, enemyEye2, enemyMouth, text, arrow]);
+    container.add([shadow, glow, rail, leftBlade, rightBlade, body, core, capsule, weaponHandle, weaponBarrel, weaponCore, circuitA, circuitB, chipA, chipB, iconText, text, arrow]);
     return container;
   }
 

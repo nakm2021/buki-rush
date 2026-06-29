@@ -64,6 +64,12 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyFrostLens', path: 'assets/generated/enemy-frost-lens.png' },
   { key: 'enemyBrassBeetle', path: 'assets/generated/enemy-brass-beetle.png' },
   { key: 'enemyVioletMoth', path: 'assets/generated/enemy-violet-moth.png' },
+  { key: 'enemyToxicVial', path: 'assets/generated/enemy-toxic-vial.png' },
+  { key: 'enemyShockCoil', path: 'assets/generated/enemy-shock-coil.png' },
+  { key: 'enemyHexMirror', path: 'assets/generated/enemy-hex-mirror.png' },
+  { key: 'enemyFrostChain', path: 'assets/generated/enemy-frost-chain.png' },
+  { key: 'enemyRustBomb', path: 'assets/generated/enemy-rust-bomb.png' },
+  { key: 'enemyNeonRazor', path: 'assets/generated/enemy-neon-razor.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
