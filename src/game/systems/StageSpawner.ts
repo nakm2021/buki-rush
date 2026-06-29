@@ -49,7 +49,20 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
   const gateLine = stepIndex % 5 === 0 ? createGateLine(stepIndex) : undefined;
   const variant = getEnemyVariant(stepIndex);
   const secondVariant = getEnemyVariant(stepIndex + 7);
-  const troubleVariants = ['toxic-vial', 'shock-coil', 'hex-mirror', 'frost-chain', 'rust-bomb', 'neon-razor'];
+  const troubleVariants = [
+    'toxic-vial',
+    'shock-coil',
+    'hex-mirror',
+    'frost-chain',
+    'rust-bomb',
+    'neon-razor',
+    'photo-berry-drone',
+    'photo-ice-lens',
+    'photo-brass-scarab',
+    'photo-toxic-vial',
+    'photo-neon-razor',
+    'photo-hex-mirror',
+  ];
   const dangerVariant = stepIndex % 13 === 9
     ? troubleVariants[Math.floor(stepIndex / 13) % troubleVariants.length]
     : stepIndex % 11 === 6

@@ -10,6 +10,7 @@ export default class TitleScene extends Phaser.Scene {
   create(): void {
     const { width, height } = this.scale;
     const meta = loadPlayerMeta();
+    const settingsState = loadSettings();
     this.drawBackground(width, height);
 
     for (let y = 0; y < height; y += 42) {
@@ -73,7 +74,7 @@ export default class TitleScene extends Phaser.Scene {
 
     const infoPanel = this.add.rectangle(width / 2, 456, 318, 108, 0x160a08, 0.72);
     infoPanel.setStrokeStyle(1, 0xffd199, 0.42);
-    this.add.text(width / 2, 456, `PC: 矢印/WASD / スマホ: ドラッグ移動\nスタート時にブキを選択 / 撃破で少し成長\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}\n図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
+    this.add.text(width / 2, 456, `PLAYER ${settingsState.playerName}\nPC: 矢印/WASD / スマホ: ドラッグ移動\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}\n図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
       fontSize: '13px',
       color: '#fff7ed',
       align: 'center',
@@ -134,9 +135,17 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
     });
-    const nameButton = this.add.rectangle(width / 2, 462, 226, 42, 0x172554, 0.96);
+    const currentName = this.add.text(width / 2, 424, `現在の名前: ${current.playerName}`, {
+      fontSize: '13px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    const nameButton = this.add.rectangle(width / 2, 464, 226, 42, 0x172554, 0.96);
     nameButton.setStrokeStyle(2, 0x38bdf8, 0.76);
-    const nameText = this.add.text(width / 2, 462, 'PLAYER名を切替', {
+    const nameText = this.add.text(width / 2, 464, 'PLAYER名を変更', {
       fontSize: '13px',
       color: '#e0f2fe',
       fontStyle: 'bold',
@@ -148,18 +157,111 @@ export default class TitleScene extends Phaser.Scene {
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, nameButton, nameText, close]).setDepth(50);
+    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, currentName, nameButton, nameText, close]).setDepth(50);
     nameButton.setInteractive({ useHandCursor: true });
     nameButton.on('pointerdown', () => {
-      const nextName = window.prompt('ランキングに表示するPLAYER名を入力してください', current.playerName);
-      if (nextName === null) {
-        return;
-      }
-      current = saveSettings({ playerName: nextName });
-      mode.setText(`PLAYER: ${current.playerName}  MODE: LOCAL`);
+      this.openPlayerNameEditor(current.playerName, (nextName) => {
+        current = saveSettings({ playerName: nextName });
+        mode.setText(`PLAYER: ${current.playerName}  MODE: LOCAL`);
+        currentName.setText(`現在の名前: ${current.playerName}`);
+      });
     });
     close.setInteractive({ useHandCursor: true });
     close.on('pointerdown', () => overlay.destroy());
+  }
+
+  private openPlayerNameEditor(currentName: string, onSave: (name: string) => void): void {
+    const existing = document.getElementById('player-name-editor');
+    if (existing) {
+      existing.remove();
+    }
+
+    const editor = document.createElement('div');
+    editor.id = 'player-name-editor';
+    editor.style.cssText = [
+      'position:fixed',
+      'inset:0',
+      'z-index:3000',
+      'display:grid',
+      'place-items:center',
+      'background:rgba(2,6,23,0.78)',
+      'font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',
+    ].join(';');
+
+    const panel = document.createElement('div');
+    panel.style.cssText = [
+      'width:min(320px,86vw)',
+      'box-sizing:border-box',
+      'padding:22px',
+      'border:2px solid rgba(254,240,138,0.86)',
+      'border-radius:8px',
+      'background:#111827',
+      'box-shadow:0 22px 60px rgba(0,0,0,0.42)',
+      'color:#f8fafc',
+      'text-align:center',
+    ].join(';');
+
+    const title = document.createElement('div');
+    title.textContent = 'PLAYER名';
+    title.style.cssText = 'font-size:20px;font-weight:900;color:#fef3c7;margin-bottom:14px';
+
+    const input = document.createElement('input');
+    input.value = currentName;
+    input.maxLength = 12;
+    input.autocomplete = 'off';
+    input.inputMode = 'text';
+    input.style.cssText = [
+      'width:100%',
+      'box-sizing:border-box',
+      'height:44px',
+      'padding:0 12px',
+      'border:2px solid #38bdf8',
+      'border-radius:6px',
+      'background:#020617',
+      'color:#ffffff',
+      'font-size:18px',
+      'font-weight:800',
+      'text-align:center',
+      'outline:none',
+    ].join(';');
+
+    const actions = document.createElement('div');
+    actions.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:16px';
+
+    const save = document.createElement('button');
+    save.textContent = '保存';
+    save.style.cssText = 'height:42px;border:0;border-radius:6px;background:#fef08a;color:#422006;font-weight:900;font-size:15px';
+
+    const cancel = document.createElement('button');
+    cancel.textContent = 'キャンセル';
+    cancel.style.cssText = 'height:42px;border:1px solid #64748b;border-radius:6px;background:#1e293b;color:#e2e8f0;font-weight:800;font-size:15px';
+
+    const closeEditor = (): void => editor.remove();
+    const saveName = (): void => {
+      onSave(input.value);
+      closeEditor();
+    };
+
+    save.addEventListener('click', saveName);
+    cancel.addEventListener('click', closeEditor);
+    input.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.key === 'Enter') {
+        saveName();
+      }
+      if (event.key === 'Escape') {
+        closeEditor();
+      }
+    });
+
+    actions.append(save, cancel);
+    panel.append(title, input, actions);
+    editor.append(panel);
+    document.body.append(editor);
+    window.setTimeout(() => {
+      input.focus();
+      input.select();
+    }, 0);
   }
 
   private drawBackground(width: number, height: number): void {

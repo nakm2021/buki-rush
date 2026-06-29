@@ -89,6 +89,28 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'gear-octopus', name: 'Gear Octopus', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'spider', hpScale: 1.95, radius: 24, damage: 2, imageKey: 'enemyAmberGear', statusEffect: 'paralyze', statusChance: 0.45 },
   { id: 'phoenix-spark', name: 'Phoenix Spark', bodyColor: 0xfb7185, accentColor: 0xfacc15, coreColor: 0x7f1d1d, shape: 'wing', hpScale: 1.1, radius: 19, damage: 2, imageKey: 'enemyNeonRazor', statusEffect: 'burn', statusChance: 0.4 },
   { id: 'crystal-warden', name: 'Crystal Warden', bodyColor: 0x99f6e4, accentColor: 0xf0abfc, coreColor: 0x134e4a, shape: 'knight', hpScale: 2.15, radius: 24, damage: 3, imageKey: 'enemyFrostChain', statusEffect: 'freeze', statusChance: 0.35 },
+  { id: 'berry-lancer', name: 'Berry Lancer', bodyColor: 0xbe123c, accentColor: 0xffedd5, coreColor: 0x4c0519, shape: 'knight', hpScale: 1.38, radius: 20, damage: 2, imageKey: 'enemyStrawberryImp' },
+  { id: 'aurora-mirror', name: 'Aurora Mirror', bodyColor: 0xa5f3fc, accentColor: 0xf0abfc, coreColor: 0x164e63, shape: 'mask', hpScale: 1.62, radius: 21, damage: 2, imageKey: 'enemyHexMirror', statusEffect: 'freeze', statusChance: 0.28 },
+  { id: 'voltage-idol', name: 'Voltage Idol', bodyColor: 0xfef08a, accentColor: 0x38bdf8, coreColor: 0x422006, shape: 'orb', hpScale: 1.3, radius: 20, damage: 2, imageKey: 'enemyShockCoil', statusEffect: 'paralyze', statusChance: 0.36 },
+  { id: 'rust-knight', name: 'Rust Knight', bodyColor: 0x92400e, accentColor: 0xfdba74, coreColor: 0x1c1917, shape: 'knight', hpScale: 2.05, radius: 24, damage: 3, imageKey: 'enemyRustBomb', statusEffect: 'burn', statusChance: 0.3 },
+  { id: 'prism-serpent', name: 'Prism Serpent', bodyColor: 0x67e8f9, accentColor: 0xf0abfc, coreColor: 0x1e1b4b, shape: 'wyrm', hpScale: 1.52, radius: 22, damage: 2, imageKey: 'enemyPrismJaw' },
+  { id: 'needle-ace', name: 'Needle Ace', bodyColor: 0x2563eb, accentColor: 0xe0f2fe, coreColor: 0x172554, shape: 'wing', hpScale: 0.78, radius: 18, damage: 2, imageKey: 'enemyJetNeedle', statusEffect: 'freeze', statusChance: 0.26 },
+  { id: 'toxic-crown', name: 'Toxic Crown', bodyColor: 0x65a30d, accentColor: 0xfef08a, coreColor: 0x1a2e05, shape: 'plant', hpScale: 1.7, radius: 22, damage: 2, imageKey: 'enemyToxicVial', statusEffect: 'poison', statusChance: 0.48 },
+  { id: 'crimson-crawler', name: 'Crimson Crawler', bodyColor: 0x9f1239, accentColor: 0xfca5a5, coreColor: 0x4c0519, shape: 'spider', hpScale: 1.86, radius: 23, damage: 3, imageKey: 'enemyCrimsonShell', statusEffect: 'burn', statusChance: 0.34 },
+  { id: 'brass-oracle', name: 'Brass Oracle', bodyColor: 0xb45309, accentColor: 0xfef3c7, coreColor: 0x451a03, shape: 'wisp', hpScale: 1.42, radius: 20, damage: 2, imageKey: 'enemyAmberGear', statusEffect: 'curse', statusChance: 0.24 },
+  { id: 'void-lantern', name: 'Void Lantern', bodyColor: 0x312e81, accentColor: 0xc4b5fd, coreColor: 0x020617, shape: 'orb', hpScale: 1.64, radius: 21, damage: 3, imageKey: 'enemyVioletMoth', statusEffect: 'curse', statusChance: 0.32 },
+  { id: 'frost-saw', name: 'Frost Saw', bodyColor: 0xbfdbfe, accentColor: 0xffffff, coreColor: 0x075985, shape: 'spider', hpScale: 1.74, radius: 22, damage: 2, imageKey: 'enemyFrostChain', statusEffect: 'freeze', statusChance: 0.4 },
+  { id: 'meteor-brute', name: 'Meteor Brute', bodyColor: 0x7f1d1d, accentColor: 0xfb923c, coreColor: 0x111827, shape: 'golem', hpScale: 2.38, radius: 25, damage: 4, imageKey: 'enemyRustBomb', statusEffect: 'burn', statusChance: 0.22 },
+  { id: 'mint-needle', name: 'Mint Needle', bodyColor: 0x5eead4, accentColor: 0xf0fdfa, coreColor: 0x134e4a, shape: 'horn', hpScale: 1.12, radius: 19, damage: 1, imageKey: 'enemyJetNeedle' },
+  { id: 'shadow-choir', name: 'Shadow Choir', bodyColor: 0x18181b, accentColor: 0xf0abfc, coreColor: 0xffffff, shape: 'wisp', hpScale: 1.58, radius: 21, damage: 2, imageKey: 'enemyHexMirror', statusEffect: 'curse', statusChance: 0.42 },
+  { id: 'golden-shell', name: 'Golden Shell', bodyColor: 0xfacc15, accentColor: 0xffffff, coreColor: 0x713f12, shape: 'spider', hpScale: 2.0, radius: 24, damage: 3, imageKey: 'enemyBrassBeetle' },
+  { id: 'neon-phantom', name: 'Neon Phantom', bodyColor: 0x06b6d4, accentColor: 0xf0abfc, coreColor: 0x020617, shape: 'mask', hpScale: 1.32, radius: 20, damage: 2, imageKey: 'enemyNeonRazor', statusEffect: 'paralyze', statusChance: 0.3 },
+  { id: 'photo-berry-drone', name: 'Photo Berry Drone', bodyColor: 0xe11d48, accentColor: 0x38bdf8, coreColor: 0x4c0519, shape: 'orb', hpScale: 1.28, radius: 21, damage: 2, imageKey: 'enemyBerryDronePhoto', statusEffect: 'burn', statusChance: 0.34 },
+  { id: 'photo-ice-lens', name: 'Photo Ice Lens', bodyColor: 0x7dd3fc, accentColor: 0xf8fafc, coreColor: 0x075985, shape: 'orb', hpScale: 1.46, radius: 22, damage: 2, imageKey: 'enemyIceLensPhoto', statusEffect: 'freeze', statusChance: 0.44 },
+  { id: 'photo-brass-scarab', name: 'Photo Brass Scarab', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'spider', hpScale: 1.82, radius: 23, damage: 3, imageKey: 'enemyBrassScarabPhoto', statusEffect: 'paralyze', statusChance: 0.26 },
+  { id: 'photo-toxic-vial', name: 'Photo Toxic Vial', bodyColor: 0x84cc16, accentColor: 0xfef08a, coreColor: 0x1a2e05, shape: 'slime', hpScale: 1.58, radius: 22, damage: 2, imageKey: 'enemyToxicVialPhoto', statusEffect: 'poison', statusChance: 0.62 },
+  { id: 'photo-neon-razor', name: 'Photo Neon Razor', bodyColor: 0x06b6d4, accentColor: 0xf0abfc, coreColor: 0x164e63, shape: 'wing', hpScale: 0.92, radius: 19, damage: 2, imageKey: 'enemyNeonRazorPhoto', statusEffect: 'paralyze', statusChance: 0.38 },
+  { id: 'photo-hex-mirror', name: 'Photo Hex Mirror', bodyColor: 0x18181b, accentColor: 0xc084fc, coreColor: 0xf0abfc, shape: 'mask', hpScale: 1.9, radius: 23, damage: 3, imageKey: 'enemyHexMirrorPhoto', statusEffect: 'curse', statusChance: 0.52 },
 ];
 
 const PHOTO_ENEMY_IMAGE_KEYS = [
@@ -106,6 +128,12 @@ const PHOTO_ENEMY_IMAGE_KEYS = [
   'enemyJetNeedle',
   'enemyAmberGear',
   'enemyCrimsonShell',
+  'enemyBerryDronePhoto',
+  'enemyIceLensPhoto',
+  'enemyBrassScarabPhoto',
+  'enemyToxicVialPhoto',
+  'enemyNeonRazorPhoto',
+  'enemyHexMirrorPhoto',
 ];
 
 function withPhotoImage(variant: EnemyVariant, index: number): EnemyVariant {

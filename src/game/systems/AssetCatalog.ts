@@ -77,6 +77,12 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyJetNeedle', path: 'assets/generated/enemy-jet-needle.png' },
   { key: 'enemyAmberGear', path: 'assets/generated/enemy-amber-gear.png' },
   { key: 'enemyCrimsonShell', path: 'assets/generated/enemy-crimson-shell.png' },
+  { key: 'enemyBerryDronePhoto', path: 'assets/generated/enemy-berry-drone.png' },
+  { key: 'enemyIceLensPhoto', path: 'assets/generated/enemy-ice-lens.png' },
+  { key: 'enemyBrassScarabPhoto', path: 'assets/generated/enemy-brass-scarab-photo.png' },
+  { key: 'enemyToxicVialPhoto', path: 'assets/generated/enemy-toxic-vial-photo.png' },
+  { key: 'enemyNeonRazorPhoto', path: 'assets/generated/enemy-neon-razor-photo.png' },
+  { key: 'enemyHexMirrorPhoto', path: 'assets/generated/enemy-hex-mirror-photo.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [

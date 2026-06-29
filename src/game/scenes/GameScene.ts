@@ -14,6 +14,7 @@ import { getBuildRank, getModuleProfile, getShotSpread, getStarterWeapon, getWea
 import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
+type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'nova';
 
 interface PlayerStatusState {
   poisonMs: number;
@@ -1759,8 +1760,11 @@ export default class GameScene extends Phaser.Scene {
   private showSpecialOpening(primary: number, secondary: number, aura: number): void {
     const { width, height } = this.scale;
     const flash = this.add.rectangle(width / 2, height / 2, width, height, aura, 0.42).setDepth(35).setBlendMode(Phaser.BlendModes.ADD);
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.18).setDepth(34).setBlendMode(Phaser.BlendModes.ADD);
     const crown = this.add.circle(this.player.x, this.player.y, 48, primary, 0).setStrokeStyle(7, secondary, 1).setDepth(36);
     const halo = this.add.circle(this.player.x, this.player.y, 78, secondary, 0).setStrokeStyle(3, aura, 0.9).setDepth(36);
+    const glyph = this.add.star(this.player.x, this.player.y - 20, 8, 22, 92, secondary, 0).setStrokeStyle(4, aura, 0.95).setDepth(36);
+    glyph.setBlendMode(Phaser.BlendModes.ADD);
     const title = this.add.text(width / 2, height * 0.36, 'LIFE OVERDRIVE', {
       fontSize: '34px',
       color: '#ffffff',
@@ -1793,8 +1797,42 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
+    for (let i = 0; i < 10; i++) {
+      const x = 36 + i * 36;
+      const beam = this.add.rectangle(x, height / 2, 8 + (i % 3) * 5, height + 120, i % 2 === 0 ? secondary : aura, 0.28).setAngle(i % 2 === 0 ? -12 : 12).setDepth(33);
+      beam.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: beam,
+        x: x + (i % 2 === 0 ? 46 : -46),
+        alpha: 0,
+        scaleX: 2.4,
+        duration: 620 + i * 26,
+        ease: 'Cubic.easeOut',
+        onComplete: () => beam.destroy(),
+      });
+    }
+
+    for (let i = 0; i < 30; i++) {
+      const angle = (Math.PI * 2 * i) / 30;
+      const shard = this.add.triangle(this.player.x, this.player.y - 22, 0, -8, 6, 8, -6, 8, i % 2 === 0 ? aura : secondary, 0.82).setDepth(37);
+      shard.setBlendMode(Phaser.BlendModes.ADD);
+      shard.setRotation(angle);
+      this.tweens.add({
+        targets: shard,
+        x: this.player.x + Math.cos(angle) * Phaser.Math.Between(120, 260),
+        y: this.player.y - 22 + Math.sin(angle) * Phaser.Math.Between(90, 220),
+        angle: Phaser.Math.RadToDeg(angle) + 260,
+        alpha: 0,
+        scale: 2.2,
+        duration: 680 + (i % 5) * 70,
+        ease: 'Cubic.easeOut',
+        onComplete: () => shard.destroy(),
+      });
+    }
+
     this.tweens.add({ targets: flash, alpha: 0, duration: 680, onComplete: () => flash.destroy() });
-    this.tweens.add({ targets: [crown, halo], scale: 4.2, alpha: 0, duration: 880, ease: 'Cubic.easeOut', onComplete: () => { crown.destroy(); halo.destroy(); } });
+    this.tweens.add({ targets: veil, alpha: 0, duration: 360, onComplete: () => veil.destroy() });
+    this.tweens.add({ targets: [crown, halo, glyph], scale: 4.2, angle: 220, alpha: 0, duration: 880, ease: 'Cubic.easeOut', onComplete: () => { crown.destroy(); halo.destroy(); glyph.destroy(); } });
     this.tweens.add({ targets: [title, subtitle], y: '-=28', alpha: 0, duration: 1180, ease: 'Sine.easeOut', onComplete: () => { title.destroy(); subtitle.destroy(); } });
   }
 
@@ -1887,6 +1925,8 @@ export default class GameScene extends Phaser.Scene {
       this.tweens.add({ targets: core, scale: 14, alpha: 0, duration: 360, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
     }
 
+    this.spawnSpecialPulseFlare(colors, specialStyle, range);
+
     this.enemies.getChildren().forEach((enemy) => {
       const enemyObject = enemy as Enemy;
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemyObject.x, enemyObject.y);
@@ -1912,7 +1952,49 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private getWeaponSpecialStyle(): 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'nova' {
+  private spawnSpecialPulseFlare(colors: ReturnType<typeof getWeaponColors>, specialStyle: SpecialStyle, range: number): void {
+    const pulse = this.add.circle(this.player.x, this.player.y - 38, Math.max(30, range * 0.13), colors.aura, 0).setStrokeStyle(8, colors.bullet, 0.8).setDepth(14);
+    const inner = this.add.circle(this.player.x, this.player.y - 38, 18, colors.primary, 0.26).setStrokeStyle(3, colors.secondary, 0.9).setDepth(15);
+    pulse.setBlendMode(Phaser.BlendModes.ADD);
+    inner.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: pulse, scale: 4.6, alpha: 0, duration: 420, ease: 'Cubic.easeOut', onComplete: () => pulse.destroy() });
+    this.tweens.add({ targets: inner, scale: 8.4, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: () => inner.destroy() });
+
+    const slashCount = specialStyle === 'storm' ? 10 : specialStyle === 'phoenix' ? 12 : 8;
+    for (let i = 0; i < slashCount; i++) {
+      const angle = (Math.PI * 2 * i) / slashCount + this.stageTimer * 0.004;
+      const length = specialStyle === 'anchor' ? 230 : 170 + (i % 3) * 36;
+      const slash = this.add.rectangle(this.player.x + Math.cos(angle) * 52, this.player.y - 38 + Math.sin(angle) * 44, 7, length, i % 2 === 0 ? colors.secondary : colors.bullet, 0.48).setDepth(14);
+      slash.setBlendMode(Phaser.BlendModes.ADD);
+      slash.setRotation(angle);
+      this.tweens.add({
+        targets: slash,
+        x: slash.x + Math.cos(angle) * 118,
+        y: slash.y + Math.sin(angle) * 118,
+        alpha: 0,
+        scaleX: 2.6,
+        duration: 260 + (i % 4) * 34,
+        ease: 'Quad.easeOut',
+        onComplete: () => slash.destroy(),
+      });
+    }
+
+    if (specialStyle === 'phoenix' || specialStyle === 'rune') {
+      const star = this.add.star(this.player.x, this.player.y - 76, specialStyle === 'phoenix' ? 7 : 10, 18, 72, colors.secondary, 0.34).setStrokeStyle(3, colors.bullet, 0.88).setDepth(16);
+      star.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: star, angle: 260, scale: 3.2, alpha: 0, duration: 430, ease: 'Cubic.easeOut', onComplete: () => star.destroy() });
+    }
+
+    if (specialStyle === 'basilisk' || specialStyle === 'nova') {
+      for (let i = 0; i < 5; i++) {
+        const ring = this.add.circle(this.player.x, this.player.y - 44, 38 + i * 18, colors.primary, 0).setStrokeStyle(2, i % 2 === 0 ? colors.aura : colors.secondary, 0.42).setDepth(13);
+        ring.setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: ring, scale: 2.2 + i * 0.18, alpha: 0, duration: 360 + i * 54, ease: 'Sine.easeOut', onComplete: () => ring.destroy() });
+      }
+    }
+  }
+
+  private getWeaponSpecialStyle(): SpecialStyle {
     if (['anchor', 'kraken', 'gigas', 'atlas', 'hammer'].includes(this.stats.archetype)) return 'anchor';
     if (['basilisk', 'chimera', 'onyx', 'phantom'].includes(this.stats.archetype) || this.stats.element === 'shadow') return 'basilisk';
     if (['rune', 'oracle', 'seraph'].includes(this.stats.archetype) || this.stats.element === 'light') return 'rune';
