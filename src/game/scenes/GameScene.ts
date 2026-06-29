@@ -1321,62 +1321,96 @@ export default class GameScene extends Phaser.Scene {
   private emitSpecialPulse(): void {
     const colors = getWeaponColors(this.stats);
     const damage = Math.max(12, Math.round((this.stats.power + this.stats.level * 2 + this.stats.weaponCount * 0.45) * getWeaponPowerMultiplier(this.stats) * 1.12));
-    const beamCount = 5 + Math.min(6, Math.floor(this.stats.weaponCount / 12));
-    const baseX = this.player.x;
     const specialStyle = this.getWeaponSpecialStyle();
+    let range = 460;
+    let enemyDamage = damage * 2;
+    let bossDamage = damage;
 
-    const actualBeamCount = specialStyle === 'anchor' ? Math.max(3, Math.floor(beamCount / 2)) : beamCount;
-    for (let i = 0; i < actualBeamCount; i++) {
-      const offset = i - (actualBeamCount - 1) / 2;
-      const beamWidth = specialStyle === 'anchor' ? 18 : specialStyle === 'basilisk' ? 12 : 8;
-      const beam = this.add.rectangle(baseX + offset * (specialStyle === 'anchor' ? 46 : 32), this.player.y - 150, beamWidth, 520, i % 2 === 0 ? colors.bullet : colors.primary, specialStyle === 'anchor' ? 0.72 : 0.58).setDepth(14);
-      beam.setBlendMode(Phaser.BlendModes.ADD);
-      beam.setAngle(offset * 3.5);
-      this.tweens.add({
-        targets: beam,
-        alpha: 0,
-        scaleX: specialStyle === 'anchor' ? 5.2 : 3.1,
-        duration: specialStyle === 'rune' ? 300 : 220,
-        ease: 'Quad.easeOut',
-        onComplete: () => beam.destroy(),
+    if (specialStyle === 'anchor') {
+      range = 380;
+      enemyDamage = damage * 3.4;
+      bossDamage = damage * 2.4;
+      const slamCount = 3 + Math.min(2, Math.floor(this.stats.weaponCount / 22));
+      for (let i = 0; i < slamCount; i++) {
+        const x = this.player.x + (i - (slamCount - 1) / 2) * 68;
+        const pillar = this.add.rectangle(x, this.player.y - 170, 28, 360, colors.primary, 0.68).setDepth(14).setBlendMode(Phaser.BlendModes.ADD);
+        const impact = this.add.circle(x, this.player.y - 28, 24, colors.secondary, 0).setStrokeStyle(8, colors.bullet, 0.9).setDepth(15);
+        this.tweens.add({ targets: pillar, y: '+=92', alpha: 0, scaleX: 4.8, duration: 260, ease: 'Cubic.easeOut', onComplete: () => pillar.destroy() });
+        this.tweens.add({ targets: impact, scale: 4.4, alpha: 0, duration: 340, ease: 'Cubic.easeOut', onComplete: () => impact.destroy() });
+      }
+    } else if (specialStyle === 'basilisk') {
+      range = 560;
+      enemyDamage = damage * 1.35;
+      bossDamage = damage * 1.15;
+      this.enemies.getChildren().slice(0, 8).forEach((enemy, index) => {
+        const target = enemy as Enemy;
+        const line = this.add.line(0, 0, this.player.x, this.player.y - 18, target.x, target.y, index % 2 === 0 ? colors.primary : colors.secondary, 0.74).setDepth(15);
+        line.setLineWidth(5).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: line, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => line.destroy() });
       });
-    }
-
-    const ring = this.add.circle(this.player.x, this.player.y, 34, colors.aura, 0).setStrokeStyle(4, colors.bullet, 0.92).setDepth(15);
-    this.tweens.add({
-      targets: ring,
-      scale: 5.4,
-      alpha: 0,
-      duration: 360,
-      ease: 'Quad.easeOut',
-      onComplete: () => ring.destroy(),
-    });
-
-    if ((specialStyle === 'rune' || specialStyle === 'phoenix') && this.specialPulseTimer === 0 && Math.random() < (specialStyle === 'phoenix' ? 0.22 : 0.34)) {
-      this.playerHp += 1;
-      this.showFlash(specialStyle === 'phoenix' ? 'REBIRTH' : 'RUNE HEAL', '#dcfce7', this.player.x, this.player.y - 124);
-    }
-
-    if (specialStyle === 'storm') {
-      this.bossProjectiles.getChildren().slice(0, 6).forEach((projectile) => {
+      const eye = this.add.circle(this.player.x, this.player.y - 54, 20, colors.primary, 0.34).setStrokeStyle(4, colors.secondary, 0.92).setDepth(15);
+      this.tweens.add({ targets: eye, scaleX: 6, scaleY: 1.2, alpha: 0, duration: 320, ease: 'Quad.easeOut', onComplete: () => eye.destroy() });
+    } else if (specialStyle === 'rune') {
+      range = 430;
+      enemyDamage = damage * 1.7;
+      bossDamage = damage * 0.9;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 * i) / 6 + this.stageTimer * 0.002;
+        const glyph = this.add.rectangle(this.player.x + Math.cos(angle) * 62, this.player.y + Math.sin(angle) * 38, 18, 18, i % 2 === 0 ? colors.secondary : colors.bullet, 0.72).setDepth(15);
+        glyph.setAngle(45 + i * 30).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: glyph, scale: 2.4, angle: glyph.angle + 180, alpha: 0, duration: 420, ease: 'Sine.easeOut', onComplete: () => glyph.destroy() });
+      }
+      const ward = this.add.circle(this.player.x, this.player.y, 42, colors.aura, 0).setStrokeStyle(5, colors.bullet, 0.86).setDepth(15);
+      this.tweens.add({ targets: ward, scale: 3.7, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => ward.destroy() });
+      if (Math.random() < 0.34) {
+        this.playerHp += 1;
+        this.showFlash('RUNE HEAL', '#dcfce7', this.player.x, this.player.y - 124);
+      }
+    } else if (specialStyle === 'phoenix') {
+      range = 500;
+      enemyDamage = damage * 2.5;
+      bossDamage = damage * 1.55;
+      for (let i = 0; i < 7; i++) {
+        const offset = i - 3;
+        const feather = this.add.triangle(this.player.x + offset * 24, this.player.y - 78, 0, -22, 14, 20, -14, 20, i % 2 === 0 ? colors.primary : colors.secondary, 0.78).setDepth(15);
+        feather.setAngle(offset * 12).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: feather, y: '-=210', x: `+=${offset * 18}`, scale: 2.4, alpha: 0, duration: 430, ease: 'Cubic.easeOut', onComplete: () => feather.destroy() });
+      }
+      this.spawnBurst(this.player.x, this.player.y - 54, colors.secondary, 34);
+      if (Math.random() < 0.22) {
+        this.playerHp += 1;
+        this.showFlash('REBIRTH', '#dcfce7', this.player.x, this.player.y - 124);
+      }
+    } else if (specialStyle === 'storm') {
+      range = 520;
+      enemyDamage = damage * 2.05;
+      bossDamage = damage * 1.2;
+      for (let i = 0; i < 7; i++) {
+        const x = Phaser.Math.Between(54, 346);
+        const bolt = this.add.line(0, 0, x, this.player.y - 370, x + Phaser.Math.Between(-30, 30), this.player.y + 10, i % 2 === 0 ? colors.bullet : colors.secondary, 0.88).setDepth(15);
+        bolt.setLineWidth(4 + (i % 3)).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: bolt, alpha: 0, duration: 170, ease: 'Quad.easeOut', onComplete: () => bolt.destroy() });
+      }
+      this.bossProjectiles.getChildren().slice(0, 8).forEach((projectile) => {
         const obj = projectile as Phaser.GameObjects.GameObject & { x: number; y: number };
         this.spawnBurst(obj.x, obj.y, colors.bullet, 12);
         projectile.destroy();
       });
       this.playTone(880 + Math.random() * 120, 0.035, 0.02);
-    }
-
-    if (specialStyle === 'nova') {
+    } else {
+      range = 620;
+      enemyDamage = damage * 1.85;
+      bossDamage = damage * 0.95;
       const nova = this.add.circle(this.player.x, this.player.y - 80, 22, colors.secondary, 0.22).setStrokeStyle(6, colors.bullet, 0.86).setDepth(16);
+      const core = this.add.circle(this.player.x, this.player.y - 80, 10, colors.primary, 0.7).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({ targets: nova, scale: 9, alpha: 0, duration: 460, ease: 'Cubic.easeOut', onComplete: () => nova.destroy() });
+      this.tweens.add({ targets: core, scale: 14, alpha: 0, duration: 360, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
     }
 
     this.enemies.getChildren().forEach((enemy) => {
       const enemyObject = enemy as Enemy;
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, enemyObject.x, enemyObject.y);
-      const range = specialStyle === 'basilisk' ? 540 : 460;
-      const finalDamage = specialStyle === 'anchor' ? damage * 3 : specialStyle === 'basilisk' ? damage : specialStyle === 'phoenix' ? Math.round(damage * 2.4) : damage * 2;
-      if (distance < range && enemyObject.damage(finalDamage)) {
+      if (distance < range && enemyObject.damage(Math.round(enemyDamage))) {
         this.spawnBurst(enemyObject.x, enemyObject.y, colors.secondary, 28);
         enemyObject.destroy();
       } else if (distance < range) {
@@ -1385,11 +1419,10 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if (this.boss) {
-      const bossDamage = specialStyle === 'anchor' ? damage * 2 : specialStyle === 'basilisk' ? Math.round(damage * 1.25) : specialStyle === 'phoenix' ? Math.round(damage * 1.45) : damage;
-      this.bossHp -= bossDamage;
+      this.bossHp -= Math.round(bossDamage);
       this.spawnHitEffect(this.boss.x + Phaser.Math.Between(-86, 86), this.boss.y + Phaser.Math.Between(-40, 80), colors.bullet);
       if (specialStyle === 'basilisk') {
-        this.bossAttackTimer += 80;
+        this.bossAttackTimer += 120;
       }
       if (this.bossHp <= 0) {
         this.hitBoss(new Bullet(this, this.boss.x, this.boss.y, colors.bullet));

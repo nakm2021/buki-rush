@@ -3,8 +3,7 @@ body {
   width: 100%;
   height: 100%;
   margin: 0;
-  background:
-    radial-gradient(circle at top, #1f2937 0%, #020617 55%, #020617 100%);
+  background: var(--app-background, radial-gradient(circle at top, #7f1d1d 0%, #2a0d08 54%, #160a08 100%));
   overflow: hidden;
   font-family:
     system-ui,

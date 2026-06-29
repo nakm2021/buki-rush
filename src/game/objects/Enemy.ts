@@ -20,7 +20,12 @@ export class Enemy extends Phaser.GameObjects.Container {
 
     const shadow = scene.add.ellipse(0, variant.radius + 10, variant.radius * 2.4, 13, 0x020617, 0.32);
     const glow = scene.add.circle(0, 0, variant.radius + 12, variant.lethal ? 0xff174d : variant.bodyColor, variant.lethal ? 0.28 : 0.13);
-    const image = variant.lethal && scene.textures.exists('eliteReaper') ? scene.add.image(0, 0, 'eliteReaper').setDisplaySize(variant.radius * 5.4, variant.radius * 10.4) : undefined;
+    const regularImage = variant.imageKey && scene.textures.exists(variant.imageKey)
+      ? scene.add.image(0, -variant.radius * 0.2, variant.imageKey).setDisplaySize(variant.radius * 3.7, variant.radius * 6.55)
+      : undefined;
+    const image = variant.lethal && scene.textures.exists('eliteReaper')
+      ? scene.add.image(0, 0, 'eliteReaper').setDisplaySize(variant.radius * 5.4, variant.radius * 10.4)
+      : regularImage;
     const parts = image ? [image] : this.createBody(scene, variant);
     const warning = variant.lethal
       ? scene.add.text(0, -variant.radius - 27, '!!', {

@@ -5,6 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>ブキラッシュ</title>
+    <script>
+      const titleBackgroundUrl = new URL('assets/generated/title-ichigo.png', window.location.href).toString();
+      document.documentElement.style.setProperty(
+        '--app-background',
+        `linear-gradient(rgba(42, 13, 8, 0.24), rgba(22, 10, 8, 0.62)), url("${titleBackgroundUrl}") center / cover no-repeat, radial-gradient(circle at top, #7f1d1d 0%, #2a0d08 54%, #160a08 100%)`,
+      );
+    </script>
   </head>
   <body>
     <div id="app"></div>

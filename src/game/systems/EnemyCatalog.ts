@@ -1,8 +1,8 @@
 import type { EnemyVariant } from '../types/GameTypes';
 
 export const ENEMY_VARIANTS: EnemyVariant[] = [
-  { id: 'ember-imp', name: 'Ember Imp', bodyColor: 0xff6b35, accentColor: 0xffc857, coreColor: 0x3b1022, shape: 'horn', hpScale: 0.9, radius: 18, damage: 1 },
-  { id: 'frost-wisp', name: 'Frost Wisp', bodyColor: 0x7dd3fc, accentColor: 0xe0f2fe, coreColor: 0x0f172a, shape: 'wisp', hpScale: 0.85, radius: 17, damage: 1 },
+  { id: 'ember-imp', name: 'Ember Imp', bodyColor: 0xff6b35, accentColor: 0xffc857, coreColor: 0x3b1022, shape: 'horn', hpScale: 0.9, radius: 18, damage: 1, imageKey: 'enemyStrawberryImp' },
+  { id: 'frost-wisp', name: 'Frost Wisp', bodyColor: 0x7dd3fc, accentColor: 0xe0f2fe, coreColor: 0x0f172a, shape: 'wisp', hpScale: 0.85, radius: 17, damage: 1, imageKey: 'enemyFrostLens' },
   { id: 'thorn-beast', name: 'Thorn Beast', bodyColor: 0x22c55e, accentColor: 0xbbf7d0, coreColor: 0x052e16, shape: 'horn', hpScale: 1.05, radius: 19, damage: 1 },
   { id: 'violet-eye', name: 'Violet Eye', bodyColor: 0xa855f7, accentColor: 0xf0abfc, coreColor: 0x1e103a, shape: 'orb', hpScale: 0.95, radius: 18, damage: 1 },
   { id: 'iron-golem', name: 'Iron Golem', bodyColor: 0x94a3b8, accentColor: 0xf8fafc, coreColor: 0x1e293b, shape: 'golem', hpScale: 1.35, radius: 21, damage: 1 },
@@ -36,11 +36,11 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'pumpkin-hex', name: 'Pumpkin Hex', bodyColor: 0xf97316, accentColor: 0xfef08a, coreColor: 0x431407, shape: 'plant', hpScale: 1.05, radius: 19, damage: 1 },
   { id: 'aqua-siren', name: 'Aqua Siren', bodyColor: 0x06b6d4, accentColor: 0xccfbf1, coreColor: 0x164e63, shape: 'wisp', hpScale: 1.0, radius: 18, damage: 1 },
   { id: 'grave-crow', name: 'Grave Crow', bodyColor: 0x1f2937, accentColor: 0x9ca3af, coreColor: 0x030712, shape: 'wing', hpScale: 1.1, radius: 19, damage: 2 },
-  { id: 'scarab-guard', name: 'Scarab Guard', bodyColor: 0x0f766e, accentColor: 0x5eead4, coreColor: 0x042f2e, shape: 'spider', hpScale: 1.6, radius: 21, damage: 2 },
+  { id: 'scarab-guard', name: 'Scarab Guard', bodyColor: 0x0f766e, accentColor: 0x5eead4, coreColor: 0x042f2e, shape: 'spider', hpScale: 1.6, radius: 21, damage: 2, imageKey: 'enemyBrassBeetle' },
   { id: 'ruby-mimic', name: 'Ruby Mimic', bodyColor: 0xbe123c, accentColor: 0xfda4af, coreColor: 0x4c0519, shape: 'mask', hpScale: 1.2, radius: 19, damage: 1 },
   { id: 'snow-yeti', name: 'Snow Yeti', bodyColor: 0xe0f2fe, accentColor: 0x7dd3fc, coreColor: 0x075985, shape: 'beast', hpScale: 1.8, radius: 23, damage: 2 },
   { id: 'thunder-ram', name: 'Thunder Ram', bodyColor: 0xfacc15, accentColor: 0xfef9c3, coreColor: 0x713f12, shape: 'horn', hpScale: 1.3, radius: 20, damage: 2 },
-  { id: 'violet-moth', name: 'Violet Moth', bodyColor: 0x9333ea, accentColor: 0xe9d5ff, coreColor: 0x3b0764, shape: 'wing', hpScale: 0.95, radius: 18, damage: 1 },
+  { id: 'violet-moth', name: 'Violet Moth', bodyColor: 0x9333ea, accentColor: 0xe9d5ff, coreColor: 0x3b0764, shape: 'wing', hpScale: 0.95, radius: 18, damage: 1, imageKey: 'enemyVioletMoth' },
   { id: 'mud-brute', name: 'Mud Brute', bodyColor: 0x78350f, accentColor: 0xfbbf24, coreColor: 0x1c1917, shape: 'beast', hpScale: 1.7, radius: 23, damage: 2 },
   { id: 'necro-eye', name: 'Necro Eye', bodyColor: 0x4c1d95, accentColor: 0xf0abfc, coreColor: 0x020617, shape: 'orb', hpScale: 1.25, radius: 19, damage: 2 },
   { id: 'coral-slime', name: 'Coral Slime', bodyColor: 0xfb7185, accentColor: 0xffedd5, coreColor: 0x881337, shape: 'slime', hpScale: 1.0, radius: 18, damage: 1 },

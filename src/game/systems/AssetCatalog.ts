@@ -57,12 +57,22 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossFrostQueen', path: 'assets/generated/boss-frost-queen.png', width: 390, height: 820 },
 ];
 
+export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
+
+export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
+  { key: 'enemyStrawberryImp', path: 'assets/generated/enemy-strawberry-imp.png' },
+  { key: 'enemyFrostLens', path: 'assets/generated/enemy-frost-lens.png' },
+  { key: 'enemyBrassBeetle', path: 'assets/generated/enemy-brass-beetle.png' },
+  { key: 'enemyVioletMoth', path: 'assets/generated/enemy-violet-moth.png' },
+];
+
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
+  ...ENEMY_IMAGE_ASSETS,
   { key: 'eliteReaper', path: 'assets/generated/elite-reaper.png' },
 ];
 
 export function getPreloadImageAssets(): ImageAsset[] {
-  return [...WEAPON_IMAGE_ASSETS, ...BOSS_IMAGE_ASSETS, ...MISC_IMAGE_ASSETS];
+  return [TITLE_BACKGROUND_ASSET, ...WEAPON_IMAGE_ASSETS, ...BOSS_IMAGE_ASSETS, ...MISC_IMAGE_ASSETS];
 }
 
 export function getWeaponAssetKeys(): string[] {

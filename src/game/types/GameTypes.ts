@@ -77,5 +77,6 @@ export interface EnemyVariant {
   hpScale: number;
   radius: number;
   damage: number;
+  imageKey?: string;
   lethal?: boolean;
 }

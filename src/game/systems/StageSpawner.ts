@@ -4,7 +4,7 @@ import type { GateOption, StageStep } from '../types/GameTypes';
 
 export const INITIAL_STEP_INTERVAL = 650;
 export const LOOP_STEP_INTERVAL = 820;
-export const BOSS_STEP_INTERVAL = 4;
+export const BOSS_STEP_INTERVAL = 10;
 
 const goodColors = [0x22c55e, 0x38bdf8, 0x818cf8, 0x14b8a6, 0xa855f7, 0xfacc15];
 const premiumColors = [0xfb923c, 0x7dd3fc, 0xfef08a, 0xc084fc, 0xf0abfc, 0x99f6e4];
