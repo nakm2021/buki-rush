@@ -18,7 +18,7 @@ export default class WeaponSelectScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 6,
     }).setOrigin(0.5);
-    this.add.text(width / 2, 92, '選んだブキを育てて進化させよう', {
+    this.add.text(width / 2, 92, '選んだブキは実行中固定 / 強化だけ育つ', {
       fontSize: '13px',
       color: '#bfdbfe',
       fontFamily: 'Arial, sans-serif',

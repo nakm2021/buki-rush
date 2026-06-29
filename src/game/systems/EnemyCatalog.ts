@@ -84,6 +84,11 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'star-scorpion', name: 'Star Scorpion', bodyColor: 0x1e3a8a, accentColor: 0xfef08a, coreColor: 0x0f172a, shape: 'spider', hpScale: 1.7, radius: 23, damage: 3 },
   { id: 'aurora-harpy', name: 'Aurora Harpy', bodyColor: 0x5eead4, accentColor: 0xe9d5ff, coreColor: 0x0f766e, shape: 'wing', hpScale: 1.22, radius: 19, damage: 1 },
   { id: 'onyx-idol', name: 'Onyx Idol', bodyColor: 0x18181b, accentColor: 0xa1a1aa, coreColor: 0xfb7185, shape: 'mask', hpScale: 1.92, radius: 23, damage: 2 },
+  { id: 'strawberry-guard', name: 'Strawberry Guard', bodyColor: 0xe11d48, accentColor: 0x86efac, coreColor: 0x4c0519, shape: 'plant', hpScale: 1.55, radius: 21, damage: 2, imageKey: 'enemyStrawberryImp', statusEffect: 'burn', statusChance: 0.32 },
+  { id: 'lunar-fang', name: 'Lunar Fang', bodyColor: 0xc084fc, accentColor: 0xe0e7ff, coreColor: 0x12071f, shape: 'beast', hpScale: 1.78, radius: 23, damage: 3, imageKey: 'enemyHexMirror', statusEffect: 'curse', statusChance: 0.38 },
+  { id: 'gear-octopus', name: 'Gear Octopus', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'spider', hpScale: 1.95, radius: 24, damage: 2, imageKey: 'enemyAmberGear', statusEffect: 'paralyze', statusChance: 0.45 },
+  { id: 'phoenix-spark', name: 'Phoenix Spark', bodyColor: 0xfb7185, accentColor: 0xfacc15, coreColor: 0x7f1d1d, shape: 'wing', hpScale: 1.1, radius: 19, damage: 2, imageKey: 'enemyNeonRazor', statusEffect: 'burn', statusChance: 0.4 },
+  { id: 'crystal-warden', name: 'Crystal Warden', bodyColor: 0x99f6e4, accentColor: 0xf0abfc, coreColor: 0x134e4a, shape: 'knight', hpScale: 2.15, radius: 24, damage: 3, imageKey: 'enemyFrostChain', statusEffect: 'freeze', statusChance: 0.35 },
 ];
 
 const PHOTO_ENEMY_IMAGE_KEYS = [

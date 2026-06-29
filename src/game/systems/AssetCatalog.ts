@@ -55,6 +55,9 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossMantis', path: 'assets/generated/boss-mantis.png', width: 390, height: 820 },
   { key: 'bossOni', path: 'assets/generated/boss-oni.png', width: 410, height: 620 },
   { key: 'bossFrostQueen', path: 'assets/generated/boss-frost-queen.png', width: 390, height: 820 },
+  { key: 'bossStrawberryEmpress', path: 'assets/generated/boss-strawberry-empress.png', width: 390, height: 620 },
+  { key: 'bossClockworkKraken', path: 'assets/generated/boss-clockwork-kraken.png', width: 410, height: 620 },
+  { key: 'bossLunarKitsune', path: 'assets/generated/boss-lunar-kitsune.png', width: 410, height: 640 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -90,6 +93,19 @@ export function getWeaponAssetKeys(): string[] {
 }
 
 export function selectWeaponAssetKey(stats: PlayerStats): string {
+  if ((stats.element === 'fire' || stats.archetype === 'phoenix') && (stats.tier >= 4 || stats.rarity === 'legend' || stats.rarity === 'mythic')) {
+    return 'weaponPhoenix';
+  }
+  if ((stats.archetype === 'dragon' || stats.archetype === 'hydra') && stats.tier >= 4) {
+    return 'weaponDragon';
+  }
+  if ((stats.element === 'ice' || stats.element === 'crystal') && stats.tier >= 4) {
+    return 'weaponCrystal';
+  }
+  if ((stats.element === 'light' || stats.archetype === 'seraph') && stats.tier >= 4) {
+    return 'weaponSeraph';
+  }
+
   const matched = [...WEAPON_IMAGE_ASSETS].reverse().find((asset) => {
     const match = asset.match;
     if (!match) {
@@ -124,6 +140,9 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossMantis', primary: 0x14b8a6, secondary: 0xfacc15, accent: 0xccfbf1, darkness: 0x042f2e },
   { key: 'bossOni', primary: 0xf97316, secondary: 0x7f1d1d, accent: 0xfef3c7, darkness: 0x1c0a05 },
   { key: 'bossFrostQueen', primary: 0x7dd3fc, secondary: 0xe0f2fe, accent: 0xffffff, darkness: 0x082f49 },
+  { key: 'bossStrawberryEmpress', primary: 0xf43f5e, secondary: 0x22c55e, accent: 0xfef3c7, darkness: 0x2a0d08 },
+  { key: 'bossClockworkKraken', primary: 0x0ea5e9, secondary: 0xb45309, accent: 0xfde68a, darkness: 0x082f49 },
+  { key: 'bossLunarKitsune', primary: 0xc084fc, secondary: 0xe0e7ff, accent: 0xf0abfc, darkness: 0x12071f },
 ];
 
 export function getBossTheme(key: string): BossTheme {

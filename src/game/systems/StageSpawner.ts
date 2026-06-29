@@ -90,8 +90,8 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
 }
 
 export function createBossHp(loopIndex: number): number {
-  const lateBossBonus = Math.max(0, loopIndex - 1) * 180;
-  return Math.round(620 + loopIndex * 310 + lateBossBonus + loopIndex * loopIndex * 72);
+  const lateBossBonus = Math.max(0, loopIndex - 1) * 420;
+  return Math.round(1800 + loopIndex * 850 + lateBossBonus + loopIndex * loopIndex * 220);
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {

@@ -48,6 +48,11 @@ export default class BootScene extends Phaser.Scene {
   }
 
   create(): void {
+    const initialLoader = document.getElementById('initial-loader');
+    if (initialLoader) {
+      initialLoader.classList.add('is-hidden');
+      window.setTimeout(() => initialLoader.remove(), 460);
+    }
     this.scene.start('TitleScene');
   }
 }

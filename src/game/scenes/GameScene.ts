@@ -4,7 +4,7 @@ import { Bullet } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, getBossTheme, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
+import { getBossAssetByLoop, getBossTheme, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
@@ -36,10 +36,10 @@ interface StageTheme {
   accent: number;
 }
 
-const PLAYER_MIN_X = 40;
-const PLAYER_MAX_X = 360;
-const PLAYER_MIN_Y = 360;
-const PLAYER_MAX_Y = 660;
+const PLAYER_MIN_X = 28;
+const PLAYER_MAX_X = 372;
+const PLAYER_MIN_Y = 48;
+const PLAYER_MAX_Y = 684;
 
 const STAGE_THEMES: StageTheme[] = [
   { name: 'STRAWBERRY DAWN', sky: 0x2a0d08, ground: 0x1c140f, trackOuter: 0xd6d8dd, trackMid: 0xbfc3ca, trackInner: 0xe5e7eb, lane: 0xffffff, accent: 0xfb7185 },
@@ -139,6 +139,7 @@ export default class GameScene extends Phaser.Scene {
   private bossDefeatGraceMs = 0;
   private defeatedBossKeys: string[] = [];
   private evolutionCount = 0;
+  private lockedWeaponSkinKey = 'weaponAnime';
   private playerStatuses: PlayerStatusState = {
     poisonMs: 0,
     poisonTickMs: 0,
@@ -193,6 +194,7 @@ export default class GameScene extends Phaser.Scene {
     const meta = loadPlayerMeta();
     const starter = getStarterWeapon(starterId);
     this.permanentRank = meta.permanentRank;
+    this.lockedWeaponSkinKey = starter.imageKey;
     this.stats = {
       ...starter.stats,
       modules: [...starter.stats.modules],
@@ -837,6 +839,27 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
+    if (key.includes('Strawberry')) {
+      this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
+      this.time.delayedCall(160, () => this.spawnBossBulletRain(theme, 10 + this.bossPhase * 4, 58));
+      if (this.bossPhase >= 3) this.time.delayedCall(420, () => this.spawnBossFanShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Clockwork')) {
+      this.spawnBossSpiral(theme, 14 + this.bossPhase * 5);
+      this.time.delayedCall(240, () => this.spawnBossWaveWall(theme));
+      if (this.bossPhase >= 2) this.time.delayedCall(460, () => this.spawnBossAimedShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Lunar')) {
+      this.spawnBossCrossSlash(theme);
+      this.time.delayedCall(180, () => this.spawnBossFanShot(theme));
+      if (this.bossPhase >= 2) this.time.delayedCall(360, () => this.spawnBossNova(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
     if (key.includes('Void') || key.includes('Demon')) {
       this.spawnBossNova(theme);
       this.spawnBossSpiral(theme, 12 + this.bossPhase * 4);
@@ -1106,6 +1129,24 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(260, () => this.spawnBossWaveWall(theme));
         return;
       }
+      if (key.includes('Strawberry')) {
+        this.spawnBossLaneStrike(theme, true);
+        this.spawnBossBulletRain(theme, 22 + this.bossPhase * 5, 34);
+        this.time.delayedCall(300, () => this.spawnBossFanShot(theme));
+        return;
+      }
+      if (key.includes('Clockwork')) {
+        this.spawnBossSpiral(theme, 28 + this.bossPhase * 5);
+        this.spawnBossWaveWall(theme);
+        this.time.delayedCall(280, () => this.spawnBossSpiral(theme, 18 + this.bossPhase * 4));
+        return;
+      }
+      if (key.includes('Lunar')) {
+        this.spawnBossNova(theme);
+        this.spawnBossCrossSlash(theme);
+        this.time.delayedCall(220, () => this.spawnBossFanShot(theme));
+        return;
+      }
       if (key.includes('Mantis')) {
         this.spawnBossCrossSlash(theme);
         this.spawnBossSpiral(theme, 20 + this.bossPhase * 4);
@@ -1197,7 +1238,8 @@ export default class GameScene extends Phaser.Scene {
     this.bossPhaseText.setText(this.boss ? `BOSS P${this.bossPhase}` : `MEDAL ${this.medalCount}`);
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
-    this.player.setWeaponSkin(selectWeaponAssetKey(this.stats));
+    this.player.setWeaponSkin(this.lockedWeaponSkinKey);
+    this.player.setEvolutionStage(this.evolutionCount + Math.floor(this.stats.tier / 2), colors.primary, colors.secondary, colors.aura);
     this.updateStageMood(colors.primary, colors.secondary, colors.aura);
     this.updateAuraRings(colors.aura);
     this.updateSquadUnits(colors.primary, colors.secondary);
@@ -1507,7 +1549,9 @@ export default class GameScene extends Phaser.Scene {
 
     const shot = bullet as Bullet;
     const critical = Math.random() < this.stats.critRate;
-    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1)));
+    const rawDamage = (this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1);
+    const bossArmor = 2.2 + this.bossLoopIndex * 0.55 + this.bossPhase * 0.45;
+    const damage = Math.max(1, Math.round(rawDamage / bossArmor));
     this.bossHp -= damage;
     this.spawnHitEffect(shot.x, shot.y, 0xfff1a8);
     shot.destroy();
@@ -1855,7 +1899,9 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if (this.boss) {
-      this.bossHp -= Math.round(bossDamage);
+      const bossArmor = 2.4 + this.bossLoopIndex * 0.5 + this.bossPhase * 0.4;
+      const armoredBossDamage = Math.max(1, Math.round(bossDamage / bossArmor));
+      this.bossHp -= armoredBossDamage;
       this.spawnHitEffect(this.boss.x + Phaser.Math.Between(-86, 86), this.boss.y + Phaser.Math.Between(-40, 80), colors.bullet);
       if (specialStyle === 'basilisk') {
         this.bossAttackTimer += 120;
