@@ -43,7 +43,7 @@ export default class TitleScene extends Phaser.Scene {
     specialGlow.setBlendMode(Phaser.BlendModes.ADD);
     const specialPanel = this.add.rectangle(width / 2, 326, 326, 70, 0x7f1d1d, 0.84);
     specialPanel.setStrokeStyle(3, 0xfff176, 0.95);
-    this.add.text(width / 2, 306, 'スマホはダブルタップ!', {
+    this.add.text(width / 2, 306, 'OD 100%でダブルタップ!', {
       fontSize: '22px',
       color: '#fff7ad',
       fontStyle: 'bold',
@@ -51,7 +51,7 @@ export default class TitleScene extends Phaser.Scene {
       stroke: '#5f160f',
       strokeThickness: 5,
     }).setOrigin(0.5);
-    this.add.text(width / 2, 340, '必殺技 LIFE OVERDRIVE 発動', {
+    this.add.text(width / 2, 340, '撃破と時間経過で必殺技チャージ', {
       fontSize: '17px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -151,7 +151,10 @@ export default class TitleScene extends Phaser.Scene {
     const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, nameButton, nameText, close]).setDepth(50);
     nameButton.setInteractive({ useHandCursor: true });
     nameButton.on('pointerdown', () => {
-      const nextName = current.playerName === 'PLAYER' ? 'BUKI-01' : current.playerName === 'BUKI-01' ? 'RUSHER' : 'PLAYER';
+      const nextName = window.prompt('ランキングに表示するPLAYER名を入力してください', current.playerName);
+      if (nextName === null) {
+        return;
+      }
       current = saveSettings({ playerName: nextName });
       mode.setText(`PLAYER: ${current.playerName}  MODE: LOCAL`);
     });
