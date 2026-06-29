@@ -37,8 +37,8 @@ export default class ResultScene extends Phaser.Scene {
 
     this.add.circle(width / 2, 164, 94, title === 'CLEAR' ? 0x22c55e : 0xef4444, 0.08);
 
-    const panelGlow = this.add.rectangle(width / 2, 352, 326, 226, 0x38bdf8, 0.08);
-    const panel = this.add.rectangle(width / 2, 352, 310, 212, 0x09111f, 0.9);
+    const panelGlow = this.add.rectangle(width / 2, 336, 326, 208, 0x38bdf8, 0.08);
+    const panel = this.add.rectangle(width / 2, 336, 310, 196, 0x09111f, 0.9);
     panelGlow.setStrokeStyle(1, 0x38bdf8, 0.18);
     panel.setStrokeStyle(2, 0x38bdf8, 0.36);
 
@@ -51,13 +51,30 @@ export default class ResultScene extends Phaser.Scene {
       `最終攻撃力  ${data.power ?? 1}`,
       `レベル      ${data.level ?? 1}`,
       `武器        ${data.weaponName ?? '無-Runner Lv.1'}`,
-      `図鑑        B${data.codexBosses ?? 0} / W${data.codexWeapons ?? 0}`,
     ];
 
     rows.forEach((row, index) => {
-      this.add.text(width / 2, 246 + index * 27, row, {
-        fontSize: index === rows.length - 1 ? '15px' : '17px',
+      this.add.text(width / 2, 246 + index * 24, row, {
+        fontSize: '15px',
         color: '#f8fafc',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+      }).setOrigin(0.5);
+    });
+
+    const ranking = data.leaderboard ?? [];
+    this.add.text(width / 2, 468, data.rankUpdated ? 'RANKING UPDATED' : 'RANKING', {
+      fontSize: '16px',
+      color: data.rankUpdated ? '#fef08a' : '#bfdbfe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 4,
+    }).setOrigin(0.5);
+    ranking.slice(0, 3).forEach((entry, index) => {
+      this.add.text(width / 2, 496 + index * 24, `${index + 1}. ${entry.playerName}  ${entry.distance}m`, {
+        fontSize: '13px',
+        color: index === 0 ? '#fef3c7' : '#e0f2fe',
         fontStyle: 'bold',
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
@@ -72,15 +89,15 @@ export default class ResultScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, height - 104, 'タップでリトライ', {
+    this.add.text(width / 2, height - 104, 'タップでブキ選択へ', {
       fontSize: '13px',
       color: '#bfdbfe',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
 
     button.setInteractive({ useHandCursor: true });
-    button.on('pointerdown', () => this.scene.start('GameScene'));
-    this.input.once('pointerdown', () => this.scene.start('GameScene'));
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('GameScene'));
+    button.on('pointerdown', () => this.scene.start('WeaponSelectScene'));
+    this.input.once('pointerdown', () => this.scene.start('WeaponSelectScene'));
+    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('WeaponSelectScene'));
   }
 }

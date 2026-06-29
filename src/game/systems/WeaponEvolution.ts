@@ -1,4 +1,4 @@
-import type { PlayerStats, WeaponArchetype, WeaponElement, WeaponModule, WeaponRarity } from '../types/GameTypes';
+import type { PlayerStats, StarterWeapon, WeaponArchetype, WeaponElement, WeaponModule, WeaponRarity } from '../types/GameTypes';
 
 interface ElementProfile {
   element: WeaponElement;
@@ -194,4 +194,35 @@ export function getModuleByIndex(index: number): WeaponModule {
 export function getRarityByIndex(index: number): WeaponRarity {
   const rarityRamp: WeaponRarity[] = ['rare', 'epic', 'rare', 'legend', 'epic', 'mythic'];
   return rarityRamp[index % rarityRamp.length];
+}
+
+function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, power: number, fireRate: number): PlayerStats {
+  return {
+    weaponCount: 1,
+    power,
+    level: 1,
+    fireRate,
+    element,
+    archetype,
+    modules: [],
+    rarity: 'common',
+    tier: 1,
+    critRate: 0.04,
+    pierce: 0,
+    shield: 0,
+    synergy: 0,
+  };
+}
+
+export const STARTER_WEAPONS: StarterWeapon[] = [
+  { id: 'runner-blaster', title: 'Runner Blaster', subtitle: '扱いやすい標準砲', element: 'neutral', archetype: 'blaster', imageKey: 'weaponAnime', color: 0x38bdf8, stats: createStarterStats('neutral', 'blaster', 1, 1) },
+  { id: 'phoenix-cannon', title: 'Phoenix Cannon', subtitle: '火力と再生の炎砲', element: 'fire', archetype: 'phoenix', imageKey: 'weaponPhoenix', color: 0xfb923c, stats: createStarterStats('fire', 'phoenix', 2, 0.96) },
+  { id: 'frost-lance', title: 'Frost Lance', subtitle: '凍結で足止めする槍', element: 'ice', archetype: 'lance', imageKey: 'weaponFrost', color: 0x7dd3fc, stats: createStarterStats('ice', 'lance', 2, 0.9) },
+  { id: 'thunder-rail', title: 'Thunder Rail', subtitle: '貫く雷の高速軌道', element: 'thunder', archetype: 'rail', imageKey: 'weaponThunder', color: 0xfacc15, stats: createStarterStats('thunder', 'rail', 2, 0.94) },
+  { id: 'void-basilisk', title: 'Void Basilisk', subtitle: '毒と影で削る魔銃', element: 'shadow', archetype: 'basilisk', imageKey: 'weaponBasilisk', color: 0x8b5cf6, stats: createStarterStats('shadow', 'basilisk', 2, 0.92) },
+  { id: 'anchor-breaker', title: 'Anchor Breaker', subtitle: '重い一撃で壊す錨砲', element: 'crystal', archetype: 'anchor', imageKey: 'weaponAnchor', color: 0x99f6e4, stats: createStarterStats('crystal', 'anchor', 3, 0.84) },
+];
+
+export function getStarterWeapon(id?: string): StarterWeapon {
+  return STARTER_WEAPONS.find((weapon) => weapon.id === id) ?? STARTER_WEAPONS[0];
 }

@@ -7,14 +7,13 @@ import { PlayerWeapon } from '../objects/PlayerWeapon';
 import { getBossAssetByLoop, getBossTheme, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
-import { loadBestDistance, loadPlayerMeta, recordRun, saveBestDistance } from '../systems/RecordSystem';
+import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
 import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
-import { getBuildRank, getModuleProfile, getShotSpread, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
+import { getBuildRank, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
 import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
-type RelicId = 'phoenix-core' | 'titan-plate' | 'hydra-heart' | 'storm-engine' | 'royal-crown' | 'void-contract';
 
 interface PlayerStatusState {
   poisonMs: number;
@@ -37,14 +36,6 @@ interface StageTheme {
   accent: number;
 }
 
-interface RelicOption {
-  id: RelicId;
-  title: string;
-  description: string;
-  color: number;
-  apply: (stats: PlayerStats) => PlayerStats;
-}
-
 const PLAYER_MIN_X = 40;
 const PLAYER_MAX_X = 360;
 const PLAYER_MIN_Y = 360;
@@ -55,7 +46,7 @@ const STAGE_THEMES: StageTheme[] = [
   { name: 'NEON CIRCUIT', sky: 0x051923, ground: 0x06232c, trackOuter: 0x0f766e, trackMid: 0x164e63, trackInner: 0xd9f99d, lane: 0x67e8f9, accent: 0x22d3ee },
   { name: 'TOXIC GARDEN', sky: 0x17210b, ground: 0x0f1f0c, trackOuter: 0x365314, trackMid: 0x65a30d, trackInner: 0xecfccb, lane: 0xd9f99d, accent: 0x84cc16 },
   { name: 'FROST FORGE', sky: 0x082f49, ground: 0x0c1f2e, trackOuter: 0x075985, trackMid: 0x7dd3fc, trackInner: 0xf0f9ff, lane: 0xe0f2fe, accent: 0x38bdf8 },
-  { name: 'VOID RELIC', sky: 0x09051a, ground: 0x120a24, trackOuter: 0x312e81, trackMid: 0x6d28d9, trackInner: 0xe9d5ff, lane: 0xf0abfc, accent: 0xa855f7 },
+  { name: 'VOID FIELD', sky: 0x09051a, ground: 0x120a24, trackOuter: 0x312e81, trackMid: 0x6d28d9, trackInner: 0xe9d5ff, lane: 0xf0abfc, accent: 0xa855f7 },
 ];
 
 export default class GameScene extends Phaser.Scene {
@@ -143,8 +134,7 @@ export default class GameScene extends Phaser.Scene {
   private bossPatternIndex = 0;
   private bossPhase = 1;
   private defeatedBossKeys: string[] = [];
-  private activeRelics: RelicId[] = [];
-  private relicOverlay?: Phaser.GameObjects.Container;
+  private evolutionCount = 0;
   private playerStatuses: PlayerStatusState = {
     poisonMs: 0,
     poisonTickMs: 0,
@@ -163,10 +153,10 @@ export default class GameScene extends Phaser.Scene {
     super('GameScene');
   }
 
-  create(): void {
+  create(data?: { starterId?: string }): void {
     const { width, height } = this.scale;
 
-    this.resetRunState();
+    this.resetRunState(data?.starterId);
     this.physics.resume();
     this.drawTrack(width, height);
 
@@ -195,23 +185,17 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.bossProjectiles, (_player, projectile) => this.handleBossProjectileCollision(projectile as Phaser.GameObjects.GameObject), undefined, this);
   }
 
-  private resetRunState(): void {
+  private resetRunState(starterId?: string): void {
     const meta = loadPlayerMeta();
+    const starter = getStarterWeapon(starterId);
     this.permanentRank = meta.permanentRank;
     this.stats = {
-      weaponCount: 1,
-      power: 1 + Math.floor(this.permanentRank / 2),
-      level: 1 + Math.floor(this.permanentRank / 4),
-      fireRate: 1 + this.permanentRank * 0.03,
-      element: 'neutral',
-      archetype: 'blaster',
-      modules: [],
-      rarity: 'common',
-      tier: 1,
-      critRate: 0.04 + this.permanentRank * 0.004,
-      pierce: 0,
-      shield: 0,
-      synergy: 0,
+      ...starter.stats,
+      modules: [...starter.stats.modules],
+      power: starter.stats.power + Math.floor(this.permanentRank / 2),
+      level: starter.stats.level + Math.floor(this.permanentRank / 4),
+      fireRate: starter.stats.fireRate + this.permanentRank * 0.03,
+      critRate: starter.stats.critRate + this.permanentRank * 0.004,
     };
     this.boss = undefined;
     this.bossMaxHp = createBossHp(0);
@@ -246,8 +230,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossPatternIndex = 0;
     this.bossPhase = 1;
     this.defeatedBossKeys = [];
-    this.activeRelics = [];
-    this.relicOverlay = undefined;
+    this.evolutionCount = 0;
     this.medalCount = 0;
     this.stageBranchOffset = 0;
     this.pauseOverlay = undefined;
@@ -563,6 +546,10 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.boss) {
       this.boss.y = Math.min(210, this.boss.y + 68 * (delta / 1000));
+      if (this.currentBossTheme && this.boss.y >= 170) {
+        const sway = this.getBossSwayAmplitude(this.currentBossTheme.key);
+        this.boss.x = clamp(200 + Math.sin(this.stageTimer * 0.0024 + this.bossLoopIndex) * sway, 82, 318);
+      }
       (this.boss.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
       this.bossHpText.setPosition(this.boss.x, this.boss.y - 86);
       this.bossHpBar.setPosition(this.boss.x, this.boss.y - 62);
@@ -769,13 +756,20 @@ export default class GameScene extends Phaser.Scene {
     if (this.bossAttackTimer <= 0) {
       this.fireBossPattern(this.currentBossTheme);
       const loopPressure = this.bossLoopIndex * 44;
-      this.bossAttackTimer = Math.max(260, 1180 - loopPressure - this.bossPhase * 110 - Phaser.Math.Between(0, 180));
+      this.bossAttackTimer = Math.max(220, 820 - loopPressure - this.bossPhase * 95 - Phaser.Math.Between(0, 160));
     }
 
     if (this.bossSpecialTimer <= 0) {
       this.castBossSpecial(this.currentBossTheme);
-      this.bossSpecialTimer = Math.max(1800, 7600 - this.bossLoopIndex * 310);
+      this.bossSpecialTimer = Math.max(1500, 5200 - this.bossLoopIndex * 260 - this.bossPhase * 220);
     }
+  }
+
+  private getBossSwayAmplitude(key: string): number {
+    if (key.includes('Mantis') || key.includes('Phoenix')) return 92;
+    if (key.includes('Leviathan') || key.includes('Hydra')) return 72;
+    if (key.includes('Titan') || key.includes('Oni')) return 34;
+    return 54;
   }
 
   private updateBossProjectiles(delta: number): void {
@@ -798,21 +792,57 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const key = theme.key;
-    if (key.includes('Dragon') || key.includes('Phoenix') || key.includes('Oni')) {
+    if (key.includes('Dragon')) {
       this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
-      if (this.bossPhase >= 3) this.spawnBossFanShot(theme);
+      this.spawnBossBulletRain(theme, 8 + this.bossPhase * 4, 80);
+      if (this.bossPhase >= 2) this.time.delayedCall(280, () => this.spawnBossFanShot(theme));
       this.bossPatternIndex += 1;
       return;
     }
-    if (key.includes('Hydra') || key.includes('Leviathan') || key.includes('Frost')) {
+    if (key.includes('Phoenix')) {
       this.spawnBossFanShot(theme);
-      if (this.bossPhase >= 2) this.spawnBossAimedShot(theme);
+      this.time.delayedCall(180, () => this.spawnBossPhoenixDive(theme));
+      if (this.bossPhase >= 2) this.spawnBossBulletRain(theme, 6 + this.bossPhase * 3, 55);
       this.bossPatternIndex += 1;
       return;
     }
-    if (key.includes('Void') || key.includes('Demon') || key.includes('Mantis')) {
+    if (key.includes('Hydra')) {
+      this.spawnBossHydraBarrage(theme);
+      if (this.bossPhase >= 2) this.time.delayedCall(240, () => this.spawnBossAimedShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Leviathan') || key.includes('Frost')) {
+      this.spawnBossFanShot(theme);
+      this.time.delayedCall(210, () => this.spawnBossWaveWall(theme));
+      if (this.bossPhase >= 3) this.time.delayedCall(420, () => this.spawnBossFanShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Void') || key.includes('Demon')) {
       this.spawnBossNova(theme);
-      if (this.bossPhase >= 2) this.spawnBossAimedShot(theme);
+      this.spawnBossSpiral(theme, 12 + this.bossPhase * 4);
+      if (this.bossPhase >= 2) this.time.delayedCall(260, () => this.spawnBossAimedShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Mantis')) {
+      this.spawnBossCrossSlash(theme);
+      this.spawnBossAimedShot(theme);
+      if (this.bossPhase >= 2) this.time.delayedCall(260, () => this.spawnBossCrossSlash(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Oni')) {
+      this.spawnBossLaneStrike(theme, true);
+      this.time.delayedCall(180, () => this.spawnBossCrossSlash(theme));
+      if (this.bossPhase >= 2) this.spawnBossBulletRain(theme, 7 + this.bossPhase * 3, 65);
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Titan')) {
+      this.spawnBossWaveWall(theme);
+      this.time.delayedCall(260, () => this.spawnBossLaneStrike(theme, this.bossPhase >= 2));
       this.bossPatternIndex += 1;
       return;
     }
@@ -868,6 +898,114 @@ export default class GameScene extends Phaser.Scene {
     this.spawnBurst(this.boss.x, this.boss.y + 76, theme.secondary, 18);
   }
 
+  private spawnBossHydraBarrage(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const heads = 3 + this.bossPhase;
+    for (let h = 0; h < heads; h++) {
+      this.time.delayedCall(h * 105, () => {
+        if (!this.boss) return;
+        const originX = this.boss.x + (h - (heads - 1) / 2) * 32;
+        const angle = Phaser.Math.Angle.Between(originX, this.boss.y + 70, this.player.x + Phaser.Math.Between(-42, 42), this.player.y);
+        for (let i = -1; i <= 1; i++) {
+          const spread = angle + i * 0.16;
+          const speed = 220 + this.bossPhase * 24 + h * 8;
+          this.spawnBossProjectile(originX, this.boss.y + 72, Math.cos(spread) * speed, Math.sin(spread) * speed, 7, i === 0 ? theme.primary : theme.secondary, this.getBossDamage(1), 'orb');
+        }
+      });
+    }
+  }
+
+  private spawnBossBulletRain(theme: BossTheme, count: number, delayStep: number): void {
+    for (let i = 0; i < count; i++) {
+      this.time.delayedCall(i * delayStep, () => {
+        const x = 42 + ((i * 67 + this.bossPatternIndex * 39) % 316);
+        const speed = 235 + this.bossPhase * 28 + (i % 4) * 24;
+        this.spawnBossProjectile(x, -30, Phaser.Math.Between(-18, 18), speed, i % 3 === 0 ? 9 : 7, i % 2 === 0 ? theme.accent : theme.primary, this.getBossDamage(1), i % 2 === 0 ? 'diamond' : 'orb');
+      });
+    }
+  }
+
+  private spawnBossSpiral(theme: BossTheme, count: number): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const originX = this.boss.x;
+    const originY = this.boss.y + 68;
+    for (let i = 0; i < count; i++) {
+      const angle = Phaser.Math.DegToRad(this.bossPatternIndex * 31 + i * (360 / count));
+      const speed = 135 + (i % 4) * 34 + this.bossPhase * 18;
+      const vy = Math.max(84, Math.sin(angle) * speed + 85);
+      this.spawnBossProjectile(originX, originY, Math.cos(angle) * speed, vy, i % 2 === 0 ? 8 : 6, i % 2 === 0 ? theme.secondary : theme.accent, this.getBossDamage(1), i % 3 === 0 ? 'diamond' : 'orb');
+    }
+  }
+
+  private spawnBossWaveWall(theme: BossTheme): void {
+    const lanes = [58, 104, 150, 196, 242, 288, 334];
+    lanes.forEach((x, index) => {
+      if ((index + this.bossPatternIndex) % 3 === 1) {
+        return;
+      }
+      this.time.delayedCall(index * 70, () => {
+        this.spawnBossProjectile(x, -24, Math.sin(index) * 42, 245 + this.bossPhase * 34, 10, index % 2 === 0 ? theme.primary : theme.accent, this.getBossDamage(1), 'diamond');
+      });
+    });
+  }
+
+  private spawnBossPhoenixDive(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const startX = this.boss.x;
+    const targetX = clamp(this.player.x + Phaser.Math.Between(-80, 80), 72, 328);
+    const warning = this.add.rectangle(targetX, 384, 58, 680, theme.secondary, 0.18).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+    warning.setStrokeStyle(2, theme.accent, 0.78);
+    this.tweens.add({
+      targets: warning,
+      alpha: 0.42,
+      yoyo: true,
+      repeat: 2,
+      duration: 86,
+      onComplete: () => {
+        warning.destroy();
+        if (!this.boss) return;
+        this.tweens.add({ targets: this.boss, x: targetX, duration: 210, ease: 'Cubic.easeInOut' });
+        this.spawnBossLaneStrike(theme, true);
+        this.time.delayedCall(260, () => {
+          if (this.boss) this.tweens.add({ targets: this.boss, x: startX, duration: 260, ease: 'Sine.easeOut' });
+        });
+      },
+    });
+  }
+
+  private spawnBossCrossSlash(theme: BossTheme): void {
+    const angles = [-18, 18];
+    angles.forEach((angle, index) => {
+      const warning = this.add.rectangle(200, 384, 54, 760, theme.primary, 0.15).setAngle(angle).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      warning.setStrokeStyle(2, theme.accent, 0.72);
+      this.tweens.add({
+        targets: warning,
+        alpha: 0.38,
+        yoyo: true,
+        repeat: 2,
+        duration: 100,
+        onComplete: () => {
+          warning.destroy();
+          const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.55).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          this.tweens.add({ targets: slash, alpha: 0, scaleX: 1.8, duration: 300, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
+          const distanceToLine = Math.abs((this.player.x - 200) * Math.cos(Phaser.Math.DegToRad(angle)) + (this.player.y - 384) * Math.sin(Phaser.Math.DegToRad(angle)));
+          if (distanceToLine < 36) {
+            this.damagePlayer(this.getBossDamage(2), 'SLASH HIT', theme.accent);
+          }
+        },
+      });
+    });
+  }
+
   private spawnBossLaneStrike(theme: BossTheme, empowered: boolean): void {
     if (!this.boss) {
       return;
@@ -913,6 +1051,41 @@ export default class GameScene extends Phaser.Scene {
     this.tweens.add({ targets: sigil, scale: 2.8, angle: 220, alpha: 0, duration: 940, ease: 'Cubic.easeOut', onComplete: () => sigil.destroy() });
 
     this.time.delayedCall(620, () => {
+      const key = theme.key;
+      if (key.includes('Dragon') || key.includes('Oni')) {
+        this.spawnBossLaneStrike(theme, true);
+        this.spawnBossBulletRain(theme, 16 + this.bossPhase * 4, 42);
+        return;
+      }
+      if (key.includes('Phoenix')) {
+        this.spawnBossPhoenixDive(theme);
+        this.spawnBossFanShot(theme);
+        this.spawnBossBulletRain(theme, 12 + this.bossPhase * 4, 38);
+        return;
+      }
+      if (key.includes('Hydra') || key.includes('Leviathan')) {
+        this.spawnBossHydraBarrage(theme);
+        this.time.delayedCall(260, () => this.spawnBossHydraBarrage(theme));
+        this.spawnBossWaveWall(theme);
+        return;
+      }
+      if (key.includes('Frost') || key.includes('Titan')) {
+        this.spawnBossWaveWall(theme);
+        this.spawnBossLaneStrike(theme, true);
+        this.time.delayedCall(260, () => this.spawnBossWaveWall(theme));
+        return;
+      }
+      if (key.includes('Mantis')) {
+        this.spawnBossCrossSlash(theme);
+        this.spawnBossSpiral(theme, 20 + this.bossPhase * 4);
+        return;
+      }
+      if (key.includes('Void') || key.includes('Demon')) {
+        this.spawnBossNova(theme);
+        this.spawnBossSpiral(theme, 24 + this.bossPhase * 5);
+        this.time.delayedCall(260, () => this.spawnBossAimedShot(theme));
+        return;
+      }
       this.spawnBossLaneStrike(theme, true);
       this.spawnBossNova(theme);
     });
@@ -1246,6 +1419,7 @@ export default class GameScene extends Phaser.Scene {
     this.applyEnemyStatus(enemyObject, bulletObject.getData('statusEffect') as StatusEffect | undefined);
     if (enemyObject.damage(damage)) {
       this.spawnBurst(enemyObject.x, enemyObject.y, 0xffb020, 20);
+      this.grantEnemyDefeatReward(enemyObject);
       enemyObject.destroy();
     }
     const pierceLeft = Number(bulletObject.getData('pierceLeft') ?? 0);
@@ -1254,6 +1428,26 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     bulletObject.destroy();
+  }
+
+  private grantEnemyDefeatReward(enemyObject: Enemy): void {
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
+    const roll = Phaser.Math.Between(0, 99);
+    if (roll < 38) {
+      this.stats = { ...this.stats, power: this.stats.power + 1 };
+      this.showFlash('ATK +1', '#93c5fd', enemyObject.x, enemyObject.y - 32);
+    } else if (roll < 68) {
+      this.stats = { ...this.stats, level: this.stats.level + 1 };
+      this.showFlash('Lv +1', '#d8b4fe', enemyObject.x, enemyObject.y - 32);
+    } else if (roll < 84) {
+      this.playerHp += 1;
+      this.showFlash('HP +1', '#fecaca', enemyObject.x, enemyObject.y - 32);
+    } else {
+      this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 1, synergy: this.stats.synergy + 1 };
+      this.showFlash('BUKI +1', '#86efac', enemyObject.x, enemyObject.y - 32);
+    }
+    this.showStatGainFeedback(previousStats, previousHp, { label: 'DROP BONUS', kind: 'fusion', value: 1, color: 0xfef3c7, good: true });
   }
 
   private hitBoss(bullet: Phaser.GameObjects.GameObject): void {
@@ -1305,121 +1499,30 @@ export default class GameScene extends Phaser.Scene {
     this.medalCount += medals;
     this.showFlash('STAGE BRANCH', '#bae6fd', 200, 254);
     this.showFlash(`MEDAL +${medals}`, '#fef3c7', 200, 214);
-    this.time.delayedCall(520, () => this.showRelicDraft());
+    this.time.delayedCall(420, () => this.grantBossEvolutionBonus());
   }
 
-  private getRelicOptions(): RelicOption[] {
-    const allRelics: RelicOption[] = [
-      {
-        id: 'phoenix-core',
-        title: '鳳凰コア',
-        description: '武器変更チャンス: 炎 / 耐久+1',
-        color: 0xfb923c,
-        apply: (stats) => ({ ...stats, power: stats.power + 3, tier: stats.tier + 1, element: 'fire', archetype: stats.archetype === 'blaster' ? 'phoenix' : stats.archetype }),
-      },
-      {
-        id: 'titan-plate',
-        title: '巨神装甲',
-        description: '防御特化 / シールド+2',
-        color: 0x94a3b8,
-        apply: (stats) => ({ ...stats, shield: stats.shield + 2, power: stats.power + 1 }),
-      },
-      {
-        id: 'hydra-heart',
-        title: '多頭の心臓',
-        description: '武器変更チャンス: 多頭 / 武器数+8',
-        color: 0x22c55e,
-        apply: (stats) => ({ ...stats, weaponCount: stats.weaponCount + 8, synergy: stats.synergy + 2, archetype: 'hydra' }),
-      },
-      {
-        id: 'storm-engine',
-        title: '雷鳴機関',
-        description: '武器変更チャンス: 雷 / 連射+',
-        color: 0xfacc15,
-        apply: (stats) => ({ ...stats, fireRate: stats.fireRate + 0.45, critRate: stats.critRate + 0.05, element: 'thunder', archetype: stats.archetype === 'blaster' ? 'levin' : stats.archetype }),
-      },
-      {
-        id: 'royal-crown',
-        title: '王冠レリック',
-        description: '武器変更チャンス: レア度 / レベル+2',
-        color: 0xfef3c7,
-        apply: (stats) => ({ ...stats, level: stats.level + 2, tier: stats.tier + 1, rarity: stats.rarity === 'common' ? 'rare' : stats.rarity }),
-      },
-      {
-        id: 'void-contract',
-        title: '虚無契約',
-        description: '武器変更チャンス: 影 / 攻撃大幅+',
-        color: 0x8b5cf6,
-        apply: (stats) => ({ ...stats, power: stats.power + 7, synergy: stats.synergy + 4, element: 'shadow', archetype: stats.archetype === 'blaster' ? 'phantom' : stats.archetype }),
-      },
-    ];
-
-    const offset = this.defeatedBossKeys.length + this.stats.level + this.stats.tier;
-    return [0, 2, 4].map((step) => allRelics[(offset + step) % allRelics.length]);
-  }
-
-  private showRelicDraft(): void {
-    if (this.isGameOver || this.relicOverlay) {
-      return;
-    }
-
-    const options = this.getRelicOptions();
-    const { width, height } = this.scale;
-    this.isPaused = true;
-    this.physics.pause();
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.74);
-    const title = this.add.text(width / 2, 132, 'RELIC SELECT', {
-      fontSize: '28px',
-      color: '#fef3c7',
-      fontStyle: 'bold',
-      fontFamily: 'Arial, sans-serif',
-      stroke: '#020617',
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    const nodes = options.map((option, index) => {
-      const y = 242 + index * 118;
-      const card = this.add.rectangle(width / 2, y, 316, 88, 0x09111f, 0.95);
-      card.setStrokeStyle(3, option.color, 0.9);
-      const gem = this.add.star(70, y, 7, 12, 24, option.color, 0.82);
-      const name = this.add.text(104, y - 20, option.title, {
-        fontSize: '18px',
-        color: '#ffffff',
-        fontStyle: 'bold',
-        fontFamily: 'Arial, sans-serif',
-        stroke: '#020617',
-        strokeThickness: 4,
-      }).setOrigin(0, 0.5);
-      const desc = this.add.text(104, y + 16, option.description, {
-        fontSize: '12px',
-        color: '#cbd5e1',
-        fontFamily: 'Arial, sans-serif',
-      }).setOrigin(0, 0.5);
-      card.setInteractive({ useHandCursor: true });
-      card.on('pointerdown', () => this.chooseRelic(option));
-      return [card, gem, name, desc];
-    }).flat();
-
-    this.relicOverlay = this.add.container(0, 0, [veil, title, ...nodes]).setDepth(40);
-    this.playRareSound();
-  }
-
-  private chooseRelic(option: RelicOption): void {
+  private grantBossEvolutionBonus(): void {
     const previousStats = { ...this.stats, modules: [...this.stats.modules] };
     const previousHp = this.playerHp;
-    this.stats = option.apply(this.stats);
-    if (option.id === 'phoenix-core') {
-      this.playerHp += 1;
-    }
-    if (option.id === 'void-contract') {
-      this.playerHp = Math.max(1, this.playerHp - 1);
-    }
-    this.activeRelics.push(option.id);
-    this.relicOverlay?.destroy();
-    this.relicOverlay = undefined;
-    this.isPaused = false;
-    this.physics.resume();
-    this.showStatGainFeedback(previousStats, previousHp, { label: option.title, kind: 'fusion', value: 1, color: option.color, good: true });
-    this.showRareEvolution(option.color);
+    this.evolutionCount += 1;
+    const rarity = this.evolutionCount >= 5 ? 'legend' : this.evolutionCount >= 3 ? 'epic' : 'rare';
+    this.stats = {
+      ...this.stats,
+      rarity,
+      level: this.stats.level + 2,
+      tier: this.stats.tier + 1,
+      power: this.stats.power + 5 + this.evolutionCount,
+      fireRate: this.stats.fireRate + 0.16,
+      critRate: this.stats.critRate + 0.025,
+      synergy: this.stats.synergy + 3,
+      shield: this.stats.shield + 1,
+    };
+    this.playerHp += 1;
+    const color = getWeaponColors(this.stats).aura;
+    this.showFlash(`BUKI EVOLVE +${this.evolutionCount}`, '#fef3c7', this.player.x, this.player.y - 132);
+    this.showStatGainFeedback(previousStats, previousHp, { label: 'BUKI EVOLVE', kind: 'fusion', value: 1, color, good: true });
+    this.showRareEvolution(color);
     this.playRareSound();
   }
 
@@ -1430,8 +1533,9 @@ export default class GameScene extends Phaser.Scene {
     this.currentBossTheme = getBossTheme(bossAsset.key);
     this.boss = new Boss(this, 200, -130, this.bossHp, bossAsset.key);
     this.boss.setDepth(2);
-    this.bossAttackTimer = 1200;
-    this.bossSpecialTimer = 4300 + Phaser.Math.Between(0, 1200);
+    this.bossPhase = 1;
+    this.bossAttackTimer = 820;
+    this.bossSpecialTimer = 2800 + Phaser.Math.Between(0, 900);
     this.bossPatternIndex = this.bossLoopIndex;
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);
@@ -1853,7 +1957,7 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#020617',
         strokeThickness: 5,
       }).setOrigin(0.5);
-      const build = this.add.text(200, 360, `${getWeaponName(this.stats)}\nBUILD ${getBuildRank(this.stats)} / RELIC ${this.activeRelics.length} / MEDAL ${this.medalCount}`, {
+      const build = this.add.text(200, 360, `${getWeaponName(this.stats)}\nBUILD ${getBuildRank(this.stats)} / EVOLVE ${this.evolutionCount} / MEDAL ${this.medalCount}`, {
         fontSize: '12px',
         color: '#fef3c7',
         align: 'center',
@@ -1969,10 +2073,12 @@ export default class GameScene extends Phaser.Scene {
     this.isGameOver = true;
     this.physics.pause();
     const bestDistance = saveBestDistance(this.distance);
+    const finalWeaponName = getWeaponName(this.stats);
+    const leaderboardResult = recordLeaderboard(this.distance, finalWeaponName);
     const meta = recordRun({
       distance: this.distance,
       bosses: this.defeatedBossKeys,
-      weaponName: getWeaponName(this.stats),
+      weaponName: finalWeaponName,
       medals: this.medalCount + Math.floor(this.distance / 220),
     });
     this.scene.start('ResultScene', {
@@ -1983,13 +2089,15 @@ export default class GameScene extends Phaser.Scene {
       level: this.stats.level,
       distance: Math.floor(this.distance),
       bestDistance,
-      weaponName: getWeaponName(this.stats),
+      weaponName: finalWeaponName,
       medals: meta.medals,
       defeatedBosses: this.defeatedBossKeys.length,
       totalBosses: meta.totalBossKills,
-      relics: this.activeRelics,
+      evolutions: this.evolutionCount,
       codexBosses: meta.bosses.length,
       codexWeapons: meta.weapons.length,
+      leaderboard: leaderboardResult.leaderboard,
+      rankUpdated: leaderboardResult.updated,
     });
   }
 }

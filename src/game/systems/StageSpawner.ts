@@ -46,7 +46,7 @@ export const OPENING_STEPS: StageStep[] = [
 ];
 
 export function createLoopStep(stepIndex: number, difficulty: number): StageStep {
-  const gateLine = stepIndex % 3 === 0 ? createGateLine(stepIndex) : undefined;
+  const gateLine = stepIndex % 5 === 0 ? createGateLine(stepIndex) : undefined;
   const variant = getEnemyVariant(stepIndex);
   const secondVariant = getEnemyVariant(stepIndex + 7);
   const troubleVariants = ['toxic-vial', 'shock-coil', 'hex-mirror', 'frost-chain', 'rust-bomb', 'neon-razor'];

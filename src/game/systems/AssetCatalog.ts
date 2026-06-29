@@ -70,6 +70,10 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyFrostChain', path: 'assets/generated/enemy-frost-chain.png' },
   { key: 'enemyRustBomb', path: 'assets/generated/enemy-rust-bomb.png' },
   { key: 'enemyNeonRazor', path: 'assets/generated/enemy-neon-razor.png' },
+  { key: 'enemyPrismJaw', path: 'assets/generated/enemy-prism-jaw.png' },
+  { key: 'enemyJetNeedle', path: 'assets/generated/enemy-jet-needle.png' },
+  { key: 'enemyAmberGear', path: 'assets/generated/enemy-amber-gear.png' },
+  { key: 'enemyCrimsonShell', path: 'assets/generated/enemy-crimson-shell.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [

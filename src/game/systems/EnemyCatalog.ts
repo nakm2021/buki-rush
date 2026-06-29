@@ -55,6 +55,10 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'frost-chain', name: 'Frost Chain', bodyColor: 0xbfdbfe, accentColor: 0xf8fafc, coreColor: 0x1d4ed8, shape: 'knight', hpScale: 1.9, radius: 22, damage: 2, imageKey: 'enemyFrostChain', statusEffect: 'freeze', statusChance: 0.8 },
   { id: 'rust-bomb', name: 'Rust Bomb', bodyColor: 0x7c2d12, accentColor: 0xfdba74, coreColor: 0x1c1917, shape: 'golem', hpScale: 2.45, radius: 25, damage: 3, imageKey: 'enemyRustBomb', statusEffect: 'burn', statusChance: 0.72 },
   { id: 'neon-razor', name: 'Neon Razor', bodyColor: 0x06b6d4, accentColor: 0xf0abfc, coreColor: 0x164e63, shape: 'wing', hpScale: 0.72, radius: 18, damage: 1, imageKey: 'enemyNeonRazor', statusEffect: 'paralyze', statusChance: 0.45 },
+  { id: 'prism-jaw', name: 'Prism Jaw', bodyColor: 0x99f6e4, accentColor: 0xf0abfc, coreColor: 0x0c4a6e, shape: 'orb', hpScale: 1.4, radius: 20, damage: 2, imageKey: 'enemyPrismJaw', statusEffect: 'curse', statusChance: 0.4 },
+  { id: 'jet-needle', name: 'Jet Needle', bodyColor: 0x60a5fa, accentColor: 0xe0f2fe, coreColor: 0x1d4ed8, shape: 'wing', hpScale: 0.82, radius: 18, damage: 1, imageKey: 'enemyJetNeedle', statusEffect: 'freeze', statusChance: 0.35 },
+  { id: 'amber-gear', name: 'Amber Gear', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'golem', hpScale: 1.85, radius: 22, damage: 2, imageKey: 'enemyAmberGear', statusEffect: 'paralyze', statusChance: 0.42 },
+  { id: 'crimson-shell', name: 'Crimson Shell', bodyColor: 0xbe123c, accentColor: 0xfca5a5, coreColor: 0x4c0519, shape: 'spider', hpScale: 1.65, radius: 21, damage: 2, imageKey: 'enemyCrimsonShell', statusEffect: 'burn', statusChance: 0.5 },
   { id: 'nightmare-bat', name: 'Nightmare Bat', bodyColor: 0x581c87, accentColor: 0xf0abfc, coreColor: 0x030712, shape: 'wing', hpScale: 1.25, radius: 20, damage: 2 },
   { id: 'plague-orb', name: 'Plague Orb', bodyColor: 0x65a30d, accentColor: 0xd9f99d, coreColor: 0x1a2e05, shape: 'orb', hpScale: 1.2, radius: 19, damage: 2 },
   { id: 'brass-golem', name: 'Brass Golem', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'golem', hpScale: 1.9, radius: 24, damage: 2 },
@@ -82,10 +86,35 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'onyx-idol', name: 'Onyx Idol', bodyColor: 0x18181b, accentColor: 0xa1a1aa, coreColor: 0xfb7185, shape: 'mask', hpScale: 1.92, radius: 23, damage: 2 },
 ];
 
+const PHOTO_ENEMY_IMAGE_KEYS = [
+  'enemyStrawberryImp',
+  'enemyFrostLens',
+  'enemyBrassBeetle',
+  'enemyVioletMoth',
+  'enemyToxicVial',
+  'enemyShockCoil',
+  'enemyHexMirror',
+  'enemyFrostChain',
+  'enemyRustBomb',
+  'enemyNeonRazor',
+  'enemyPrismJaw',
+  'enemyJetNeedle',
+  'enemyAmberGear',
+  'enemyCrimsonShell',
+];
+
+function withPhotoImage(variant: EnemyVariant, index: number): EnemyVariant {
+  return {
+    ...variant,
+    imageKey: variant.imageKey ?? PHOTO_ENEMY_IMAGE_KEYS[index % PHOTO_ENEMY_IMAGE_KEYS.length],
+  };
+}
+
 export function getEnemyVariant(index: number): EnemyVariant {
-  return ENEMY_VARIANTS[index % ENEMY_VARIANTS.length];
+  return withPhotoImage(ENEMY_VARIANTS[index % ENEMY_VARIANTS.length], index);
 }
 
 export function findEnemyVariant(id?: string): EnemyVariant {
-  return ENEMY_VARIANTS.find((variant) => variant.id === id) ?? getEnemyVariant(0);
+  const index = ENEMY_VARIANTS.findIndex((variant) => variant.id === id);
+  return index >= 0 ? withPhotoImage(ENEMY_VARIANTS[index], index) : getEnemyVariant(0);
 }

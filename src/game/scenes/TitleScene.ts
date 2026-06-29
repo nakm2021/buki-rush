@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TITLE_BACKGROUND_ASSET } from '../systems/AssetCatalog';
-import { loadPlayerMeta } from '../systems/RecordSystem';
+import { loadLeaderboard, loadPlayerMeta, loadSettings, saveSettings } from '../systems/RecordSystem';
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -73,7 +73,7 @@ export default class TitleScene extends Phaser.Scene {
 
     const infoPanel = this.add.rectangle(width / 2, 456, 318, 108, 0x160a08, 0.72);
     infoPanel.setStrokeStyle(1, 0xffd199, 0.42);
-    this.add.text(width / 2, 456, `PC: 矢印/WASD / スマホ: ドラッグ移動\n武器変更はBOSS撃破後のRELICで発生\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}\n図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
+    this.add.text(width / 2, 456, `PC: 矢印/WASD / スマホ: ドラッグ移動\nスタート時にブキを選択 / 撃破で少し成長\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}\n図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
       fontSize: '13px',
       color: '#fff7ed',
       align: 'center',
@@ -91,8 +91,72 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     button.setInteractive({ useHandCursor: true });
-    button.on('pointerdown', () => this.scene.start('GameScene'));
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('GameScene'));
+    button.on('pointerdown', () => this.scene.start('WeaponSelectScene'));
+    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('WeaponSelectScene'));
+
+    const settings = this.add.text(width / 2, height - 72, 'RANKING / SETTINGS', {
+      fontSize: '13px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#4a0f09',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    settings.setInteractive({ useHandCursor: true });
+    settings.on('pointerdown', () => this.showSettingsOverlay());
+  }
+
+  private showSettingsOverlay(): void {
+    const { width, height } = this.scale;
+    let current = loadSettings();
+    const leaderboard = loadLeaderboard();
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.78);
+    const panel = this.add.rectangle(width / 2, height / 2, 336, 438, 0x111827, 0.97);
+    panel.setStrokeStyle(2, 0xfff176, 0.74);
+    const title = this.add.text(width / 2, 172, 'RANKING / SETTINGS', {
+      fontSize: '21px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+    const mode = this.add.text(width / 2, 210, `PLAYER: ${current.playerName}  MODE: LOCAL`, {
+      fontSize: '12px',
+      color: '#bfdbfe',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    const rows = (leaderboard.length > 0 ? leaderboard : [{ playerName: '-', distance: 0, weaponName: 'NO RECORD', recordedAt: '' }]).slice(0, 5).map((entry, index) => {
+      return this.add.text(width / 2, 254 + index * 34, `${index + 1}. ${entry.playerName}  ${entry.distance}m  ${entry.weaponName}`, {
+        fontSize: '12px',
+        color: index === 0 ? '#fef08a' : '#f8fafc',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+      }).setOrigin(0.5);
+    });
+    const nameButton = this.add.rectangle(width / 2, 462, 226, 42, 0x172554, 0.96);
+    nameButton.setStrokeStyle(2, 0x38bdf8, 0.76);
+    const nameText = this.add.text(width / 2, 462, 'PLAYER名を切替', {
+      fontSize: '13px',
+      color: '#e0f2fe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    const close = this.add.text(width / 2, 522, 'CLOSE', {
+      fontSize: '15px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, nameButton, nameText, close]).setDepth(50);
+    nameButton.setInteractive({ useHandCursor: true });
+    nameButton.on('pointerdown', () => {
+      const nextName = current.playerName === 'PLAYER' ? 'BUKI-01' : current.playerName === 'BUKI-01' ? 'RUSHER' : 'PLAYER';
+      current = saveSettings({ playerName: nextName });
+      mode.setText(`PLAYER: ${current.playerName}  MODE: LOCAL`);
+    });
+    close.setInteractive({ useHandCursor: true });
+    close.on('pointerdown', () => overlay.destroy());
   }
 
   private drawBackground(width: number, height: number): void {

@@ -26,6 +26,17 @@ export interface PlayerStats {
   synergy: number;
 }
 
+export interface StarterWeapon {
+  id: string;
+  title: string;
+  subtitle: string;
+  element: WeaponElement;
+  archetype: WeaponArchetype;
+  imageKey: string;
+  color: number;
+  stats: PlayerStats;
+}
+
 export interface GateOption {
   label: string;
   kind: GateKind;
@@ -64,9 +75,18 @@ export interface GameResult {
   medals: number;
   defeatedBosses: number;
   totalBosses: number;
-  relics: string[];
+  evolutions: number;
   codexBosses: number;
   codexWeapons: number;
+  leaderboard?: LeaderboardEntry[];
+  rankUpdated?: boolean;
+}
+
+export interface LeaderboardEntry {
+  playerName: string;
+  distance: number;
+  weaponName: string;
+  recordedAt: string;
 }
 
 export interface EnemyVariant {
