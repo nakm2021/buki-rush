@@ -105,6 +105,11 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'shadow-choir', name: 'Shadow Choir', bodyColor: 0x18181b, accentColor: 0xf0abfc, coreColor: 0xffffff, shape: 'wisp', hpScale: 1.58, radius: 21, damage: 2, imageKey: 'enemyHexMirror', statusEffect: 'curse', statusChance: 0.42 },
   { id: 'golden-shell', name: 'Golden Shell', bodyColor: 0xfacc15, accentColor: 0xffffff, coreColor: 0x713f12, shape: 'spider', hpScale: 2.0, radius: 24, damage: 3, imageKey: 'enemyBrassBeetle' },
   { id: 'neon-phantom', name: 'Neon Phantom', bodyColor: 0x06b6d4, accentColor: 0xf0abfc, coreColor: 0x020617, shape: 'mask', hpScale: 1.32, radius: 20, damage: 2, imageKey: 'enemyNeonRazor', statusEffect: 'paralyze', statusChance: 0.3 },
+  { id: 'photo-berry-brute', name: 'Photo Berry Brute', bodyColor: 0xe11d48, accentColor: 0x86efac, coreColor: 0x4c0519, shape: 'beast', hpScale: 2.15, radius: 24, damage: 3, imageKey: 'enemyBerryBrutePhoto', statusEffect: 'burn', statusChance: 0.44 },
+  { id: 'photo-crystal-lens', name: 'Photo Crystal Lens', bodyColor: 0x7dd3fc, accentColor: 0xfef08a, coreColor: 0x075985, shape: 'orb', hpScale: 1.78, radius: 23, damage: 2, imageKey: 'enemyCrystalLensPhoto', statusEffect: 'freeze', statusChance: 0.58 },
+  { id: 'photo-gold-scarab', name: 'Photo Gold Scarab', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'spider', hpScale: 2.55, radius: 25, damage: 4, imageKey: 'enemyGoldScarabPhoto', statusEffect: 'paralyze', statusChance: 0.48 },
+  { id: 'photo-violet-stinger', name: 'Photo Violet Stinger', bodyColor: 0x7c3aed, accentColor: 0xf0abfc, coreColor: 0x030712, shape: 'wing', hpScale: 1.48, radius: 22, damage: 3, imageKey: 'enemyVioletStingerPhoto', statusEffect: 'curse', statusChance: 0.52 },
+  { id: 'photo-chrome-mantis', name: 'Photo Chrome Mantis', bodyColor: 0xef4444, accentColor: 0xe5e7eb, coreColor: 0x111827, shape: 'spider', hpScale: 2.85, radius: 26, damage: 4, imageKey: 'enemyChromeBerryMantisPhoto', statusEffect: 'poison', statusChance: 0.5 },
   { id: 'photo-berry-drone', name: 'Photo Berry Drone', bodyColor: 0xe11d48, accentColor: 0x38bdf8, coreColor: 0x4c0519, shape: 'orb', hpScale: 1.28, radius: 21, damage: 2, imageKey: 'enemyBerryDronePhoto', statusEffect: 'burn', statusChance: 0.34 },
   { id: 'photo-ice-lens', name: 'Photo Ice Lens', bodyColor: 0x7dd3fc, accentColor: 0xf8fafc, coreColor: 0x075985, shape: 'orb', hpScale: 1.46, radius: 22, damage: 2, imageKey: 'enemyIceLensPhoto', statusEffect: 'freeze', statusChance: 0.44 },
   { id: 'photo-brass-scarab', name: 'Photo Brass Scarab', bodyColor: 0xb45309, accentColor: 0xfde68a, coreColor: 0x451a03, shape: 'spider', hpScale: 1.82, radius: 23, damage: 3, imageKey: 'enemyBrassScarabPhoto', statusEffect: 'paralyze', statusChance: 0.26 },
@@ -134,6 +139,11 @@ const PHOTO_ENEMY_IMAGE_KEYS = [
   'enemyToxicVialPhoto',
   'enemyNeonRazorPhoto',
   'enemyHexMirrorPhoto',
+  'enemyBerryBrutePhoto',
+  'enemyCrystalLensPhoto',
+  'enemyGoldScarabPhoto',
+  'enemyVioletStingerPhoto',
+  'enemyChromeBerryMantisPhoto',
 ];
 
 function withPhotoImage(variant: EnemyVariant, index: number): EnemyVariant {

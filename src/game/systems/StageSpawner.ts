@@ -62,6 +62,11 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
     'photo-toxic-vial',
     'photo-neon-razor',
     'photo-hex-mirror',
+    'photo-berry-brute',
+    'photo-crystal-lens',
+    'photo-gold-scarab',
+    'photo-violet-stinger',
+    'photo-chrome-mantis',
   ];
   const dangerVariant = stepIndex % 13 === 9
     ? troubleVariants[Math.floor(stepIndex / 13) % troubleVariants.length]
@@ -74,7 +79,7 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
           : undefined;
   const lanes = [92, 148, 205, 258, 310];
   const lane = lanes[stepIndex % lanes.length];
-  const hp = Math.round((18 + stepIndex * 2.8 + difficulty * 11) * variant.hpScale);
+  const hp = Math.round((22 + stepIndex * 3.4 + difficulty * 14 + Math.max(0, difficulty - 3) ** 2 * 1.6) * variant.hpScale);
   const enemyCount = stepIndex < 3 ? 2 : 3 + Math.min(2, Math.floor(difficulty / 2));
   const enemies = Array.from({ length: enemyCount }, (_, index) => {
     const selectedVariant = index === 0 && dangerVariant ? dangerVariant : index === 0 ? variant.id : secondVariant.id;
@@ -102,9 +107,12 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
   };
 }
 
-export function createBossHp(loopIndex: number): number {
-  const lateBossBonus = Math.max(0, loopIndex - 1) * 420;
-  return Math.round(1800 + loopIndex * 850 + lateBossBonus + loopIndex * loopIndex * 220);
+export function createBossHp(loopIndex: number, playerPressure = 0): number {
+  const lateBossBonus = Math.max(0, loopIndex - 1) * 950;
+  const baseHp = 2600 + loopIndex * 1450 + lateBossBonus + loopIndex * loopIndex * 620;
+  const adaptiveMultiplier = 1 + Math.min(4.5, playerPressure / 280);
+  const adaptiveFlat = Math.max(0, playerPressure) * (28 + loopIndex * 5);
+  return Math.round(baseHp * adaptiveMultiplier + adaptiveFlat);
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {

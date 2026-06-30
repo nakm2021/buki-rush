@@ -58,6 +58,8 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossStrawberryEmpress', path: 'assets/generated/boss-strawberry-empress.png', width: 390, height: 620 },
   { key: 'bossClockworkKraken', path: 'assets/generated/boss-clockwork-kraken.png', width: 410, height: 620 },
   { key: 'bossLunarKitsune', path: 'assets/generated/boss-lunar-kitsune.png', width: 410, height: 640 },
+  { key: 'bossNeonOrchardSeraph', path: 'assets/generated/boss-neon-orchard-seraph.png', width: 420, height: 746 },
+  { key: 'bossAbyssChromeHydra', path: 'assets/generated/boss-abyss-chrome-hydra.png', width: 420, height: 746 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -83,6 +85,11 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyToxicVialPhoto', path: 'assets/generated/enemy-toxic-vial-photo.png' },
   { key: 'enemyNeonRazorPhoto', path: 'assets/generated/enemy-neon-razor-photo.png' },
   { key: 'enemyHexMirrorPhoto', path: 'assets/generated/enemy-hex-mirror-photo.png' },
+  { key: 'enemyBerryBrutePhoto', path: 'assets/generated/enemy-berry-brute-photo.png' },
+  { key: 'enemyCrystalLensPhoto', path: 'assets/generated/enemy-crystal-lens-photo.png' },
+  { key: 'enemyGoldScarabPhoto', path: 'assets/generated/enemy-gold-scarab-photo.png' },
+  { key: 'enemyVioletStingerPhoto', path: 'assets/generated/enemy-violet-stinger-photo.png' },
+  { key: 'enemyChromeBerryMantisPhoto', path: 'assets/generated/enemy-chrome-berry-mantis-photo.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
@@ -149,6 +156,8 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossStrawberryEmpress', primary: 0xf43f5e, secondary: 0x22c55e, accent: 0xfef3c7, darkness: 0x2a0d08 },
   { key: 'bossClockworkKraken', primary: 0x0ea5e9, secondary: 0xb45309, accent: 0xfde68a, darkness: 0x082f49 },
   { key: 'bossLunarKitsune', primary: 0xc084fc, secondary: 0xe0e7ff, accent: 0xf0abfc, darkness: 0x12071f },
+  { key: 'bossNeonOrchardSeraph', primary: 0xef4444, secondary: 0x22d3ee, accent: 0xfef08a, darkness: 0x21070d },
+  { key: 'bossAbyssChromeHydra', primary: 0x1d4ed8, secondary: 0x18181b, accent: 0xc084fc, darkness: 0x020617 },
 ];
 
 export function getBossTheme(key: string): BossTheme {

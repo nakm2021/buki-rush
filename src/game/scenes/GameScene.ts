@@ -494,6 +494,22 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private getBossPowerPressure(): number {
+    return (
+      this.stats.power * 2.2
+      + this.stats.level * 3.1
+      + this.stats.synergy * 2
+      + this.stats.weaponCount * 0.55
+      + this.stats.tier * 38
+      + this.evolutionCount * 70
+    ) * getWeaponPowerMultiplier(this.stats);
+  }
+
+  private getBossArmor(baseArmor: number): number {
+    const adaptiveArmor = Math.min(4.2, this.getBossPowerPressure() / 310);
+    return baseArmor + adaptiveArmor + this.bossLoopIndex * 0.28 + Math.max(0, this.bossPhase - 1) * 0.38;
+  }
+
   private updateMovement(delta: number): void {
     const dt = delta / 1000;
     let moveX = 0;
@@ -833,6 +849,13 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
+    if (key.includes('Abyss')) {
+      this.spawnBossHydraBarrage(theme);
+      this.time.delayedCall(180, () => this.spawnBossWaveWall(theme));
+      if (this.bossPhase >= 2) this.time.delayedCall(360, () => this.spawnBossSpiral(theme, 10 + this.bossPhase * 4));
+      this.bossPatternIndex += 1;
+      return;
+    }
     if (key.includes('Leviathan') || key.includes('Frost')) {
       this.spawnBossFanShot(theme);
       this.time.delayedCall(210, () => this.spawnBossWaveWall(theme));
@@ -844,6 +867,13 @@ export default class GameScene extends Phaser.Scene {
       this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
       this.time.delayedCall(160, () => this.spawnBossBulletRain(theme, 10 + this.bossPhase * 4, 58));
       if (this.bossPhase >= 3) this.time.delayedCall(420, () => this.spawnBossFanShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('NeonOrchard')) {
+      this.spawnBossFanShot(theme);
+      this.time.delayedCall(120, () => this.spawnBossCrossSlash(theme));
+      this.time.delayedCall(300, () => this.spawnBossBulletRain(theme, 12 + this.bossPhase * 4, 48));
       this.bossPatternIndex += 1;
       return;
     }
@@ -1124,6 +1154,12 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBossWaveWall(theme);
         return;
       }
+      if (key.includes('Abyss')) {
+        this.spawnBossHydraBarrage(theme);
+        this.time.delayedCall(180, () => this.spawnBossSpiral(theme, 24 + this.bossPhase * 5));
+        this.time.delayedCall(360, () => this.spawnBossWaveWall(theme));
+        return;
+      }
       if (key.includes('Frost') || key.includes('Titan')) {
         this.spawnBossWaveWall(theme);
         this.spawnBossLaneStrike(theme, true);
@@ -1134,6 +1170,13 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBossLaneStrike(theme, true);
         this.spawnBossBulletRain(theme, 22 + this.bossPhase * 5, 34);
         this.time.delayedCall(300, () => this.spawnBossFanShot(theme));
+        return;
+      }
+      if (key.includes('NeonOrchard')) {
+        this.spawnBossCrossSlash(theme);
+        this.spawnBossFanShot(theme);
+        this.time.delayedCall(220, () => this.spawnBossNova(theme));
+        this.time.delayedCall(420, () => this.spawnBossBulletRain(theme, 18 + this.bossPhase * 5, 36));
         return;
       }
       if (key.includes('Clockwork')) {
@@ -1551,7 +1594,7 @@ export default class GameScene extends Phaser.Scene {
     const shot = bullet as Bullet;
     const critical = Math.random() < this.stats.critRate;
     const rawDamage = (this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1);
-    const bossArmor = 2.2 + this.bossLoopIndex * 0.55 + this.bossPhase * 0.45;
+    const bossArmor = this.getBossArmor(2.35 + this.bossPhase * 0.5);
     const damage = Math.max(1, Math.round(rawDamage / bossArmor));
     this.bossHp -= damage;
     this.spawnHitEffect(shot.x, shot.y, 0xfff1a8);
@@ -1566,10 +1609,10 @@ export default class GameScene extends Phaser.Scene {
       this.stats = {
         ...this.stats,
         level: this.stats.level + 1,
-        power: this.stats.power + 4 + this.bossLoopIndex,
-        weaponCount: this.stats.weaponCount + 10 + this.bossLoopIndex,
+        power: this.stats.power + 2 + Math.floor(this.bossLoopIndex / 2),
+        weaponCount: this.stats.weaponCount + 5 + this.bossLoopIndex,
         tier: this.stats.tier + 1,
-        synergy: this.stats.synergy + 3,
+        synergy: this.stats.synergy + 2,
       };
       this.playerHp += 1;
       this.showStatGainFeedback(previousStats, previousHp, { label: 'BOSS BONUS', kind: 'fusion', value: 1, color: 0xfef3c7, good: true });
@@ -1615,10 +1658,10 @@ export default class GameScene extends Phaser.Scene {
       rarity,
       level: this.stats.level + 2,
       tier: this.stats.tier + 1,
-      power: this.stats.power + 5 + this.evolutionCount,
-      fireRate: this.stats.fireRate + 0.16,
+      power: this.stats.power + 3 + Math.ceil(this.evolutionCount / 2),
+      fireRate: this.stats.fireRate + 0.08,
       critRate: this.stats.critRate + 0.025,
-      synergy: this.stats.synergy + 3,
+      synergy: this.stats.synergy + 2,
       shield: this.stats.shield + 1,
     };
     this.playerHp += 1;
@@ -1631,7 +1674,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnBoss(): void {
-    this.bossMaxHp = createBossHp(this.bossLoopIndex);
+    this.bossMaxHp = createBossHp(this.bossLoopIndex, this.getBossPowerPressure());
     this.bossHp = this.bossMaxHp;
     const bossAsset = getBossAssetByLoop(this.bossLoopIndex);
     this.currentBossTheme = getBossTheme(bossAsset.key);
@@ -1939,7 +1982,7 @@ export default class GameScene extends Phaser.Scene {
     });
 
     if (this.boss) {
-      const bossArmor = 2.4 + this.bossLoopIndex * 0.5 + this.bossPhase * 0.4;
+      const bossArmor = this.getBossArmor(2.65 + this.bossPhase * 0.48);
       const armoredBossDamage = Math.max(1, Math.round(bossDamage / bossArmor));
       this.bossHp -= armoredBossDamage;
       this.spawnHitEffect(this.boss.x + Phaser.Math.Between(-86, 86), this.boss.y + Phaser.Math.Between(-40, 80), colors.bullet);
