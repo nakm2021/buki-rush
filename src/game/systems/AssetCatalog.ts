@@ -28,39 +28,39 @@ export interface BossTheme {
 }
 
 export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
-  { key: 'weaponAnime', path: 'assets/generated/weapon-anime.png' },
-  { key: 'weaponRunnerEvolved', path: 'assets/generated/weapon-runner-evolved.png', match: { archetypes: ['blaster'] } },
-  { key: 'weaponPhoenix', path: 'assets/generated/weapon-phoenix.png', match: { elements: ['fire'], rarities: ['mythic'] } },
-  { key: 'weaponPhoenixEvolved', path: 'assets/generated/weapon-phoenix-evolved.png', match: { elements: ['fire'], archetypes: ['phoenix', 'meteor', 'saber'] } },
-  { key: 'weaponCrystal', path: 'assets/generated/weapon-crystal.png', match: { elements: ['ice', 'crystal'], rarities: ['legend'] } },
-  { key: 'weaponFrostEvolved', path: 'assets/generated/weapon-frost-evolved.png', match: { elements: ['ice'], archetypes: ['lance', 'aurora', 'geode'] } },
-  { key: 'weaponShadow', path: 'assets/generated/weapon-shadow.png', match: { elements: ['shadow'] } },
-  { key: 'weaponWind', path: 'assets/generated/weapon-wind.png', match: { elements: ['wind'] } },
-  { key: 'weaponSeraph', path: 'assets/generated/weapon-seraph.png', match: { elements: ['light'], archetypes: ['seraph'] } },
-  { key: 'weaponSamurai', path: 'assets/generated/weapon-samurai.png', match: { archetypes: ['samurai', 'saber', 'blade'] } },
-  { key: 'weaponThunder', path: 'assets/generated/weapon-thunder.png', match: { elements: ['thunder'], archetypes: ['levin', 'rail'] } },
-  { key: 'weaponThunderEvolved', path: 'assets/generated/weapon-thunder-evolved.png', match: { elements: ['thunder'], archetypes: ['rail', 'tempest', 'magnum'] } },
-  { key: 'weaponVoid', path: 'assets/generated/weapon-void.png', match: { elements: ['shadow'], archetypes: ['onyx', 'phantom'] } },
-  { key: 'weaponDragon', path: 'assets/generated/weapon-dragon.png', match: { archetypes: ['dragon', 'hydra', 'gigas'] } },
-  { key: 'weaponFrost', path: 'assets/generated/weapon-frost.png', match: { elements: ['ice'], archetypes: ['aurora', 'geode'] } },
-  { key: 'weaponNova', path: 'assets/generated/weapon-nova.png', match: { archetypes: ['nova', 'meteor', 'chrono', 'nebula'] } },
-  { key: 'weaponRune', path: 'assets/generated/weapon-rune.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'oracle'] } },
-  { key: 'weaponBasilisk', path: 'assets/generated/weapon-basilisk.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera'] } },
-  { key: 'weaponBasiliskEvolved', path: 'assets/generated/weapon-basilisk-evolved.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera', 'phantom'] } },
-  { key: 'weaponAnchor', path: 'assets/generated/weapon-anchor.png', match: { archetypes: ['anchor', 'kraken'] } },
-  { key: 'weaponAnchorEvolved', path: 'assets/generated/weapon-anchor-evolved.png', match: { archetypes: ['anchor', 'kraken', 'atlas', 'hammer'] } },
-  { key: 'weaponMoonGuillotine', path: 'assets/generated/weapon-moon-guillotine.png', match: { elements: ['shadow'], archetypes: ['saber', 'blade', 'samurai'] } },
-  { key: 'weaponSolarDragonRail', path: 'assets/generated/weapon-solar-dragon-rail.png', match: { elements: ['fire', 'thunder'], archetypes: ['rail', 'dragon'] } },
-  { key: 'weaponQuantumBloomStaff', path: 'assets/generated/weapon-quantum-bloom-staff.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'lotus', 'oracle'] } },
-  { key: 'weaponAbyssNeedleLauncher', path: 'assets/generated/weapon-abyss-needle-launcher.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
-  { key: 'weaponTitanOrbitHammer', path: 'assets/generated/weapon-titan-orbit-hammer.png', match: { archetypes: ['hammer', 'atlas', 'anchor'] } },
-  { key: 'weaponPrismCometBow', path: 'assets/generated/weapon-prism-comet-bow.png', match: { elements: ['crystal'], archetypes: ['comet', 'nova', 'mirror'] } },
-  { key: 'weaponCrimsonMeteorKatana', path: 'assets/generated/weapon-crimson-meteor-katana.png', match: { elements: ['fire'], archetypes: ['samurai', 'saber', 'meteor'] } },
-  { key: 'weaponAzureTempestChakram', path: 'assets/generated/weapon-azure-tempest-chakram.png', match: { elements: ['thunder', 'wind'], archetypes: ['tempest', 'vortex'] } },
-  { key: 'weaponVerdantSeraphCrossbow', path: 'assets/generated/weapon-verdant-seraph-crossbow.png', match: { elements: ['light', 'wind'], archetypes: ['seraph', 'centaur'] } },
-  { key: 'weaponObsidianGravityCannon', path: 'assets/generated/weapon-obsidian-gravity-cannon.png', match: { elements: ['shadow'], archetypes: ['gigas', 'atlas', 'nova'] } },
-  { key: 'weaponSakuraMirrorFans', path: 'assets/generated/weapon-sakura-mirror-fans.png', match: { elements: ['crystal', 'light'], archetypes: ['mirror', 'sakura'] } },
-  { key: 'weaponChronoNeedleSpear', path: 'assets/generated/weapon-chrono-needle-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['chrono', 'needle', 'lance'] } },
+  { key: 'weaponAnime', path: 'assets/optimized/weapon-anime.png' },
+  { key: 'weaponRunnerEvolved', path: 'assets/optimized/weapon-runner-evolved.png', match: { archetypes: ['blaster'] } },
+  { key: 'weaponPhoenix', path: 'assets/optimized/weapon-phoenix.png', match: { elements: ['fire'], rarities: ['mythic'] } },
+  { key: 'weaponPhoenixEvolved', path: 'assets/optimized/weapon-phoenix-evolved.png', match: { elements: ['fire'], archetypes: ['phoenix', 'meteor', 'saber'] } },
+  { key: 'weaponCrystal', path: 'assets/optimized/weapon-crystal.png', match: { elements: ['ice', 'crystal'], rarities: ['legend'] } },
+  { key: 'weaponFrostEvolved', path: 'assets/optimized/weapon-frost-evolved.png', match: { elements: ['ice'], archetypes: ['lance', 'aurora', 'geode'] } },
+  { key: 'weaponShadow', path: 'assets/optimized/weapon-shadow.png', match: { elements: ['shadow'] } },
+  { key: 'weaponWind', path: 'assets/optimized/weapon-wind.png', match: { elements: ['wind'] } },
+  { key: 'weaponSeraph', path: 'assets/optimized/weapon-seraph.png', match: { elements: ['light'], archetypes: ['seraph'] } },
+  { key: 'weaponSamurai', path: 'assets/optimized/weapon-samurai.png', match: { archetypes: ['samurai', 'saber', 'blade'] } },
+  { key: 'weaponThunder', path: 'assets/optimized/weapon-thunder.png', match: { elements: ['thunder'], archetypes: ['levin', 'rail'] } },
+  { key: 'weaponThunderEvolved', path: 'assets/optimized/weapon-thunder-evolved.png', match: { elements: ['thunder'], archetypes: ['rail', 'tempest', 'magnum'] } },
+  { key: 'weaponVoid', path: 'assets/optimized/weapon-void.png', match: { elements: ['shadow'], archetypes: ['onyx', 'phantom'] } },
+  { key: 'weaponDragon', path: 'assets/optimized/weapon-dragon.png', match: { archetypes: ['dragon', 'hydra', 'gigas'] } },
+  { key: 'weaponFrost', path: 'assets/optimized/weapon-frost.png', match: { elements: ['ice'], archetypes: ['aurora', 'geode'] } },
+  { key: 'weaponNova', path: 'assets/optimized/weapon-nova.png', match: { archetypes: ['nova', 'meteor', 'chrono', 'nebula'] } },
+  { key: 'weaponRune', path: 'assets/optimized/weapon-rune.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'oracle'] } },
+  { key: 'weaponBasilisk', path: 'assets/optimized/weapon-basilisk.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera'] } },
+  { key: 'weaponBasiliskEvolved', path: 'assets/optimized/weapon-basilisk-evolved.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera', 'phantom'] } },
+  { key: 'weaponAnchor', path: 'assets/optimized/weapon-anchor.png', match: { archetypes: ['anchor', 'kraken'] } },
+  { key: 'weaponAnchorEvolved', path: 'assets/optimized/weapon-anchor-evolved.png', match: { archetypes: ['anchor', 'kraken', 'atlas', 'hammer'] } },
+  { key: 'weaponMoonGuillotine', path: 'assets/optimized/weapon-moon-guillotine.png', match: { elements: ['shadow'], archetypes: ['saber', 'blade', 'samurai'] } },
+  { key: 'weaponSolarDragonRail', path: 'assets/optimized/weapon-solar-dragon-rail.png', match: { elements: ['fire', 'thunder'], archetypes: ['rail', 'dragon'] } },
+  { key: 'weaponQuantumBloomStaff', path: 'assets/optimized/weapon-quantum-bloom-staff.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'lotus', 'oracle'] } },
+  { key: 'weaponAbyssNeedleLauncher', path: 'assets/optimized/weapon-abyss-needle-launcher.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
+  { key: 'weaponTitanOrbitHammer', path: 'assets/optimized/weapon-titan-orbit-hammer.png', match: { archetypes: ['hammer', 'atlas', 'anchor'] } },
+  { key: 'weaponPrismCometBow', path: 'assets/optimized/weapon-prism-comet-bow.png', match: { elements: ['crystal'], archetypes: ['comet', 'nova', 'mirror'] } },
+  { key: 'weaponCrimsonMeteorKatana', path: 'assets/optimized/weapon-crimson-meteor-katana.png', match: { elements: ['fire'], archetypes: ['samurai', 'saber', 'meteor'] } },
+  { key: 'weaponAzureTempestChakram', path: 'assets/optimized/weapon-azure-tempest-chakram.png', match: { elements: ['thunder', 'wind'], archetypes: ['tempest', 'vortex'] } },
+  { key: 'weaponVerdantSeraphCrossbow', path: 'assets/optimized/weapon-verdant-seraph-crossbow.png', match: { elements: ['light', 'wind'], archetypes: ['seraph', 'centaur'] } },
+  { key: 'weaponObsidianGravityCannon', path: 'assets/optimized/weapon-obsidian-gravity-cannon.png', match: { elements: ['shadow'], archetypes: ['gigas', 'atlas', 'nova'] } },
+  { key: 'weaponSakuraMirrorFans', path: 'assets/optimized/weapon-sakura-mirror-fans.png', match: { elements: ['crystal', 'light'], archetypes: ['mirror', 'sakura'] } },
+  { key: 'weaponChronoNeedleSpear', path: 'assets/optimized/weapon-chrono-needle-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['chrono', 'needle', 'lance'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -83,6 +83,13 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
+
+export const ITEM_IMAGE_ASSETS: ImageAsset[] = [
+  { key: 'itemBukiCapsule', path: 'assets/optimized/item-buki-capsule.png' },
+  { key: 'itemRareChest', path: 'assets/optimized/item-rare-chest.png' },
+  { key: 'itemLegendChest', path: 'assets/optimized/item-legend-chest.png' },
+  { key: 'itemCursedBox', path: 'assets/optimized/item-cursed-box.png' },
+];
 
 export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyStrawberryImp', path: 'assets/generated/enemy-strawberry-imp.png' },
@@ -122,7 +129,11 @@ export const MISC_IMAGE_ASSETS: ImageAsset[] = [
 ];
 
 export function getPreloadImageAssets(): ImageAsset[] {
-  return [TITLE_BACKGROUND_ASSET, ...WEAPON_IMAGE_ASSETS, ...BOSS_IMAGE_ASSETS, ...MISC_IMAGE_ASSETS];
+  return [TITLE_BACKGROUND_ASSET, ...WEAPON_IMAGE_ASSETS, ...BOSS_IMAGE_ASSETS, ...ITEM_IMAGE_ASSETS, ...MISC_IMAGE_ASSETS];
+}
+
+export function getTitleImageAssets(): ImageAsset[] {
+  return [TITLE_BACKGROUND_ASSET];
 }
 
 export function getWeaponAssetKeys(): string[] {

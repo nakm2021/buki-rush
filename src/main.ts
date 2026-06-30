@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import './style.css';
 import BootScene from './game/scenes/BootScene';
 import GameScene from './game/scenes/GameScene';
+import LoadingScene from './game/scenes/LoadingScene';
 import ResultScene from './game/scenes/ResultScene';
 import TitleScene from './game/scenes/TitleScene';
 import WeaponSelectScene from './game/scenes/WeaponSelectScene';
@@ -29,7 +30,7 @@ const config: Phaser.Types.Core.GameConfig = {
       debug: false,
     },
   },
-  scene: [BootScene, TitleScene, WeaponSelectScene, GameScene, ResultScene],
+  scene: [BootScene, TitleScene, LoadingScene, WeaponSelectScene, GameScene, ResultScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { getPreloadImageAssets, TITLE_BACKGROUND_ASSET } from '../systems/AssetCatalog';
+import { getTitleImageAssets, TITLE_BACKGROUND_ASSET } from '../systems/AssetCatalog';
 
 export default class BootScene extends Phaser.Scene {
   constructor() {
@@ -42,7 +42,7 @@ export default class BootScene extends Phaser.Scene {
       progressFill.width = 232 * value;
     });
 
-    getPreloadImageAssets().forEach((asset) => {
+    getTitleImageAssets().forEach((asset) => {
       this.load.image(asset.key, asset.path);
     });
   }

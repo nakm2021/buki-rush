@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { TITLE_BACKGROUND_ASSET } from '../systems/AssetCatalog';
-import { loadLeaderboard, loadPlayerMeta, loadSettings, saveSettings } from '../systems/RecordSystem';
+import { loadLeaderboard, loadSettings, saveSettings } from '../systems/RecordSystem';
 
 export default class TitleScene extends Phaser.Scene {
   constructor() {
@@ -9,8 +9,6 @@ export default class TitleScene extends Phaser.Scene {
 
   create(): void {
     const { width, height } = this.scale;
-    const meta = loadPlayerMeta();
-    const settingsState = loadSettings();
     this.drawBackground(width, height);
 
     for (let y = 0; y < height; y += 42) {
@@ -40,38 +38,51 @@ export default class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5);
 
-    const specialGlow = this.add.rectangle(width / 2, 316, 310, 58, 0xffef5f, 0.18);
+    const specialGlow = this.add.rectangle(width / 2, 316, 310, 58, 0xffef5f, 0.12);
     specialGlow.setBlendMode(Phaser.BlendModes.ADD);
-    const specialPanel = this.add.rectangle(width / 2, 316, 296, 48, 0x7f1d1d, 0.68);
-    specialPanel.setStrokeStyle(2, 0xfff176, 0.78);
-    this.add.text(width / 2, 316, '必殺ゲージ100%でダブルタップ', {
-      fontSize: '18px',
+    const specialPanel = this.add.rectangle(width / 2, 316, 296, 48, 0x7f1d1d, 0.38);
+    specialPanel.setStrokeStyle(1, 0xfff176, 0.64);
+    const specialLine = this.add.rectangle(width / 2, 342, 92, 3, 0xfff176, 0.78);
+    specialLine.setBlendMode(Phaser.BlendModes.ADD);
+    const specialText = this.add.text(width / 2, 316, '必殺ゲージ 100% でダブルタップ', {
+      fontSize: '17px',
       color: '#fff7ad',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#5f160f',
       strokeThickness: 5,
     }).setOrigin(0.5);
+    for (let i = 0; i < 7; i++) {
+      const spark = this.add.circle(72 + i * 42, 316 + (i % 2) * 18, 2.4, 0xfff176, 0.36);
+      spark.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: spark,
+        x: spark.x + 32,
+        alpha: { from: 0.15, to: 0.72 },
+        scale: { from: 0.8, to: 1.5 },
+        duration: 980 + i * 70,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
     this.tweens.add({
-      targets: [specialGlow, specialPanel],
-      alpha: { from: 0.62, to: 0.9 },
-      scaleX: { from: 1, to: 1.02 },
-      scaleY: { from: 1, to: 1.04 },
-      duration: 900,
+      targets: [specialGlow, specialPanel, specialText],
+      alpha: { from: 0.68, to: 1 },
+      duration: 1200,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
-
-    const infoPanel = this.add.rectangle(width / 2, 430, 292, 82, 0x160a08, 0.54);
-    infoPanel.setStrokeStyle(1, 0xffd199, 0.42);
-    this.add.text(width / 2, 430, `PLAYER ${settingsState.playerName}\nMEDAL ${meta.medals}  RANK ${meta.permanentRank}\nCODEX B${meta.bosses.length}/W${meta.weapons.length}`, {
-      fontSize: '13px',
-      color: '#fff7ed',
-      align: 'center',
-      fontFamily: 'Arial, sans-serif',
-      lineSpacing: 7,
-    }).setOrigin(0.5);
+    this.tweens.add({
+      targets: specialLine,
+      scaleX: { from: 0.45, to: 2.4 },
+      alpha: { from: 0.2, to: 0.92 },
+      duration: 980,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Cubic.easeInOut',
+    });
 
     const button = this.add.rectangle(width / 2, height - 132, 236, 60, 0x12233f, 0.96);
     button.setStrokeStyle(3, 0xfff176, 0.92);
@@ -83,8 +94,8 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     button.setInteractive({ useHandCursor: true });
-    button.on('pointerdown', () => this.scene.start('WeaponSelectScene'));
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('WeaponSelectScene'));
+    button.on('pointerdown', () => this.scene.start('LoadingScene'));
+    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('LoadingScene'));
 
     const settings = this.add.text(width / 2, height - 72, 'RANKING / SETTINGS', {
       fontSize: '13px',

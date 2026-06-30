@@ -36,48 +36,66 @@ export class GatePair extends Phaser.GameObjects.Container {
     container.setData('pair', this);
 
     const mainColor = option.good ? option.color : 0xef4444;
-    const darkColor = option.good ? 0x111827 : 0x450a0a;
     const icon = this.getIcon(option);
-    const shadow = scene.add.ellipse(5, 47, 140, 25, 0x020617, 0.36);
-    const glow = scene.add.circle(0, 0, option.good ? 64 : 58, mainColor, option.good ? 0.24 : 0.26);
+    const itemAssetKey = this.getItemAssetKey(option);
+    const grade = this.getGradeLabel(option);
+    const shadow = scene.add.ellipse(0, 48, 106, 22, 0x020617, 0.32);
+    const glow = scene.add.circle(0, 0, option.good ? 54 : 50, mainColor, option.good ? 0.24 : 0.28);
     glow.setBlendMode(Phaser.BlendModes.ADD);
-    const rail = scene.add.rectangle(0, 0, 136, 76, 0x020617, 0.44);
-    rail.setStrokeStyle(2, mainColor, 0.5);
-    const leftBlade = scene.add.triangle(-71, -1, 0, 0, 28, -42, 28, 42, mainColor, 0.82);
-    const rightBlade = scene.add.triangle(71, -1, 28, 0, 0, -42, 0, 42, mainColor, 0.82);
-    const body = scene.add.rectangle(0, 0, 108, 58, darkColor, 0.94);
-    body.setStrokeStyle(4, option.good ? mainColor : 0xffd5da, 0.95);
-    const core = scene.add.rectangle(-4, 0, 84, 42, mainColor, option.good ? 0.88 : 0.72);
-    core.setStrokeStyle(2, 0xffffff, option.good ? 0.8 : 0.48);
-    const capsule = scene.add.ellipse(-37, 0, 42, 52, 0x020617, 0.58);
-    capsule.setStrokeStyle(3, option.good ? 0xffffff : 0xffd5da, 0.6);
-    const weaponHandle = scene.add.rectangle(-37, 12, 8, 26, 0xe5e7eb, option.good ? 0.9 : 0.54);
-    const weaponBarrel = scene.add.rectangle(-37, -12, 20, 8, 0xf8fafc, option.good ? 0.94 : 0.62);
-    const weaponCore = scene.add.circle(-37, 0, 8, mainColor, 0.95);
-    const circuitA = scene.add.line(0, 0, -6, -20, 34, -20, 0xffffff, 0.42).setLineWidth(2);
-    const circuitB = scene.add.line(0, 0, -6, 20, 38, 20, 0x020617, 0.26).setLineWidth(3);
-    const chipA = scene.add.rectangle(43, -23, 10, 5, 0xffffff, option.good ? 0.66 : 0.38);
-    const chipB = scene.add.rectangle(49, 23, 7, 7, 0xffffff, option.good ? 0.52 : 0.32);
-    const iconText = scene.add.text(-37, -1, icon, {
-      fontSize: icon.length > 2 ? '11px' : '16px',
+    const itemGlow = scene.add.circle(0, -2, this.isLegendary(option) ? 38 : this.isRare(option) ? 34 : 29, mainColor, option.good ? 0.28 : 0.34);
+    itemGlow.setBlendMode(Phaser.BlendModes.ADD);
+    const item = scene.textures.exists(itemAssetKey)
+      ? scene.add.image(0, -2, itemAssetKey).setDisplaySize(this.isLegendary(option) ? 74 : this.isRare(option) ? 66 : 56, this.isLegendary(option) ? 76 : this.isRare(option) ? 68 : 58)
+      : scene.add.circle(0, -2, 26, mainColor, 0.92);
+    const gradeText = scene.add.text(-30, -34, grade, {
+      fontSize: grade.length > 2 ? '10px' : '12px',
       color: '#ffffff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#020617',
       strokeThickness: 3,
     }).setOrigin(0.5);
-    const text = scene.add.text(20, 0, option.label, {
-      fontSize: option.label.length > 5 ? '18px' : '24px',
+    const text = scene.add.text(0, 18, option.label, {
+      fontSize: option.label.length > 6 ? '15px' : option.label.length > 4 ? '18px' : '22px',
       color: '#ffffff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#111827',
       strokeThickness: 5,
     }).setOrigin(0.5);
-    const arrow = scene.add.triangle(55, 32, 0, 0, 14, 7, 0, 14, option.good ? 0xffffff : 0xfee2e2, 0.78);
+    const kindText = scene.add.text(28, -34, icon, {
+      fontSize: icon.length > 2 ? '9px' : '10px',
+      color: '#e0f2fe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 2,
+    }).setOrigin(0.5);
 
-    container.add([shadow, glow, rail, leftBlade, rightBlade, body, core, capsule, weaponHandle, weaponBarrel, weaponCore, circuitA, circuitB, chipA, chipB, iconText, text, arrow]);
+    container.add([shadow, glow, itemGlow, item, gradeText, kindText, text]);
     return container;
+  }
+
+  private getItemAssetKey(option: GateOption): string {
+    if (!option.good) return 'itemCursedBox';
+    if (this.isLegendary(option)) return 'itemLegendChest';
+    if (this.isRare(option)) return 'itemRareChest';
+    return 'itemBukiCapsule';
+  }
+
+  private getGradeLabel(option: GateOption): string {
+    if (!option.good) return 'BAD';
+    if (this.isLegendary(option)) return 'UR';
+    if (this.isRare(option)) return 'SR';
+    return 'N';
+  }
+
+  private isLegendary(option: GateOption): boolean {
+    return option.kind === 'fusion' || option.kind === 'rarity' || option.value >= 8 || (option.kind === 'multiply' && option.value >= 3);
+  }
+
+  private isRare(option: GateOption): boolean {
+    return option.kind === 'module' || option.kind === 'tier' || option.kind === 'element' || option.kind === 'archetype' || option.value >= 3;
   }
 
   private getIcon(option: GateOption): string {
