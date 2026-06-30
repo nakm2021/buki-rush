@@ -15,16 +15,16 @@ export const OPENING_STEPS: StageStep[] = [
     time: 700,
     gateLine: {
       y: -80,
-      left: { label: '+6', kind: 'add', value: 6, color: 0x22c55e, good: true },
-      right: { label: '+3', kind: 'add', value: 3, color: 0x38bdf8, good: true },
+      left: { label: 'START +18', kind: 'add', value: 18, color: 0x22c55e, good: true },
+      right: { label: 'ARSENAL +16', kind: 'add', value: 16, color: 0x38bdf8, good: true },
     },
   },
   {
     time: 2500,
     gateLine: {
       y: -80,
-      left: { label: '×2', kind: 'multiply', value: 2, color: 0x818cf8, good: true },
-      right: { label: '-4', kind: 'subtract', value: 4, color: 0xef4444, good: false },
+      left: { label: '×3', kind: 'multiply', value: 3, color: 0x818cf8, good: true },
+      right: { label: 'BOSS KIT', kind: 'fusion', value: 4, color: 0xfef08a, good: true },
     },
     enemies: [
       { x: 250, y: -170, hp: 10, variantId: 'ember-imp' },
@@ -35,7 +35,7 @@ export const OPENING_STEPS: StageStep[] = [
     time: 4600,
     gateLine: {
       y: -80,
-      left: { label: 'ATK +5', kind: 'power', value: 5, color: 0xfb923c, good: true },
+      left: { label: 'ATK +8', kind: 'power', value: 8, color: 0xfb923c, good: true },
       right: { label: '分裂MOD', kind: 'module', value: 1, color: 0xa855f7, good: true, module: 'split' },
     },
     enemies: [
@@ -67,6 +67,10 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
     'photo-gold-scarab',
     'photo-violet-stinger',
     'photo-chrome-mantis',
+    'photo-candy-core-drone',
+    'photo-ruby-fork-drone',
+    'photo-ice-spoon-harrier',
+    'photo-pepper-gear-idol',
   ];
   const dangerVariant = stepIndex % 13 === 9
     ? troubleVariants[Math.floor(stepIndex / 13) % troubleVariants.length]
@@ -110,9 +114,10 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
 export function createBossHp(loopIndex: number, playerPressure = 0): number {
   const lateBossBonus = Math.max(0, loopIndex - 1) * 950;
   const baseHp = 2600 + loopIndex * 1450 + lateBossBonus + loopIndex * loopIndex * 620;
-  const adaptiveMultiplier = 1 + Math.min(4.5, playerPressure / 280);
-  const adaptiveFlat = Math.max(0, playerPressure) * (28 + loopIndex * 5);
-  return Math.round(baseHp * adaptiveMultiplier + adaptiveFlat);
+  const firstBossRelief = loopIndex === 0 ? 0.52 : 1;
+  const adaptiveMultiplier = 1 + Math.min(4.5, playerPressure / (loopIndex === 0 ? 760 : 280));
+  const adaptiveFlat = Math.max(0, playerPressure) * ((loopIndex === 0 ? 6 : 28) + loopIndex * 5);
+  return Math.round((baseHp * adaptiveMultiplier + adaptiveFlat) * firstBossRelief);
 }
 
 function createGateLine(stepIndex: number): StageStep['gateLine'] {

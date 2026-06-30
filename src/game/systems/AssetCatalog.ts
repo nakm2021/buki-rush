@@ -60,6 +60,7 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossLunarKitsune', path: 'assets/generated/boss-lunar-kitsune.png', width: 410, height: 640 },
   { key: 'bossNeonOrchardSeraph', path: 'assets/generated/boss-neon-orchard-seraph.png', width: 420, height: 746 },
   { key: 'bossAbyssChromeHydra', path: 'assets/generated/boss-abyss-chrome-hydra.png', width: 420, height: 746 },
+  { key: 'bossCrownedBerryJuggernaut', path: 'assets/generated/boss-crowned-berry-juggernaut.png', width: 420, height: 746 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -90,6 +91,10 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyGoldScarabPhoto', path: 'assets/generated/enemy-gold-scarab-photo.png' },
   { key: 'enemyVioletStingerPhoto', path: 'assets/generated/enemy-violet-stinger-photo.png' },
   { key: 'enemyChromeBerryMantisPhoto', path: 'assets/generated/enemy-chrome-berry-mantis-photo.png' },
+  { key: 'enemyCandyCoreDronePhoto', path: 'assets/generated/enemy-candy-core-drone-photo.png' },
+  { key: 'enemyRubyForkDronePhoto', path: 'assets/generated/enemy-ruby-fork-drone-photo.png' },
+  { key: 'enemyIceSpoonHarrierPhoto', path: 'assets/generated/enemy-ice-spoon-harrier-photo.png' },
+  { key: 'enemyPepperGearIdolPhoto', path: 'assets/generated/enemy-pepper-gear-idol-photo.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
@@ -158,6 +163,7 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossLunarKitsune', primary: 0xc084fc, secondary: 0xe0e7ff, accent: 0xf0abfc, darkness: 0x12071f },
   { key: 'bossNeonOrchardSeraph', primary: 0xef4444, secondary: 0x22d3ee, accent: 0xfef08a, darkness: 0x21070d },
   { key: 'bossAbyssChromeHydra', primary: 0x1d4ed8, secondary: 0x18181b, accent: 0xc084fc, darkness: 0x020617 },
+  { key: 'bossCrownedBerryJuggernaut', primary: 0xf43f5e, secondary: 0xfacc15, accent: 0xfef3c7, darkness: 0x25080c },
 ];
 
 export function getBossTheme(key: string): BossTheme {

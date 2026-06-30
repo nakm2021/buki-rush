@@ -140,6 +140,7 @@ export default class GameScene extends Phaser.Scene {
   private bossPatternIndex = 0;
   private bossPhase = 1;
   private bossDefeatGraceMs = 0;
+  private firstBossPrepGranted = false;
   private defeatedBossKeys: string[] = [];
   private evolutionCount = 0;
   private evolutionPath: string[] = [];
@@ -191,6 +192,7 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.player, this.gates, (_player, gateObject) => this.handleGateCollision(gateObject as Phaser.GameObjects.Container), undefined, this);
     this.physics.add.overlap(this.player, this.enemies, (_player, enemyObject) => this.handleEnemyCollision(enemyObject as Enemy), undefined, this);
     this.physics.add.overlap(this.bullets, this.enemies, (bulletObject, enemyObject) => this.hitEnemy(bulletObject as Bullet, enemyObject as Enemy), undefined, this);
+    this.physics.add.overlap(this.bullets, this.bossProjectiles, (bulletObject, projectileObject) => this.resolveProjectileClash(bulletObject as Bullet, projectileObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.bossProjectiles, (_player, projectile) => this.handleBossProjectileCollision(projectile as Phaser.GameObjects.GameObject), undefined, this);
   }
 
@@ -245,6 +247,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossPatternIndex = 0;
     this.bossPhase = 1;
     this.bossDefeatGraceMs = 0;
+    this.firstBossPrepGranted = false;
     this.defeatedBossKeys = [];
     this.evolutionCount = 0;
     this.evolutionPath = [];
@@ -605,6 +608,7 @@ export default class GameScene extends Phaser.Scene {
     const hasSolarBarrage = this.evolutionPath.includes('solar-barrage');
     const hasZeroLance = this.evolutionPath.includes('zero-lance');
     const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor');
+    const clashPower = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.45) * getWeaponPowerMultiplier(this.stats) * 0.32));
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
@@ -613,6 +617,7 @@ export default class GameScene extends Phaser.Scene {
       bullet.setDepth(2);
       bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0));
       bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0));
+      bullet.setData('damage', clashPower + (hasKrakenAnchor ? 1 : 0));
       bullet.setData('pierceLeft', pierceLeft + (hasZeroLance ? 1 : 0) + (hasKrakenAnchor && i % 3 === 0 ? 1 : 0));
       const shotStatus = this.getPlayerShotStatus();
       if (shotStatus && Math.random() < shotStatus.chance) {
@@ -640,6 +645,7 @@ export default class GameScene extends Phaser.Scene {
     shard.setDepth(2);
     shard.setScale(scale);
     shard.setVelocity(Math.abs(vy));
+    shard.setData('damage', Math.max(1, Math.round((this.stats.power + this.stats.level) * 0.38 * scale)));
     shard.setData('pierceLeft', pierce);
     if (status) {
       shard.setData('statusEffect', status);
@@ -863,12 +869,14 @@ export default class GameScene extends Phaser.Scene {
     if (this.bossAttackTimer <= 0) {
       this.fireBossPattern(this.currentBossTheme);
       const loopPressure = this.bossLoopIndex * 44;
-      this.bossAttackTimer = Math.max(220, 820 - loopPressure - this.bossPhase * 95 - Phaser.Math.Between(0, 160));
+      const firstBossRelief = this.bossLoopIndex === 0 ? 260 : 0;
+      this.bossAttackTimer = Math.max(220, 820 + firstBossRelief - loopPressure - this.bossPhase * 95 - Phaser.Math.Between(0, 160));
     }
 
     if (this.bossSpecialTimer <= 0) {
       this.castBossSpecial(this.currentBossTheme);
-      this.bossSpecialTimer = Math.max(1500, 5200 - this.bossLoopIndex * 260 - this.bossPhase * 220);
+      const firstBossRelief = this.bossLoopIndex === 0 ? 900 : 0;
+      this.bossSpecialTimer = Math.max(1500, 5200 + firstBossRelief - this.bossLoopIndex * 260 - this.bossPhase * 220);
     }
   }
 
@@ -937,6 +945,13 @@ export default class GameScene extends Phaser.Scene {
       this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
       this.time.delayedCall(160, () => this.spawnBossBulletRain(theme, 10 + this.bossPhase * 4, 58));
       if (this.bossPhase >= 3) this.time.delayedCall(420, () => this.spawnBossFanShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('CrownedBerry')) {
+      this.spawnBossLaneStrike(theme, this.bossPhase >= 3);
+      this.time.delayedCall(220, () => this.spawnBossFanShot(theme));
+      if (this.bossPhase >= 2) this.time.delayedCall(430, () => this.spawnBossWaveWall(theme));
       this.bossPatternIndex += 1;
       return;
     }
@@ -1145,9 +1160,17 @@ export default class GameScene extends Phaser.Scene {
           const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.55).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           slash.setData('bossAttackEffect', true);
           this.tweens.add({ targets: slash, alpha: 0, scaleX: 1.8, duration: 300, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
-          const distanceToLine = Math.abs((this.player.x - 200) * Math.cos(Phaser.Math.DegToRad(angle)) + (this.player.y - 384) * Math.sin(Phaser.Math.DegToRad(angle)));
+          const radians = Phaser.Math.DegToRad(angle);
+          const distanceToLine = Math.abs((this.player.x - 200) * Math.cos(radians) + (this.player.y - 384) * Math.sin(radians));
           if (distanceToLine < 36) {
-            this.damagePlayer(this.getBossDamage(2), 'SLASH HIT', theme.accent);
+            const damage = this.reduceInstantBossAttack(
+              this.getBossDamage(2),
+              (bullet) => Math.abs((bullet.x - 200) * Math.cos(radians) + (bullet.y - 384) * Math.sin(radians)) < 46,
+              theme.accent,
+            );
+            if (damage > 0) {
+              this.damagePlayer(damage, 'SLASH HIT', theme.accent);
+            }
           }
         },
       });
@@ -1180,7 +1203,14 @@ export default class GameScene extends Phaser.Scene {
           beam.setData('bossAttackEffect', true);
           this.tweens.add({ targets: beam, alpha: 0, scaleX: 1.7, duration: 310, ease: 'Quad.easeOut', onComplete: () => beam.destroy() });
           if (Math.abs(this.player.x - x) < (empowered ? 34 : 26)) {
-            this.damagePlayer(this.getBossDamage(empowered ? 2 : 1), empowered ? 'BOSS SPECIAL HIT' : 'BOSS HIT', theme.accent);
+            const damage = this.reduceInstantBossAttack(
+              this.getBossDamage(empowered ? 2 : 1),
+              (bullet) => Math.abs(bullet.x - x) < (empowered ? 44 : 34),
+              theme.accent,
+            );
+            if (damage > 0) {
+              this.damagePlayer(damage, empowered ? 'BOSS SPECIAL HIT' : 'BOSS HIT', theme.accent);
+            }
           }
         },
       });
@@ -1240,6 +1270,12 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBossLaneStrike(theme, true);
         this.spawnBossBulletRain(theme, 22 + this.bossPhase * 5, 34);
         this.time.delayedCall(300, () => this.spawnBossFanShot(theme));
+        return;
+      }
+      if (key.includes('CrownedBerry')) {
+        this.spawnBossLaneStrike(theme, true);
+        this.spawnBossWaveWall(theme);
+        this.time.delayedCall(260, () => this.spawnBossNova(theme));
         return;
       }
       if (key.includes('NeonOrchard')) {
@@ -1327,6 +1363,9 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private getBossDamage(baseDamage: number): number {
+    if (this.bossLoopIndex === 0) {
+      return Math.max(1, Math.floor(baseDamage + Math.max(0, this.bossPhase - 2)));
+    }
     return Math.max(1, Math.floor(baseDamage + this.bossPhase - 1 + this.bossLoopIndex * 0.45));
   }
 
@@ -1594,6 +1633,61 @@ export default class GameScene extends Phaser.Scene {
     this.damagePlayer(damage, `BOSS HIT -${damage}`, color);
   }
 
+  private resolveProjectileClash(bulletObject: Bullet, projectile: Phaser.GameObjects.GameObject): void {
+    if (!bulletObject.active || !projectile.active) {
+      return;
+    }
+
+    const bulletDamage = Math.max(1, Number(bulletObject.getData('damage') ?? 1));
+    const bossDamage = Math.max(1, Number(projectile.getData('damage') ?? 1));
+    const x = 'x' in projectile ? Number(projectile.x) : bulletObject.x;
+    const y = 'y' in projectile ? Number(projectile.y) : bulletObject.y;
+    const color = this.currentBossTheme?.accent ?? 0xfef08a;
+    this.spawnBurst((bulletObject.x + x) / 2, (bulletObject.y + y) / 2, bulletDamage >= bossDamage ? 0xbae6fd : color, 10 + Math.min(18, Math.max(bulletDamage, bossDamage) * 2));
+
+    if (bulletDamage >= bossDamage) {
+      projectile.destroy();
+      const pierceLeft = Number(bulletObject.getData('pierceLeft') ?? 0);
+      if (bulletDamage > bossDamage && pierceLeft > 0) {
+        bulletObject.setData('pierceLeft', pierceLeft - 1);
+        bulletObject.setData('damage', Math.max(1, bulletDamage - bossDamage));
+        return;
+      }
+      bulletObject.destroy();
+      return;
+    }
+
+    projectile.setData('damage', bossDamage - bulletDamage);
+    const remainingRatio = clamp((bossDamage - bulletDamage) / bossDamage, 0.35, 1);
+    (projectile as Phaser.GameObjects.GameObject & { setScale?: (x: number, y?: number) => void }).setScale?.(remainingRatio);
+    bulletObject.destroy();
+  }
+
+  private reduceInstantBossAttack(damage: number, intersects: (bullet: Bullet) => boolean, color: number): number {
+    let remaining = damage;
+    const bullets = this.bullets.getChildren().filter((child) => child.active && intersects(child as Bullet)) as Bullet[];
+    for (const bullet of bullets) {
+      if (remaining <= 0) {
+        break;
+      }
+      const bulletDamage = Math.max(1, Number(bullet.getData('damage') ?? 1));
+      remaining -= bulletDamage;
+      this.spawnBurst(bullet.x, bullet.y, bulletDamage >= damage ? 0xbae6fd : color, 8 + Math.min(14, bulletDamage * 2));
+      bullet.destroy();
+    }
+
+    if (remaining <= 0) {
+      this.showFlash('PARRY BREAK', '#bae6fd', this.player.x, this.player.y - 112);
+      this.playTone(740, 0.05, 0.024);
+      return 0;
+    }
+
+    if (remaining < damage) {
+      this.showFlash(`PARRY -${damage - remaining}`, '#dbeafe', this.player.x, this.player.y - 112);
+    }
+    return Math.max(1, Math.ceil(remaining));
+  }
+
   private damagePlayer(amount: number, label: string, color: number): void {
     if ((!this.boss || this.bossDefeatGraceMs > 0) && (label.includes('BOSS') || label.includes('SLASH'))) {
       return;
@@ -1770,9 +1864,10 @@ export default class GameScene extends Phaser.Scene {
     this.boss = new Boss(this, 200, -130, this.bossHp, bossAsset.key);
     this.boss.setDepth(2);
     this.bossPhase = 1;
-    this.bossAttackTimer = 820;
-    this.bossSpecialTimer = 2800 + Phaser.Math.Between(0, 900);
+    this.bossAttackTimer = this.bossLoopIndex === 0 ? 1280 : 820;
+    this.bossSpecialTimer = (this.bossLoopIndex === 0 ? 4200 : 2800) + Phaser.Math.Between(0, 900);
     this.bossPatternIndex = this.bossLoopIndex;
+    this.grantFirstBossPrep();
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);
 
@@ -1792,6 +1887,29 @@ export default class GameScene extends Phaser.Scene {
     this.showFlash('BOSS INCOMING', '#fda4af', 200, 148);
   }
 
+  private grantFirstBossPrep(): void {
+    if (this.bossLoopIndex !== 0 || this.firstBossPrepGranted) {
+      return;
+    }
+
+    this.firstBossPrepGranted = true;
+    const modules = this.stats.modules.includes('shield') ? this.stats.modules : [...this.stats.modules, 'shield'];
+    this.stats = {
+      ...this.stats,
+      modules,
+      weaponCount: Math.max(this.stats.weaponCount, 22),
+      power: Math.max(this.stats.power + 4, 13),
+      level: Math.max(this.stats.level + 1, 4),
+      fireRate: this.stats.fireRate + 0.12,
+      shield: this.stats.shield + 3,
+      synergy: this.stats.synergy + 2,
+    };
+    this.playerHp = Math.max(this.playerHp, 6);
+    this.specialCharge = Math.max(this.specialCharge, 70);
+    this.showFlash('FIRST BOSS SUPPLY', '#dcfce7', this.player.x, this.player.y - 130);
+    this.spawnBurst(this.player.x, this.player.y - 24, 0x86efac, 26);
+  }
+
   private updateBossBar(): void {
     if (!this.boss) {
       return;
@@ -1808,7 +1926,7 @@ export default class GameScene extends Phaser.Scene {
       this.spawnBurst(this.boss.x, this.boss.y + 36, this.currentBossTheme?.accent ?? 0xfecaca, 34);
       this.spawnBossPhaseMinions(this.bossPhase);
       if (this.currentBossTheme) {
-        this.time.delayedCall(180, () => this.fireBossPattern(this.currentBossTheme!));
+        this.time.delayedCall(this.bossLoopIndex === 0 ? 520 : 180, () => this.fireBossPattern(this.currentBossTheme!));
       }
       this.cameras.main.shake(300, 0.004);
     }
@@ -1839,7 +1957,7 @@ export default class GameScene extends Phaser.Scene {
     const variants = phase >= 3
       ? ['photo-chrome-mantis', 'photo-gold-scarab', 'photo-violet-stinger']
       : ['photo-crystal-lens', 'photo-berry-brute', 'shock-coil'];
-    const count = phase + 1;
+    const count = Math.max(1, phase + 1 - (this.bossLoopIndex === 0 ? 1 : 0));
     for (let i = 0; i < count; i++) {
       this.spawnEnemy({
         x: 72 + i * (256 / Math.max(1, count - 1)),
@@ -2056,6 +2174,14 @@ export default class GameScene extends Phaser.Scene {
       if (variant >= 1) {
         this.spawnSpecialRain(colors, variant === 2 ? 18 : 10, colors.primary);
       }
+      if (variant === 2) {
+        this.spawnReaperScythes(colors);
+        this.bossProjectiles.getChildren().slice(0, 10).forEach((projectile) => {
+          const obj = projectile as Phaser.GameObjects.GameObject & { x: number; y: number };
+          this.spawnBurst(obj.x, obj.y, colors.primary, 12);
+          projectile.destroy();
+        });
+      }
     } else if (specialStyle === 'rune') {
       range = variant === 1 ? 540 : 430;
       enemyDamage = damage * (variant === 2 ? 1.35 : variant === 1 ? 2.05 : 1.7);
@@ -2240,6 +2366,39 @@ export default class GameScene extends Phaser.Scene {
         onComplete: () => shard.destroy(),
       });
     }
+  }
+
+  private spawnReaperScythes(colors: ReturnType<typeof getWeaponColors>): void {
+    const sweeps = [
+      { y: this.player.y - 154, angle: -54, dir: 1 },
+      { y: this.player.y - 250, angle: 54, dir: -1 },
+      { y: this.player.y - 64, angle: -18, dir: 1 },
+    ];
+    sweeps.forEach((sweep, index) => {
+      const shaft = this.add.rectangle(sweep.dir > 0 ? -40 : 440, sweep.y, 18, 260, colors.primary, 0.78).setDepth(17);
+      const blade = this.add.arc(sweep.dir > 0 ? -42 : 442, sweep.y - 68, 74, 208, 342, false, colors.bullet, 0.86).setDepth(18);
+      const edge = this.add.arc(sweep.dir > 0 ? -42 : 442, sweep.y - 68, 92, 210, 338, false, 0xffffff, 0.7).setDepth(19);
+      [shaft, blade, edge].forEach((part) => {
+        part.setBlendMode(Phaser.BlendModes.ADD);
+        part.setAngle(sweep.angle);
+      });
+      this.time.delayedCall(index * 70, () => {
+        this.tweens.add({
+          targets: [shaft, blade, edge],
+          x: sweep.dir > 0 ? 460 : -60,
+          y: `+=${sweep.dir * 36}`,
+          angle: `+=${sweep.dir * 34}`,
+          alpha: 0,
+          duration: 520,
+          ease: 'Cubic.easeOut',
+          onComplete: () => { shaft.destroy(); blade.destroy(); edge.destroy(); },
+        });
+      });
+    });
+    const omen = this.add.circle(this.player.x, this.player.y - 92, 38, colors.primary, 0).setStrokeStyle(8, colors.secondary, 0.92).setDepth(17);
+    omen.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: omen, scaleX: 7, scaleY: 1.8, angle: 180, alpha: 0, duration: 520, ease: 'Cubic.easeOut', onComplete: () => omen.destroy() });
+    this.showFlash('REAPER SCYTHE', '#f0abfc', this.player.x, this.player.y - 142);
   }
 
   private spawnSpecialOrbitals(colors: ReturnType<typeof getWeaponColors>, count: number, radius: number): void {
