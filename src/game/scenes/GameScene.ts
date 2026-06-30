@@ -4,7 +4,7 @@ import { Bullet } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, getBossTheme, type BossTheme } from '../systems/AssetCatalog';
+import { getBossAssetByLoop, getBossTheme, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
@@ -1391,11 +1391,16 @@ export default class GameScene extends Phaser.Scene {
     this.bossPhaseText.setText(this.boss ? `BOSS P${this.bossPhase}` : `MEDAL ${this.medalCount}`);
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
-    this.player.setWeaponSkin(this.lockedWeaponSkinKey);
+    this.player.setWeaponSkin(this.getCurrentWeaponSkinKey());
     this.player.setEvolutionStage(this.evolutionCount + Math.floor(this.stats.tier / 2), colors.primary, colors.secondary, colors.aura);
     this.updateStageMood(colors.primary, colors.secondary, colors.aura);
     this.updateAuraRings(colors.aura);
     this.updateSquadUnits(colors.primary, colors.secondary);
+  }
+
+  private getCurrentWeaponSkinKey(): string {
+    const evolved = this.evolutionCount > 0 || this.stats.tier >= 3 || this.stats.rarity !== 'common';
+    return evolved ? selectWeaponAssetKey(this.stats) : this.lockedWeaponSkinKey;
   }
 
   private updateStageMood(primary: number, secondary: number, aura: number): void {

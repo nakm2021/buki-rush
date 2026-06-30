@@ -28,20 +28,26 @@ export interface BossTheme {
 
 export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponAnime', path: 'assets/generated/weapon-anime.png' },
+  { key: 'weaponRunnerEvolved', path: 'assets/generated/weapon-runner-evolved.png', match: { archetypes: ['blaster'] } },
   { key: 'weaponPhoenix', path: 'assets/generated/weapon-phoenix.png', match: { elements: ['fire'], rarities: ['mythic'] } },
+  { key: 'weaponPhoenixEvolved', path: 'assets/generated/weapon-phoenix-evolved.png', match: { elements: ['fire'], archetypes: ['phoenix', 'meteor', 'saber'] } },
   { key: 'weaponCrystal', path: 'assets/generated/weapon-crystal.png', match: { elements: ['ice', 'crystal'], rarities: ['legend'] } },
+  { key: 'weaponFrostEvolved', path: 'assets/generated/weapon-frost-evolved.png', match: { elements: ['ice'], archetypes: ['lance', 'aurora', 'geode'] } },
   { key: 'weaponShadow', path: 'assets/generated/weapon-shadow.png', match: { elements: ['shadow'] } },
   { key: 'weaponWind', path: 'assets/generated/weapon-wind.png', match: { elements: ['wind'] } },
   { key: 'weaponSeraph', path: 'assets/generated/weapon-seraph.png', match: { elements: ['light'], archetypes: ['seraph'] } },
   { key: 'weaponSamurai', path: 'assets/generated/weapon-samurai.png', match: { archetypes: ['samurai', 'saber', 'blade'] } },
   { key: 'weaponThunder', path: 'assets/generated/weapon-thunder.png', match: { elements: ['thunder'], archetypes: ['levin', 'rail'] } },
+  { key: 'weaponThunderEvolved', path: 'assets/generated/weapon-thunder-evolved.png', match: { elements: ['thunder'], archetypes: ['rail', 'tempest', 'magnum'] } },
   { key: 'weaponVoid', path: 'assets/generated/weapon-void.png', match: { elements: ['shadow'], archetypes: ['onyx', 'phantom'] } },
   { key: 'weaponDragon', path: 'assets/generated/weapon-dragon.png', match: { archetypes: ['dragon', 'hydra', 'gigas'] } },
   { key: 'weaponFrost', path: 'assets/generated/weapon-frost.png', match: { elements: ['ice'], archetypes: ['aurora', 'geode'] } },
   { key: 'weaponNova', path: 'assets/generated/weapon-nova.png', match: { archetypes: ['nova', 'meteor', 'chrono', 'nebula'] } },
   { key: 'weaponRune', path: 'assets/generated/weapon-rune.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'oracle'] } },
   { key: 'weaponBasilisk', path: 'assets/generated/weapon-basilisk.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera'] } },
+  { key: 'weaponBasiliskEvolved', path: 'assets/generated/weapon-basilisk-evolved.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera', 'phantom'] } },
   { key: 'weaponAnchor', path: 'assets/generated/weapon-anchor.png', match: { archetypes: ['anchor', 'kraken'] } },
+  { key: 'weaponAnchorEvolved', path: 'assets/generated/weapon-anchor-evolved.png', match: { archetypes: ['anchor', 'kraken', 'atlas', 'hammer'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -111,6 +117,15 @@ export function getWeaponAssetKeys(): string[] {
 }
 
 export function selectWeaponAssetKey(stats: PlayerStats): string {
+  if (stats.tier >= 3 || stats.rarity === 'epic' || stats.rarity === 'legend' || stats.rarity === 'mythic') {
+    if (stats.element === 'fire' || ['phoenix', 'meteor'].includes(stats.archetype)) return 'weaponPhoenixEvolved';
+    if (stats.element === 'ice' || ['lance', 'aurora', 'geode'].includes(stats.archetype)) return 'weaponFrostEvolved';
+    if (stats.element === 'thunder' || ['rail', 'tempest', 'magnum'].includes(stats.archetype)) return 'weaponThunderEvolved';
+    if (stats.element === 'shadow' || ['basilisk', 'chimera', 'phantom'].includes(stats.archetype)) return 'weaponBasiliskEvolved';
+    if (['anchor', 'kraken', 'atlas', 'hammer'].includes(stats.archetype)) return 'weaponAnchorEvolved';
+    if (stats.archetype === 'blaster') return 'weaponRunnerEvolved';
+  }
+
   if ((stats.element === 'fire' || stats.archetype === 'phoenix') && (stats.tier >= 4 || stats.rarity === 'legend' || stats.rarity === 'mythic')) {
     return 'weaponPhoenix';
   }
