@@ -29,6 +29,20 @@ interface RarityProfile {
   multiplier: number;
 }
 
+export interface WeaponEvolutionBranch {
+  id: string;
+  title: string;
+  subtitle: string;
+  module: WeaponModule;
+  archetype?: WeaponArchetype;
+  power: number;
+  fireRate: number;
+  critRate: number;
+  pierce: number;
+  shield: number;
+  synergy: number;
+}
+
 export const ELEMENT_PROFILES: ElementProfile[] = [
   { element: 'neutral', label: '無', names: ['Runner', 'Twin', 'Burst', 'Nova', 'Orbit', 'Crown', 'Zenith', 'Omega'], colors: { primary: 0x38bdf8, secondary: 0x93c5fd, bullet: 0x67e8f9, aura: 0x0ea5e9 } },
   { element: 'fire', label: '火', names: ['Spark', 'Flare', 'Blaze', 'Inferno', 'Phoenix', 'Solar', 'Volcanic', 'Helios'], colors: { primary: 0xfb923c, secondary: 0xfacc15, bullet: 0xffedd5, aura: 0xef4444 } },
@@ -194,6 +208,63 @@ export function getModuleByIndex(index: number): WeaponModule {
 export function getRarityByIndex(index: number): WeaponRarity {
   const rarityRamp: WeaponRarity[] = ['rare', 'epic', 'rare', 'legend', 'epic', 'mythic'];
   return rarityRamp[index % rarityRamp.length];
+}
+
+const DEFAULT_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
+  { id: 'core-overdrive', title: 'CORE OVERDRIVE', subtitle: '基礎性能を大きく底上げ', module: 'reactor', power: 5, fireRate: 0.08, critRate: 0.025, pierce: 0, shield: 1, synergy: 3 },
+  { id: 'rapid-arsenal', title: 'RAPID ARSENAL', subtitle: '弾数と連射を強化', module: 'rapid-drum', power: 2, fireRate: 0.22, critRate: 0.01, pierce: 0, shield: 0, synergy: 4 },
+  { id: 'pierce-driver', title: 'PIERCE DRIVER', subtitle: '貫通と一点火力を強化', module: 'drill', power: 6, fireRate: -0.02, critRate: 0.035, pierce: 1, shield: 0, synergy: 2 },
+];
+
+const EVOLUTION_BRANCHES: Record<string, WeaponEvolutionBranch[]> = {
+  phoenix: [
+    { id: 'phoenix-rebirth', title: 'REBIRTH WING', subtitle: '回復と炎上を伸ばす不死鳥進化', module: 'repair', archetype: 'phoenix', power: 4, fireRate: 0.1, critRate: 0.02, pierce: 0, shield: 2, synergy: 4 },
+    { id: 'solar-barrage', title: 'SOLAR BARRAGE', subtitle: '炎弾幕で画面を焼く', module: 'flare', archetype: 'meteor', power: 6, fireRate: 0.16, critRate: 0.02, pierce: 0, shield: 0, synergy: 3 },
+    { id: 'ash-saber', title: 'ASH SABER', subtitle: '火力と会心に寄せる刃進化', module: 'bladebit', archetype: 'saber', power: 7, fireRate: 0.02, critRate: 0.055, pierce: 1, shield: 0, synergy: 2 },
+  ],
+  lance: [
+    { id: 'zero-lance', title: 'ZERO LANCE', subtitle: '凍結と貫通を伸ばす', module: 'freeze', archetype: 'lance', power: 5, fireRate: 0.04, critRate: 0.025, pierce: 1, shield: 1, synergy: 3 },
+    { id: 'aurora-field', title: 'AURORA FIELD', subtitle: '広範囲制圧と防御を強化', module: 'barrier', archetype: 'aurora', power: 3, fireRate: 0.12, critRate: 0.01, pierce: 0, shield: 2, synergy: 5 },
+    { id: 'geode-shard', title: 'GEODE SHARD', subtitle: '結晶片を重ねる高火力進化', module: 'drill', archetype: 'geode', power: 7, fireRate: 0, critRate: 0.035, pierce: 1, shield: 0, synergy: 3 },
+  ],
+  rail: [
+    { id: 'tesla-rail', title: 'TESLA RAIL', subtitle: '雷撃と連鎖を伸ばす', module: 'volt', archetype: 'rail', power: 5, fireRate: 0.12, critRate: 0.025, pierce: 1, shield: 0, synergy: 3 },
+    { id: 'storm-array', title: 'STORM ARRAY', subtitle: '弾幕数と速度を伸ばす', module: 'scatter', archetype: 'tempest', power: 3, fireRate: 0.24, critRate: 0.015, pierce: 0, shield: 0, synergy: 5 },
+    { id: 'deadeye-line', title: 'DEADEYE LINE', subtitle: '一点突破の狙撃進化', module: 'sniper', archetype: 'magnum', power: 8, fireRate: -0.05, critRate: 0.06, pierce: 2, shield: 0, synergy: 2 },
+  ],
+  basilisk: [
+    { id: 'venom-gaze', title: 'VENOM GAZE', subtitle: '毒と呪いで削る', module: 'poison', archetype: 'basilisk', power: 4, fireRate: 0.1, critRate: 0.02, pierce: 0, shield: 0, synergy: 5 },
+    { id: 'void-phantom', title: 'VOID PHANTOM', subtitle: '影弾と回避不能圧を伸ばす', module: 'rift', archetype: 'phantom', power: 6, fireRate: 0.08, critRate: 0.035, pierce: 1, shield: 0, synergy: 3 },
+    { id: 'onyx-chimera', title: 'ONYX CHIMERA', subtitle: '高耐久の異形進化', module: 'berserk', archetype: 'chimera', power: 8, fireRate: -0.04, critRate: 0.03, pierce: 0, shield: 2, synergy: 2 },
+  ],
+  anchor: [
+    { id: 'kraken-anchor', title: 'KRAKEN ANCHOR', subtitle: '重撃と海裂を伸ばす', module: 'gravity', archetype: 'kraken', power: 7, fireRate: -0.02, critRate: 0.03, pierce: 1, shield: 1, synergy: 3 },
+    { id: 'atlas-breaker', title: 'ATLAS BREAKER', subtitle: '一撃火力と装甲を伸ばす', module: 'focus', archetype: 'atlas', power: 9, fireRate: -0.08, critRate: 0.04, pierce: 0, shield: 2, synergy: 2 },
+    { id: 'tide-hammer', title: 'TIDE HAMMER', subtitle: '広範囲叩きつけ進化', module: 'mine', archetype: 'hammer', power: 6, fireRate: 0.06, critRate: 0.015, pierce: 0, shield: 1, synergy: 4 },
+  ],
+};
+
+export function getEvolutionBranches(stats: PlayerStats): WeaponEvolutionBranch[] {
+  return EVOLUTION_BRANCHES[stats.archetype] ?? EVOLUTION_BRANCHES[stats.element] ?? DEFAULT_EVOLUTION_BRANCHES;
+}
+
+export function applyWeaponEvolutionBranch(stats: PlayerStats, branch: WeaponEvolutionBranch, evolutionCount: number): PlayerStats {
+  const modules = stats.modules.includes(branch.module) ? stats.modules : [...stats.modules, branch.module];
+  const rarity: WeaponRarity = evolutionCount >= 6 ? 'mythic' : evolutionCount >= 4 ? 'legend' : evolutionCount >= 2 ? 'epic' : 'rare';
+  return {
+    ...stats,
+    archetype: branch.archetype ?? stats.archetype,
+    rarity,
+    modules,
+    level: stats.level + 2,
+    tier: stats.tier + 1,
+    power: stats.power + branch.power + Math.ceil(evolutionCount / 2),
+    fireRate: Math.max(0.75, stats.fireRate + branch.fireRate),
+    critRate: Math.min(0.58, stats.critRate + branch.critRate),
+    pierce: stats.pierce + branch.pierce,
+    shield: stats.shield + branch.shield,
+    synergy: stats.synergy + branch.synergy,
+  };
 }
 
 function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, power: number, fireRate: number): PlayerStats {

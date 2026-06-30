@@ -10,11 +10,12 @@ import { PlayerInputController } from '../systems/PlayerInputController';
 import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
 import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
-import { getBuildRank, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
+import { applyWeaponEvolutionBranch, getBuildRank, getEvolutionBranches, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
 import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
-type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'nova';
+type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'frost' | 'nova';
+type SpecialVariant = 0 | 1 | 2;
 
 interface PlayerStatusState {
   poisonMs: number;
@@ -131,6 +132,7 @@ export default class GameScene extends Phaser.Scene {
   private specialTimer = 0;
   private specialDrainTimer = 0;
   private specialPulseTimer = 0;
+  private specialVariant: SpecialVariant = 0;
   private specialCharge = 0;
   private specialCooldown = 0;
   private bossAttackTimer = 0;
@@ -140,6 +142,7 @@ export default class GameScene extends Phaser.Scene {
   private bossDefeatGraceMs = 0;
   private defeatedBossKeys: string[] = [];
   private evolutionCount = 0;
+  private evolutionPath: string[] = [];
   private lockedWeaponSkinKey = 'weaponAnime';
   private playerStatuses: PlayerStatusState = {
     poisonMs: 0,
@@ -192,6 +195,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private resetRunState(starterId?: string): void {
+    this.time.timeScale = 1;
+    this.physics.world.timeScale = 1;
     const meta = loadPlayerMeta();
     const starter = getStarterWeapon(starterId);
     this.permanentRank = meta.permanentRank;
@@ -232,6 +237,7 @@ export default class GameScene extends Phaser.Scene {
     this.specialTimer = 0;
     this.specialDrainTimer = 0;
     this.specialPulseTimer = 0;
+    this.specialVariant = 0;
     this.specialCharge = 12;
     this.specialCooldown = 0;
     this.bossAttackTimer = 0;
@@ -241,6 +247,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossDefeatGraceMs = 0;
     this.defeatedBossKeys = [];
     this.evolutionCount = 0;
+    this.evolutionPath = [];
     this.medalCount = 0;
     this.stageBranchOffset = 0;
     this.pauseOverlay = undefined;
@@ -269,6 +276,7 @@ export default class GameScene extends Phaser.Scene {
     this.spawnStageEvents();
     this.updatePlayerStatuses(smoothDelta);
     this.updateEnemyStatuses(smoothDelta);
+    this.updateEnemyTactics(smoothDelta);
     this.updateMovement(smoothDelta);
     this.updateSpeedLines(smoothDelta);
     this.updateBullets(smoothDelta);
@@ -587,29 +595,58 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private fireWeapons(): void {
-    const shotCount = Math.min(13, 1 + Math.floor(this.stats.weaponCount / 5));
+    const branchBonus = Math.min(4, this.evolutionPath.length);
+    const shotCount = Math.min(17, 1 + Math.floor(this.stats.weaponCount / 5) + Math.floor(branchBonus / 2));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
     const pierceLeft = this.stats.pierce + (this.stats.modules.includes('chain') ? 1 : 0);
+    const hasStormArray = this.evolutionPath.includes('storm-array');
+    const hasSolarBarrage = this.evolutionPath.includes('solar-barrage');
+    const hasZeroLance = this.evolutionPath.includes('zero-lance');
+    const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor');
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
       const color = i % 3 === 0 ? colors.bullet : i % 3 === 1 ? colors.primary : colors.secondary;
       const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color);
       bullet.setDepth(2);
-      bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4);
-      bullet.setScale(this.stats.modules.includes('focus') ? 1.28 : 1);
-      bullet.setData('pierceLeft', pierceLeft);
+      bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0));
+      bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0));
+      bullet.setData('pierceLeft', pierceLeft + (hasZeroLance ? 1 : 0) + (hasKrakenAnchor && i % 3 === 0 ? 1 : 0));
       const shotStatus = this.getPlayerShotStatus();
       if (shotStatus && Math.random() < shotStatus.chance) {
         bullet.setData('statusEffect', shotStatus.effect);
       }
       const body = bullet.body as Phaser.Physics.Arcade.Body;
-      body.setVelocityX(offset * 24 * spread);
+      body.setVelocityX(offset * 24 * spread + (hasSolarBarrage ? Math.sin(i + this.stageTimer * 0.01) * 28 : 0));
       body.setVelocityY(-440 - this.stats.power * 22);
       this.bullets.add(bullet);
+
+      if (hasSolarBarrage && i % 2 === 0) {
+        this.spawnBranchShard(this.player.x + offset * 12, this.player.y - 48, offset * 52, -520, colors.secondary, 'burn');
+      }
+      if (this.evolutionPath.includes('venom-gaze') && i % 3 === 0) {
+        this.spawnBranchShard(this.player.x + offset * 10, this.player.y - 42, offset * 20, -430, colors.primary, 'poison');
+      }
+      if (this.evolutionPath.includes('deadeye-line') && i === Math.floor(center)) {
+        this.spawnBranchShard(this.player.x, this.player.y - 58, 0, -760, colors.bullet, undefined, 1.7, 3);
+      }
     }
+  }
+
+  private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0): void {
+    const shard = new Bullet(this, x, y, color);
+    shard.setDepth(2);
+    shard.setScale(scale);
+    shard.setVelocity(Math.abs(vy));
+    shard.setData('pierceLeft', pierce);
+    if (status) {
+      shard.setData('statusEffect', status);
+    }
+    const body = shard.body as Phaser.Physics.Arcade.Body;
+    body.setVelocity(vx, vy);
+    this.bullets.add(shard);
   }
 
   private updateBullets(delta: number): void {
@@ -685,6 +722,39 @@ export default class GameScene extends Phaser.Scene {
       const slowMs = Math.max(0, Number(enemy.getData('slowMs') ?? 0) - delta);
       enemy.setData('slowMs', slowMs);
       enemy.setData('slowMultiplier', slowMs > 0 ? Number(enemy.getData('slowPower') ?? 0.45) : 1);
+    });
+  }
+
+  private updateEnemyTactics(delta: number): void {
+    const dt = delta / 1000;
+    this.enemies.getChildren().forEach((child, index) => {
+      const enemy = child as Enemy;
+      let tactic = String(enemy.getData('tactic') ?? '');
+      if (!tactic) {
+        const seed = Math.abs(Math.floor(enemy.x + enemy.y + index * 17));
+        tactic = seed % 11 === 0 ? 'dash' : seed % 7 === 0 ? 'sway' : seed % 5 === 0 ? 'guard' : 'fall';
+        enemy.setData('tactic', tactic);
+        enemy.setData('tacticSeed', seed);
+        enemy.setData('tacticTimer', Phaser.Math.Between(420, 1100));
+      }
+
+      const seed = Number(enemy.getData('tacticSeed') ?? 0);
+      const timer = Math.max(0, Number(enemy.getData('tacticTimer') ?? 0) - delta);
+      enemy.setData('tacticTimer', timer);
+
+      if (tactic === 'sway') {
+        enemy.x = clamp(enemy.x + Math.sin(this.stageTimer * 0.006 + seed) * 74 * dt, 32, 368);
+      } else if (tactic === 'dash' && timer <= 0) {
+        const direction = Math.sign(this.player.x - enemy.x) || 1;
+        enemy.x = clamp(enemy.x + direction * 175 * dt, 32, 368);
+        enemy.y += 78 * dt;
+        if (Math.abs(enemy.x - this.player.x) < 30 || enemy.y > this.player.y - 40) {
+          enemy.setData('tacticTimer', 820);
+        }
+      } else if (tactic === 'guard') {
+        enemy.setScale(1 + Math.sin(this.stageTimer * 0.008 + seed) * 0.045);
+      }
+      (enemy.body as Phaser.Physics.Arcade.Body | undefined)?.updateFromGameObject();
     });
   }
 
@@ -1603,6 +1673,7 @@ export default class GameScene extends Phaser.Scene {
     if (this.bossHp <= 0 && this.boss) {
       const defeatedBossKey = this.currentBossTheme?.key ?? getBossAssetByLoop(this.bossLoopIndex).key;
       this.spawnBurst(this.boss.x, this.boss.y, 0xfef3c7, 42);
+      this.showBossDefeatCutIn();
       this.showFlash('BOSS BREAK +Lv', '#fef3c7', this.boss.x, this.boss.y - 70);
       const previousStats = { ...this.stats, modules: [...this.stats.modules] };
       const previousHp = this.playerHp;
@@ -1638,6 +1709,31 @@ export default class GameScene extends Phaser.Scene {
       .forEach((child) => child.destroy());
   }
 
+  private showBossDefeatCutIn(): void {
+    const { width, height } = this.scale;
+    const color = this.currentBossTheme?.accent ?? 0xfef3c7;
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.32).setDepth(36).setBlendMode(Phaser.BlendModes.ADD);
+    const band = this.add.rectangle(width / 2, height * 0.42, width + 120, 88, 0x020617, 0.9).setDepth(37);
+    band.setStrokeStyle(3, color, 0.95);
+    const text = this.add.text(width / 2, height * 0.42, 'BOSS BREAK', {
+      fontSize: '34px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 8,
+    }).setOrigin(0.5).setDepth(38);
+    this.time.timeScale = 0.42;
+    this.physics.world.timeScale = 0.42;
+    this.time.delayedCall(260, () => {
+      this.time.timeScale = 1;
+      this.physics.world.timeScale = 1;
+    });
+    this.tweens.add({ targets: flash, alpha: 0, duration: 520, onComplete: () => flash.destroy() });
+    this.tweens.add({ targets: [band, text], alpha: 0, y: '-=24', delay: 620, duration: 380, ease: 'Sine.easeIn', onComplete: () => { band.destroy(); text.destroy(); } });
+    this.cameras.main.shake(420, 0.008);
+  }
+
   private handleBossDefeated(bossKey: string): void {
     this.defeatedBossKeys.push(bossKey);
     this.stageBranchOffset = Math.abs([...bossKey].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % 17;
@@ -1652,24 +1748,17 @@ export default class GameScene extends Phaser.Scene {
     const previousStats = { ...this.stats, modules: [...this.stats.modules] };
     const previousHp = this.playerHp;
     this.evolutionCount += 1;
-    const rarity = this.evolutionCount >= 5 ? 'legend' : this.evolutionCount >= 3 ? 'epic' : 'rare';
-    this.stats = {
-      ...this.stats,
-      rarity,
-      level: this.stats.level + 2,
-      tier: this.stats.tier + 1,
-      power: this.stats.power + 3 + Math.ceil(this.evolutionCount / 2),
-      fireRate: this.stats.fireRate + 0.08,
-      critRate: this.stats.critRate + 0.025,
-      synergy: this.stats.synergy + 2,
-      shield: this.stats.shield + 1,
-    };
+    const branches = getEvolutionBranches(this.stats);
+    const branch = branches[(this.evolutionCount + this.bossLoopIndex + Phaser.Math.Between(0, branches.length - 1)) % branches.length];
+    this.evolutionPath.push(branch.id);
+    this.stats = applyWeaponEvolutionBranch(this.stats, branch, this.evolutionCount);
     this.playerHp += 1;
     const color = getWeaponColors(this.stats).aura;
-    this.showFlash(`BUKI EVOLVE +${this.evolutionCount}`, '#fef3c7', this.player.x, this.player.y - 132);
+    this.showFlash(branch.title, '#fef3c7', this.player.x, this.player.y - 132);
     this.specialCharge = clamp(this.specialCharge + 28, 0, 100);
     this.showStatGainFeedback(previousStats, previousHp, { label: 'BUKI EVOLVE', kind: 'fusion', value: 1, color, good: true });
-    this.showRareEvolution(color);
+    this.showEvolutionCutIn(branch.title, branch.subtitle, color);
+    this.showRareEvolution(color, branch.title);
     this.playRareSound();
   }
 
@@ -1715,11 +1804,51 @@ export default class GameScene extends Phaser.Scene {
       this.bossAttackTimer = Math.min(this.bossAttackTimer, 260);
       this.bossSpecialTimer = Math.min(this.bossSpecialTimer, 900);
       this.showFlash(`PHASE ${this.bossPhase}`, '#fecaca', this.boss.x, this.boss.y - 122);
+      this.showBossPhaseCutIn(this.bossPhase);
       this.spawnBurst(this.boss.x, this.boss.y + 36, this.currentBossTheme?.accent ?? 0xfecaca, 34);
+      this.spawnBossPhaseMinions(this.bossPhase);
+      if (this.currentBossTheme) {
+        this.time.delayedCall(180, () => this.fireBossPattern(this.currentBossTheme!));
+      }
       this.cameras.main.shake(300, 0.004);
     }
     this.bossHpFill.displayWidth = Math.max(0, hpRatio * 180);
     this.bossHpText.setText(`BOSS P${this.bossPhase}  ${Math.max(0, this.bossHp)} HP`);
+  }
+
+  private showBossPhaseCutIn(phase: number): void {
+    const theme = this.currentBossTheme;
+    const color = theme?.accent ?? 0xfecaca;
+    const { width, height } = this.scale;
+    const band = this.add.rectangle(width / 2, height * 0.24, width + 80, 78, theme?.darkness ?? 0x1f0712, 0.88).setDepth(32);
+    band.setStrokeStyle(3, color, 0.92);
+    const text = this.add.text(width / 2, height * 0.24, `BOSS PHASE ${phase}`, {
+      fontSize: '28px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(33);
+    const blade = this.add.rectangle(-40, height * 0.24, width * 0.9, 8, color, 0.82).setAngle(-8).setDepth(33).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: blade, x: width + 80, alpha: 0, scaleX: 1.8, duration: 520, ease: 'Cubic.easeOut', onComplete: () => blade.destroy() });
+    this.tweens.add({ targets: [band, text], alpha: 0, delay: 720, duration: 320, onComplete: () => { band.destroy(); text.destroy(); } });
+  }
+
+  private spawnBossPhaseMinions(phase: number): void {
+    const variants = phase >= 3
+      ? ['photo-chrome-mantis', 'photo-gold-scarab', 'photo-violet-stinger']
+      : ['photo-crystal-lens', 'photo-berry-brute', 'shock-coil'];
+    const count = phase + 1;
+    for (let i = 0; i < count; i++) {
+      this.spawnEnemy({
+        x: 72 + i * (256 / Math.max(1, count - 1)),
+        y: -120 - i * 42,
+        hp: Math.round((42 + this.bossLoopIndex * 18 + phase * 28) * (phase >= 3 ? 1.35 : 1)),
+        variantId: variants[i % variants.length],
+      });
+    }
+    this.showFlash('MINIONS IN', '#fecaca', 200, 160);
   }
 
   private activateSpecial(): void {
@@ -1747,12 +1876,13 @@ export default class GameScene extends Phaser.Scene {
 
     const colors = getWeaponColors(this.stats);
     this.specialActive = true;
+    this.specialVariant = Phaser.Math.Between(0, 2) as SpecialVariant;
     this.specialCharge = 0;
     this.specialCooldown = 8500;
     this.specialTimer = 2600 + Math.min(1100, this.stats.synergy * 42 + this.stats.level * 18);
     this.specialDrainTimer = this.getSpecialDrainInterval() * 0.42;
     this.specialPulseTimer = 0;
-    this.showSpecialOpening(colors.primary, colors.secondary, colors.aura);
+    this.showSpecialOpening(colors.primary, colors.secondary, colors.aura, this.specialVariant);
     this.playRareSound();
     this.cameras.main.shake(420, 0.006);
   }
@@ -1800,7 +1930,7 @@ export default class GameScene extends Phaser.Scene {
     return clamp(1040 + efficientBonus + heavyCost + rarityCost - buildCost, 620, 1180);
   }
 
-  private showSpecialOpening(primary: number, secondary: number, aura: number): void {
+  private showSpecialOpening(primary: number, secondary: number, aura: number, variant: SpecialVariant): void {
     const { width, height } = this.scale;
     const flash = this.add.rectangle(width / 2, height / 2, width, height, aura, 0.42).setDepth(35).setBlendMode(Phaser.BlendModes.ADD);
     const veil = this.add.rectangle(width / 2, height / 2, width, height, 0xffffff, 0.18).setDepth(34).setBlendMode(Phaser.BlendModes.ADD);
@@ -1816,7 +1946,8 @@ export default class GameScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 8,
     }).setOrigin(0.5).setDepth(37);
-    const subtitle = this.add.text(width / 2, height * 0.42, getWeaponName(this.stats), {
+    const specialNames = ['BURST', 'RAMPAGE', 'CATASTROPHE'];
+    const subtitle = this.add.text(width / 2, height * 0.42, `${getWeaponName(this.stats)} / ${specialNames[variant]}`, {
       fontSize: '13px',
       color: '#fef3c7',
       fontStyle: 'bold',
@@ -1825,8 +1956,9 @@ export default class GameScene extends Phaser.Scene {
       strokeThickness: 4,
     }).setOrigin(0.5).setDepth(37);
 
-    for (let i = 0; i < 18; i++) {
-      const angle = (Math.PI * 2 * i) / 18;
+    const rayCount = 18 + variant * 6;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (Math.PI * 2 * i) / rayCount;
       const ray = this.add.rectangle(this.player.x, this.player.y, 5, 150, i % 2 === 0 ? primary : secondary, 0.46).setDepth(34);
       ray.setBlendMode(Phaser.BlendModes.ADD);
       ray.setRotation(angle);
@@ -1840,7 +1972,7 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 10 + variant * 3; i++) {
       const x = 36 + i * 36;
       const beam = this.add.rectangle(x, height / 2, 8 + (i % 3) * 5, height + 120, i % 2 === 0 ? secondary : aura, 0.28).setAngle(i % 2 === 0 ? -12 : 12).setDepth(33);
       beam.setBlendMode(Phaser.BlendModes.ADD);
@@ -1855,8 +1987,17 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
-    for (let i = 0; i < 30; i++) {
-      const angle = (Math.PI * 2 * i) / 30;
+    if (variant >= 1) {
+      for (let i = 0; i < 5 + variant * 2; i++) {
+        const ring = this.add.circle(this.player.x, this.player.y - 28, 42 + i * 18, i % 2 === 0 ? primary : secondary, 0).setStrokeStyle(3, i % 2 === 0 ? aura : secondary, 0.78).setDepth(36);
+        ring.setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: ring, scale: 2.8 + i * 0.2, angle: 180 + i * 24, alpha: 0, duration: 620 + i * 62, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
+      }
+    }
+
+    const shardCount = 30 + variant * 12;
+    for (let i = 0; i < shardCount; i++) {
+      const angle = (Math.PI * 2 * i) / shardCount;
       const shard = this.add.triangle(this.player.x, this.player.y - 22, 0, -8, 6, 8, -6, 8, i % 2 === 0 ? aura : secondary, 0.82).setDepth(37);
       shard.setBlendMode(Phaser.BlendModes.ADD);
       shard.setRotation(angle);
@@ -1883,92 +2024,136 @@ export default class GameScene extends Phaser.Scene {
     const colors = getWeaponColors(this.stats);
     const damage = Math.max(12, Math.round((this.stats.power + this.stats.level * 2 + this.stats.weaponCount * 0.45) * getWeaponPowerMultiplier(this.stats) * 1.12));
     const specialStyle = this.getWeaponSpecialStyle();
+    const variant = this.specialVariant;
     let range = 460;
     let enemyDamage = damage * 2;
     let bossDamage = damage;
 
     if (specialStyle === 'anchor') {
-      range = 380;
-      enemyDamage = damage * 3.4;
-      bossDamage = damage * 2.4;
-      const slamCount = 3 + Math.min(2, Math.floor(this.stats.weaponCount / 22));
+      range = variant === 1 ? 470 : variant === 2 ? 430 : 380;
+      enemyDamage = damage * (variant === 2 ? 4.1 : variant === 1 ? 2.8 : 3.4);
+      bossDamage = damage * (variant === 2 ? 2.85 : variant === 1 ? 2.15 : 2.4);
+      const slamCount = 3 + Math.min(2, Math.floor(this.stats.weaponCount / 22)) + variant;
       for (let i = 0; i < slamCount; i++) {
-        const x = this.player.x + (i - (slamCount - 1) / 2) * 68;
-        const pillar = this.add.rectangle(x, this.player.y - 170, 28, 360, colors.primary, 0.68).setDepth(14).setBlendMode(Phaser.BlendModes.ADD);
-        const impact = this.add.circle(x, this.player.y - 28, 24, colors.secondary, 0).setStrokeStyle(8, colors.bullet, 0.9).setDepth(15);
-        this.tweens.add({ targets: pillar, y: '+=92', alpha: 0, scaleX: 4.8, duration: 260, ease: 'Cubic.easeOut', onComplete: () => pillar.destroy() });
-        this.tweens.add({ targets: impact, scale: 4.4, alpha: 0, duration: 340, ease: 'Cubic.easeOut', onComplete: () => impact.destroy() });
+        const x = variant === 1 ? 52 + i * (296 / Math.max(1, slamCount - 1)) : this.player.x + (i - (slamCount - 1) / 2) * 68;
+        const pillar = this.add.rectangle(x, this.player.y - 185 + (variant === 2 ? i * 12 : 0), variant === 2 ? 42 : 28, 360, colors.primary, 0.68).setDepth(14).setBlendMode(Phaser.BlendModes.ADD);
+        const impact = this.add.circle(x, this.player.y - 28, 24 + variant * 6, colors.secondary, 0).setStrokeStyle(8 + variant * 2, colors.bullet, 0.9).setDepth(15);
+        this.tweens.add({ targets: pillar, y: `+=${92 + variant * 26}`, alpha: 0, scaleX: 4.8 + variant * 1.4, duration: 260 + variant * 55, ease: 'Cubic.easeOut', onComplete: () => pillar.destroy() });
+        this.tweens.add({ targets: impact, scale: 4.4 + variant * 1.2, alpha: 0, duration: 340 + variant * 60, ease: 'Cubic.easeOut', onComplete: () => impact.destroy() });
       }
     } else if (specialStyle === 'basilisk') {
-      range = 560;
-      enemyDamage = damage * 1.35;
-      bossDamage = damage * 1.15;
-      this.enemies.getChildren().slice(0, 8).forEach((enemy, index) => {
+      range = variant === 2 ? 650 : 560;
+      enemyDamage = damage * (variant === 0 ? 1.35 : variant === 1 ? 1.7 : 1.2);
+      bossDamage = damage * (variant === 0 ? 1.15 : variant === 1 ? 1.35 : 1.0);
+      this.enemies.getChildren().slice(0, 8 + variant * 4).forEach((enemy, index) => {
         const target = enemy as Enemy;
         const line = this.add.line(0, 0, this.player.x, this.player.y - 18, target.x, target.y, index % 2 === 0 ? colors.primary : colors.secondary, 0.74).setDepth(15);
-        line.setLineWidth(5).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: line, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => line.destroy() });
+        line.setLineWidth(5 + variant * 2).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: line, alpha: 0, duration: 260 + variant * 80, ease: 'Quad.easeOut', onComplete: () => line.destroy() });
       });
       const eye = this.add.circle(this.player.x, this.player.y - 54, 20, colors.primary, 0.34).setStrokeStyle(4, colors.secondary, 0.92).setDepth(15);
-      this.tweens.add({ targets: eye, scaleX: 6, scaleY: 1.2, alpha: 0, duration: 320, ease: 'Quad.easeOut', onComplete: () => eye.destroy() });
+      this.tweens.add({ targets: eye, scaleX: 6 + variant * 2, scaleY: 1.2 + variant * 0.4, alpha: 0, duration: 320 + variant * 80, ease: 'Quad.easeOut', onComplete: () => eye.destroy() });
+      if (variant >= 1) {
+        this.spawnSpecialRain(colors, variant === 2 ? 18 : 10, colors.primary);
+      }
     } else if (specialStyle === 'rune') {
-      range = 430;
-      enemyDamage = damage * 1.7;
-      bossDamage = damage * 0.9;
-      for (let i = 0; i < 6; i++) {
-        const angle = (Math.PI * 2 * i) / 6 + this.stageTimer * 0.002;
-        const glyph = this.add.rectangle(this.player.x + Math.cos(angle) * 62, this.player.y + Math.sin(angle) * 38, 18, 18, i % 2 === 0 ? colors.secondary : colors.bullet, 0.72).setDepth(15);
+      range = variant === 1 ? 540 : 430;
+      enemyDamage = damage * (variant === 2 ? 1.35 : variant === 1 ? 2.05 : 1.7);
+      bossDamage = damage * (variant === 1 ? 1.18 : 0.9);
+      const glyphCount = 6 + variant * 4;
+      for (let i = 0; i < glyphCount; i++) {
+        const angle = (Math.PI * 2 * i) / glyphCount + this.stageTimer * 0.002;
+        const glyph = this.add.rectangle(this.player.x + Math.cos(angle) * (62 + variant * 18), this.player.y + Math.sin(angle) * (38 + variant * 12), 18 + variant * 4, 18 + variant * 4, i % 2 === 0 ? colors.secondary : colors.bullet, 0.72).setDepth(15);
         glyph.setAngle(45 + i * 30).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: glyph, scale: 2.4, angle: glyph.angle + 180, alpha: 0, duration: 420, ease: 'Sine.easeOut', onComplete: () => glyph.destroy() });
+        this.tweens.add({ targets: glyph, scale: 2.4 + variant * 0.9, angle: glyph.angle + 180 + variant * 90, alpha: 0, duration: 420 + variant * 70, ease: 'Sine.easeOut', onComplete: () => glyph.destroy() });
       }
       const ward = this.add.circle(this.player.x, this.player.y, 42, colors.aura, 0).setStrokeStyle(5, colors.bullet, 0.86).setDepth(15);
-      this.tweens.add({ targets: ward, scale: 3.7, alpha: 0, duration: 420, ease: 'Quad.easeOut', onComplete: () => ward.destroy() });
-      if (Math.random() < 0.34) {
+      this.tweens.add({ targets: ward, scale: 3.7 + variant * 0.8, alpha: 0, duration: 420 + variant * 70, ease: 'Quad.easeOut', onComplete: () => ward.destroy() });
+      if (Math.random() < (variant === 2 ? 0.5 : 0.34)) {
         this.playerHp += 1;
         this.showFlash('RUNE HEAL', '#dcfce7', this.player.x, this.player.y - 124);
       }
     } else if (specialStyle === 'phoenix') {
-      range = 500;
-      enemyDamage = damage * 2.5;
-      bossDamage = damage * 1.55;
-      for (let i = 0; i < 7; i++) {
-        const offset = i - 3;
-        const feather = this.add.triangle(this.player.x + offset * 24, this.player.y - 78, 0, -22, 14, 20, -14, 20, i % 2 === 0 ? colors.primary : colors.secondary, 0.78).setDepth(15);
+      range = variant === 2 ? 580 : 500;
+      enemyDamage = damage * (variant === 1 ? 2.95 : variant === 2 ? 2.25 : 2.5);
+      bossDamage = damage * (variant === 1 ? 1.85 : variant === 2 ? 1.4 : 1.55);
+      const featherCount = 7 + variant * 5;
+      for (let i = 0; i < featherCount; i++) {
+        const offset = i - (featherCount - 1) / 2;
+        const feather = this.add.triangle(this.player.x + offset * (variant === 2 ? 18 : 24), this.player.y - 78, 0, -22, 14, 20, -14, 20, i % 2 === 0 ? colors.primary : colors.secondary, 0.78).setDepth(15);
         feather.setAngle(offset * 12).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: feather, y: '-=210', x: `+=${offset * 18}`, scale: 2.4, alpha: 0, duration: 430, ease: 'Cubic.easeOut', onComplete: () => feather.destroy() });
+        this.tweens.add({ targets: feather, y: `-=${210 + variant * 60}`, x: `+=${offset * (18 + variant * 8)}`, scale: 2.4 + variant * 0.9, alpha: 0, duration: 430 + variant * 70, ease: 'Cubic.easeOut', onComplete: () => feather.destroy() });
       }
-      this.spawnBurst(this.player.x, this.player.y - 54, colors.secondary, 34);
-      if (Math.random() < 0.22) {
+      this.spawnBurst(this.player.x, this.player.y - 54, colors.secondary, 34 + variant * 10);
+      if (variant >= 1) {
+        this.spawnSpecialRain(colors, variant === 2 ? 16 : 9, colors.secondary);
+      }
+      if (Math.random() < (variant === 2 ? 0.3 : 0.22)) {
         this.playerHp += 1;
         this.showFlash('REBIRTH', '#dcfce7', this.player.x, this.player.y - 124);
       }
     } else if (specialStyle === 'storm') {
-      range = 520;
-      enemyDamage = damage * 2.05;
-      bossDamage = damage * 1.2;
-      for (let i = 0; i < 7; i++) {
+      range = variant === 2 ? 610 : 520;
+      enemyDamage = damage * (variant === 1 ? 2.45 : variant === 2 ? 1.85 : 2.05);
+      bossDamage = damage * (variant === 1 ? 1.45 : variant === 2 ? 1.1 : 1.2);
+      for (let i = 0; i < 7 + variant * 5; i++) {
         const x = Phaser.Math.Between(54, 346);
         const bolt = this.add.line(0, 0, x, this.player.y - 370, x + Phaser.Math.Between(-30, 30), this.player.y + 10, i % 2 === 0 ? colors.bullet : colors.secondary, 0.88).setDepth(15);
-        bolt.setLineWidth(4 + (i % 3)).setBlendMode(Phaser.BlendModes.ADD);
-        this.tweens.add({ targets: bolt, alpha: 0, duration: 170, ease: 'Quad.easeOut', onComplete: () => bolt.destroy() });
+        bolt.setLineWidth(4 + (i % 3) + variant).setBlendMode(Phaser.BlendModes.ADD);
+        this.tweens.add({ targets: bolt, alpha: 0, duration: 170 + variant * 36, ease: 'Quad.easeOut', onComplete: () => bolt.destroy() });
       }
-      this.bossProjectiles.getChildren().slice(0, 8).forEach((projectile) => {
+      this.bossProjectiles.getChildren().slice(0, 8 + variant * 5).forEach((projectile) => {
         const obj = projectile as Phaser.GameObjects.GameObject & { x: number; y: number };
         this.spawnBurst(obj.x, obj.y, colors.bullet, 12);
         projectile.destroy();
       });
+      if (variant === 2) {
+        this.spawnSpecialOrbitals(colors, 8, 94);
+      }
       this.playTone(880 + Math.random() * 120, 0.035, 0.02);
+    } else if (specialStyle === 'frost') {
+      range = variant === 1 ? 590 : 520;
+      enemyDamage = damage * (variant === 0 ? 2.1 : variant === 1 ? 1.75 : 2.65);
+      bossDamage = damage * (variant === 0 ? 1.22 : variant === 1 ? 1.05 : 1.55);
+      const lanceCount = 6 + variant * 4;
+      for (let i = 0; i < lanceCount; i++) {
+        const angle = (Math.PI * 2 * i) / lanceCount + (variant === 1 ? this.stageTimer * 0.004 : -Math.PI / 2);
+        const startX = variant === 2 ? 38 + i * (324 / Math.max(1, lanceCount - 1)) : this.player.x + Math.cos(angle) * (70 + variant * 18);
+        const startY = variant === 2 ? this.player.y - 330 : this.player.y - 54 + Math.sin(angle) * (44 + variant * 18);
+        const lance = this.add.triangle(startX, startY, 0, -30, 10, 22, -10, 22, i % 2 === 0 ? colors.bullet : colors.secondary, 0.82).setDepth(15);
+        lance.setBlendMode(Phaser.BlendModes.ADD);
+        lance.setAngle(variant === 2 ? Phaser.Math.Between(-10, 10) : Phaser.Math.RadToDeg(angle) + 90);
+        this.tweens.add({
+          targets: lance,
+          y: variant === 2 ? this.player.y + 46 : startY + Math.sin(angle) * 230,
+          x: variant === 2 ? startX + Phaser.Math.Between(-26, 26) : startX + Math.cos(angle) * 230,
+          scale: 2.5 + variant * 0.5,
+          alpha: 0,
+          duration: 360 + variant * 80,
+          ease: 'Cubic.easeOut',
+          onComplete: () => lance.destroy(),
+        });
+      }
+      const crystal = this.add.star(this.player.x, this.player.y - 54, 8, 16, 62 + variant * 18, colors.secondary, 0.32).setStrokeStyle(4 + variant, colors.bullet, 0.86).setDepth(16);
+      crystal.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: crystal, scale: 3.1 + variant, angle: 180 + variant * 120, alpha: 0, duration: 430 + variant * 80, ease: 'Cubic.easeOut', onComplete: () => crystal.destroy() });
+      if (variant >= 1) {
+        this.bossAttackTimer += 80;
+      }
     } else {
-      range = 620;
-      enemyDamage = damage * 1.85;
-      bossDamage = damage * 0.95;
-      const nova = this.add.circle(this.player.x, this.player.y - 80, 22, colors.secondary, 0.22).setStrokeStyle(6, colors.bullet, 0.86).setDepth(16);
+      range = variant === 1 ? 700 : 620;
+      enemyDamage = damage * (variant === 2 ? 2.2 : 1.85);
+      bossDamage = damage * (variant === 2 ? 1.22 : 0.95);
+      const nova = this.add.circle(this.player.x, this.player.y - 80, 22 + variant * 8, colors.secondary, 0.22).setStrokeStyle(6 + variant * 2, colors.bullet, 0.86).setDepth(16);
       const core = this.add.circle(this.player.x, this.player.y - 80, 10, colors.primary, 0.7).setDepth(16).setBlendMode(Phaser.BlendModes.ADD);
-      this.tweens.add({ targets: nova, scale: 9, alpha: 0, duration: 460, ease: 'Cubic.easeOut', onComplete: () => nova.destroy() });
-      this.tweens.add({ targets: core, scale: 14, alpha: 0, duration: 360, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
+      this.tweens.add({ targets: nova, scale: 9 + variant * 2, alpha: 0, duration: 460 + variant * 80, ease: 'Cubic.easeOut', onComplete: () => nova.destroy() });
+      this.tweens.add({ targets: core, scale: 14 + variant * 3, alpha: 0, duration: 360 + variant * 70, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
+      if (variant >= 1) {
+        this.spawnSpecialOrbitals(colors, variant === 2 ? 10 : 6, variant === 2 ? 126 : 88);
+      }
     }
 
-    this.spawnSpecialPulseFlare(colors, specialStyle, range);
+    this.spawnSpecialPulseFlare(colors, specialStyle, range, variant);
 
     this.enemies.getChildren().forEach((enemy) => {
       const enemyObject = enemy as Enemy;
@@ -1995,18 +2180,18 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  private spawnSpecialPulseFlare(colors: ReturnType<typeof getWeaponColors>, specialStyle: SpecialStyle, range: number): void {
+  private spawnSpecialPulseFlare(colors: ReturnType<typeof getWeaponColors>, specialStyle: SpecialStyle, range: number, variant: SpecialVariant): void {
     const pulse = this.add.circle(this.player.x, this.player.y - 38, Math.max(30, range * 0.13), colors.aura, 0).setStrokeStyle(8, colors.bullet, 0.8).setDepth(14);
     const inner = this.add.circle(this.player.x, this.player.y - 38, 18, colors.primary, 0.26).setStrokeStyle(3, colors.secondary, 0.9).setDepth(15);
     pulse.setBlendMode(Phaser.BlendModes.ADD);
     inner.setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: pulse, scale: 4.6, alpha: 0, duration: 420, ease: 'Cubic.easeOut', onComplete: () => pulse.destroy() });
-    this.tweens.add({ targets: inner, scale: 8.4, alpha: 0, duration: 320, ease: 'Cubic.easeOut', onComplete: () => inner.destroy() });
+    this.tweens.add({ targets: pulse, scale: 4.6 + variant * 0.9, alpha: 0, duration: 420 + variant * 65, ease: 'Cubic.easeOut', onComplete: () => pulse.destroy() });
+    this.tweens.add({ targets: inner, scale: 8.4 + variant * 1.6, alpha: 0, duration: 320 + variant * 55, ease: 'Cubic.easeOut', onComplete: () => inner.destroy() });
 
-    const slashCount = specialStyle === 'storm' ? 10 : specialStyle === 'phoenix' ? 12 : 8;
+    const slashCount = (specialStyle === 'storm' ? 10 : specialStyle === 'phoenix' ? 12 : 8) + variant * 4;
     for (let i = 0; i < slashCount; i++) {
       const angle = (Math.PI * 2 * i) / slashCount + this.stageTimer * 0.004;
-      const length = specialStyle === 'anchor' ? 230 : 170 + (i % 3) * 36;
+      const length = (specialStyle === 'anchor' ? 230 : 170 + (i % 3) * 36) + variant * 42;
       const slash = this.add.rectangle(this.player.x + Math.cos(angle) * 52, this.player.y - 38 + Math.sin(angle) * 44, 7, length, i % 2 === 0 ? colors.secondary : colors.bullet, 0.48).setDepth(14);
       slash.setBlendMode(Phaser.BlendModes.ADD);
       slash.setRotation(angle);
@@ -2015,25 +2200,63 @@ export default class GameScene extends Phaser.Scene {
         x: slash.x + Math.cos(angle) * 118,
         y: slash.y + Math.sin(angle) * 118,
         alpha: 0,
-        scaleX: 2.6,
-        duration: 260 + (i % 4) * 34,
+        scaleX: 2.6 + variant * 0.8,
+        duration: 260 + variant * 40 + (i % 4) * 34,
         ease: 'Quad.easeOut',
         onComplete: () => slash.destroy(),
       });
     }
 
-    if (specialStyle === 'phoenix' || specialStyle === 'rune') {
+    if (specialStyle === 'phoenix' || specialStyle === 'rune' || specialStyle === 'frost') {
       const star = this.add.star(this.player.x, this.player.y - 76, specialStyle === 'phoenix' ? 7 : 10, 18, 72, colors.secondary, 0.34).setStrokeStyle(3, colors.bullet, 0.88).setDepth(16);
       star.setBlendMode(Phaser.BlendModes.ADD);
       this.tweens.add({ targets: star, angle: 260, scale: 3.2, alpha: 0, duration: 430, ease: 'Cubic.easeOut', onComplete: () => star.destroy() });
     }
 
     if (specialStyle === 'basilisk' || specialStyle === 'nova') {
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 5 + variant * 2; i++) {
         const ring = this.add.circle(this.player.x, this.player.y - 44, 38 + i * 18, colors.primary, 0).setStrokeStyle(2, i % 2 === 0 ? colors.aura : colors.secondary, 0.42).setDepth(13);
         ring.setBlendMode(Phaser.BlendModes.ADD);
         this.tweens.add({ targets: ring, scale: 2.2 + i * 0.18, alpha: 0, duration: 360 + i * 54, ease: 'Sine.easeOut', onComplete: () => ring.destroy() });
       }
+    }
+  }
+
+  private spawnSpecialRain(colors: ReturnType<typeof getWeaponColors>, count: number, color: number): void {
+    for (let i = 0; i < count; i++) {
+      const x = Phaser.Math.Between(28, 372);
+      const y = Phaser.Math.Between(-70, 110);
+      const shard = this.add.triangle(x, y, 0, -18, 10, 18, -10, 18, i % 2 === 0 ? color : colors.bullet, 0.78).setDepth(15);
+      shard.setBlendMode(Phaser.BlendModes.ADD);
+      shard.setAngle(Phaser.Math.Between(-22, 22));
+      this.tweens.add({
+        targets: shard,
+        y: y + Phaser.Math.Between(260, 430),
+        x: x + Phaser.Math.Between(-42, 42),
+        scale: 2.1,
+        alpha: 0,
+        duration: 380 + (i % 5) * 42,
+        ease: 'Cubic.easeIn',
+        onComplete: () => shard.destroy(),
+      });
+    }
+  }
+
+  private spawnSpecialOrbitals(colors: ReturnType<typeof getWeaponColors>, count: number, radius: number): void {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + this.stageTimer * 0.006;
+      const orb = this.add.circle(this.player.x + Math.cos(angle) * radius, this.player.y - 46 + Math.sin(angle) * radius * 0.62, 10 + (i % 3) * 3, i % 2 === 0 ? colors.secondary : colors.bullet, 0.72).setDepth(16);
+      orb.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: orb,
+        x: this.player.x + Math.cos(angle + 1.8) * (radius + 110),
+        y: this.player.y - 46 + Math.sin(angle + 1.8) * (radius + 90),
+        scale: 3.2,
+        alpha: 0,
+        duration: 430 + (i % 4) * 48,
+        ease: 'Cubic.easeOut',
+        onComplete: () => orb.destroy(),
+      });
     }
   }
 
@@ -2043,6 +2266,7 @@ export default class GameScene extends Phaser.Scene {
     if (['rune', 'oracle', 'seraph'].includes(this.stats.archetype) || this.stats.element === 'light') return 'rune';
     if (this.stats.element === 'fire' || this.stats.archetype === 'phoenix') return 'phoenix';
     if (this.stats.element === 'thunder' || this.stats.archetype === 'levin') return 'storm';
+    if (this.stats.element === 'ice' || this.stats.element === 'crystal' || ['lance', 'geode', 'aurora'].includes(this.stats.archetype)) return 'frost';
     return 'nova';
   }
 
@@ -2239,11 +2463,11 @@ export default class GameScene extends Phaser.Scene {
     this.spawnBurst(this.player.x, this.player.y - 20, color, 24);
   }
 
-  private showRareEvolution(color: number): void {
+  private showRareEvolution(color: number, label = 'RARE EVOLUTION'): void {
     const { width, height } = this.scale;
     const flash = this.add.rectangle(width / 2, height / 2, width, height, color, 0.18).setDepth(28);
     const ring = this.add.circle(this.player.x, this.player.y, 42, color, 0).setStrokeStyle(4, color, 0.9).setDepth(29);
-    this.showFlash('RARE EVOLUTION', '#fef3c7', this.player.x, this.player.y - 104);
+    this.showFlash(label, '#fef3c7', this.player.x, this.player.y - 104);
     this.tweens.add({
       targets: flash,
       alpha: 0,
@@ -2258,6 +2482,39 @@ export default class GameScene extends Phaser.Scene {
       ease: 'Quad.easeOut',
       onComplete: () => ring.destroy(),
     });
+  }
+
+  private showEvolutionCutIn(title: string, subtitle: string, color: number): void {
+    const { width, height } = this.scale;
+    const band = this.add.rectangle(width / 2, height * 0.32, width + 120, 104, 0x020617, 0.88).setDepth(38);
+    band.setStrokeStyle(3, color, 0.9);
+    const flare = this.add.rectangle(width / 2, height * 0.32, width + 160, 12, color, 0.7).setDepth(39).setBlendMode(Phaser.BlendModes.ADD);
+    const titleText = this.add.text(width / 2, height * 0.29, title, {
+      fontSize: '28px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(40);
+    const subtitleText = this.add.text(width / 2, height * 0.35, subtitle, {
+      fontSize: '13px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(40);
+
+    for (let i = 0; i < 14; i++) {
+      const slash = this.add.rectangle(-40 + i * 34, height * 0.32 + Phaser.Math.Between(-42, 42), 6, 150, i % 2 === 0 ? color : 0xffffff, 0.52).setAngle(68).setDepth(39);
+      slash.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: slash, x: slash.x + width + 160, alpha: 0, duration: 520 + i * 18, ease: 'Cubic.easeOut', onComplete: () => slash.destroy() });
+    }
+
+    this.cameras.main.shake(280, 0.0038);
+    this.tweens.add({ targets: flare, x: width + 120, alpha: 0, scaleX: 2.4, duration: 540, ease: 'Cubic.easeOut', onComplete: () => flare.destroy() });
+    this.tweens.add({ targets: [band, titleText, subtitleText], x: '+=0', alpha: 0, delay: 820, duration: 360, ease: 'Sine.easeIn', onComplete: () => { band.destroy(); titleText.destroy(); subtitleText.destroy(); } });
   }
 
   private playUpgradeSound(kind: GateOption['kind']): void {
@@ -2314,6 +2571,8 @@ export default class GameScene extends Phaser.Scene {
 
   private finish(title: string): void {
     this.isGameOver = true;
+    this.time.timeScale = 1;
+    this.physics.world.timeScale = 1;
     this.physics.pause();
     const bestDistance = saveBestDistance(this.distance);
     const finalWeaponName = getWeaponName(this.stats);
