@@ -21,10 +21,10 @@ export default class TitleScene extends Phaser.Scene {
       this.add.line(x, height / 2, 0, 0, 0, height, 0xffffff, x === 200 ? 0.13 : 0.07).setLineWidth(x === 200 ? 3 : 1);
     });
 
-    const titleShadow = this.add.rectangle(width / 2, 144, 336, 92, 0x1f0906, 0.42);
-    titleShadow.setStrokeStyle(2, 0xfff1d6, 0.26);
+    const titleShadow = this.add.rectangle(width / 2, 152, 326, 104, 0x1f0906, 0.34);
+    titleShadow.setStrokeStyle(2, 0xfff1d6, 0.22);
     this.add.text(width / 2, 132, 'ブキラッシュ', {
-      fontSize: '44px',
+      fontSize: '46px',
       color: '#f8fafc',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
@@ -32,7 +32,7 @@ export default class TitleScene extends Phaser.Scene {
       strokeThickness: 7,
     }).setOrigin(0.5);
 
-    this.add.text(width / 2, 182, '属性・型・MODを重ねて無限強化', {
+    this.add.text(width / 2, 186, '選んだブキで走り切る', {
       fontSize: '14px',
       color: '#fff7ed',
       fontFamily: 'Arial, sans-serif',
@@ -40,41 +40,32 @@ export default class TitleScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5);
 
-    const specialGlow = this.add.rectangle(width / 2, 326, 342, 82, 0xffef5f, 0.24);
+    const specialGlow = this.add.rectangle(width / 2, 316, 310, 58, 0xffef5f, 0.18);
     specialGlow.setBlendMode(Phaser.BlendModes.ADD);
-    const specialPanel = this.add.rectangle(width / 2, 326, 326, 70, 0x7f1d1d, 0.84);
-    specialPanel.setStrokeStyle(3, 0xfff176, 0.95);
-    this.add.text(width / 2, 306, 'OD 100%でダブルタップ!', {
-      fontSize: '22px',
+    const specialPanel = this.add.rectangle(width / 2, 316, 296, 48, 0x7f1d1d, 0.68);
+    specialPanel.setStrokeStyle(2, 0xfff176, 0.78);
+    this.add.text(width / 2, 316, '必殺ゲージ100%でダブルタップ', {
+      fontSize: '18px',
       color: '#fff7ad',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#5f160f',
       strokeThickness: 5,
     }).setOrigin(0.5);
-    this.add.text(width / 2, 340, '撃破と時間経過で必殺技チャージ', {
-      fontSize: '17px',
-      color: '#ffffff',
-      fontStyle: 'bold',
-      fontFamily: 'Arial, sans-serif',
-      stroke: '#5f160f',
-      strokeThickness: 4,
-    }).setOrigin(0.5);
-
     this.tweens.add({
       targets: [specialGlow, specialPanel],
-      alpha: { from: 0.72, to: 1 },
-      scaleX: { from: 1, to: 1.035 },
-      scaleY: { from: 1, to: 1.06 },
-      duration: 620,
+      alpha: { from: 0.62, to: 0.9 },
+      scaleX: { from: 1, to: 1.02 },
+      scaleY: { from: 1, to: 1.04 },
+      duration: 900,
       yoyo: true,
       repeat: -1,
       ease: 'Sine.easeInOut',
     });
 
-    const infoPanel = this.add.rectangle(width / 2, 456, 318, 108, 0x160a08, 0.72);
+    const infoPanel = this.add.rectangle(width / 2, 430, 292, 82, 0x160a08, 0.54);
     infoPanel.setStrokeStyle(1, 0xffd199, 0.42);
-    this.add.text(width / 2, 456, `PLAYER ${settingsState.playerName}\nPC: 矢印/WASD / スマホ: ドラッグ移動\nメダル ${meta.medals}  永続RANK ${meta.permanentRank}\n図鑑 B${meta.bosses.length}/W${meta.weapons.length}`, {
+    this.add.text(width / 2, 430, `PLAYER ${settingsState.playerName}\nMEDAL ${meta.medals}  RANK ${meta.permanentRank}\nCODEX B${meta.bosses.length}/W${meta.weapons.length}`, {
       fontSize: '13px',
       color: '#fff7ed',
       align: 'center',
@@ -112,7 +103,7 @@ export default class TitleScene extends Phaser.Scene {
     let current = loadSettings();
     const leaderboard = loadLeaderboard();
     const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.78);
-    const panel = this.add.rectangle(width / 2, height / 2, 336, 438, 0x111827, 0.97);
+    const panel = this.add.rectangle(width / 2, height / 2, 336, 496, 0x111827, 0.97);
     panel.setStrokeStyle(2, 0xfff176, 0.74);
     const title = this.add.text(width / 2, 172, 'RANKING / SETTINGS', {
       fontSize: '21px',
@@ -135,7 +126,17 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
     });
-    const currentName = this.add.text(width / 2, 424, `現在の名前: ${current.playerName}`, {
+    const controls = this.add.text(width / 2, 422, '操作: PC 矢印/WASD\nスマホ ドラッグ移動 / ダブルタップ 必殺', {
+      fontSize: '12px',
+      color: '#dcfce7',
+      align: 'center',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      lineSpacing: 5,
+      stroke: '#020617',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+    const currentName = this.add.text(width / 2, 470, `現在の名前: ${current.playerName}`, {
       fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -143,21 +144,21 @@ export default class TitleScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 3,
     }).setOrigin(0.5);
-    const nameButton = this.add.rectangle(width / 2, 464, 226, 42, 0x172554, 0.96);
+    const nameButton = this.add.rectangle(width / 2, 510, 226, 42, 0x172554, 0.96);
     nameButton.setStrokeStyle(2, 0x38bdf8, 0.76);
-    const nameText = this.add.text(width / 2, 464, 'PLAYER名を変更', {
+    const nameText = this.add.text(width / 2, 510, 'PLAYER名を変更', {
       fontSize: '13px',
       color: '#e0f2fe',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const close = this.add.text(width / 2, 522, 'CLOSE', {
+    const close = this.add.text(width / 2, 568, 'CLOSE', {
       fontSize: '15px',
       color: '#fef3c7',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, currentName, nameButton, nameText, close]).setDepth(50);
+    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, controls, currentName, nameButton, nameText, close]).setDepth(50);
     nameButton.setInteractive({ useHandCursor: true });
     nameButton.on('pointerdown', () => {
       this.openPlayerNameEditor(current.playerName, (nextName) => {

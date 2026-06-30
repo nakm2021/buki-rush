@@ -16,6 +16,7 @@ export interface WeaponImageAsset extends ImageAsset {
 export interface BossImageAsset extends ImageAsset {
   width: number;
   height: number;
+  minLoop?: number;
 }
 
 export interface BossTheme {
@@ -48,6 +49,12 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponBasiliskEvolved', path: 'assets/generated/weapon-basilisk-evolved.png', match: { elements: ['shadow'], archetypes: ['basilisk', 'chimera', 'phantom'] } },
   { key: 'weaponAnchor', path: 'assets/generated/weapon-anchor.png', match: { archetypes: ['anchor', 'kraken'] } },
   { key: 'weaponAnchorEvolved', path: 'assets/generated/weapon-anchor-evolved.png', match: { archetypes: ['anchor', 'kraken', 'atlas', 'hammer'] } },
+  { key: 'weaponMoonGuillotine', path: 'assets/generated/weapon-moon-guillotine.png', match: { elements: ['shadow'], archetypes: ['saber', 'blade', 'samurai'] } },
+  { key: 'weaponSolarDragonRail', path: 'assets/generated/weapon-solar-dragon-rail.png', match: { elements: ['fire', 'thunder'], archetypes: ['rail', 'dragon'] } },
+  { key: 'weaponQuantumBloomStaff', path: 'assets/generated/weapon-quantum-bloom-staff.png', match: { elements: ['light', 'crystal'], archetypes: ['rune', 'lotus', 'oracle'] } },
+  { key: 'weaponAbyssNeedleLauncher', path: 'assets/generated/weapon-abyss-needle-launcher.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
+  { key: 'weaponTitanOrbitHammer', path: 'assets/generated/weapon-titan-orbit-hammer.png', match: { archetypes: ['hammer', 'atlas', 'anchor'] } },
+  { key: 'weaponPrismCometBow', path: 'assets/generated/weapon-prism-comet-bow.png', match: { elements: ['crystal'], archetypes: ['comet', 'nova', 'mirror'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -56,17 +63,17 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossHydra', path: 'assets/generated/boss-hydra.png', width: 390, height: 590 },
   { key: 'bossPhoenix', path: 'assets/generated/boss-phoenix.png', width: 390, height: 560 },
   { key: 'bossDemon', path: 'assets/generated/boss-demon.png', width: 380, height: 560 },
-  { key: 'bossLeviathan', path: 'assets/generated/boss-leviathan.png', width: 390, height: 560 },
-  { key: 'bossVoid', path: 'assets/generated/boss-void.png', width: 390, height: 560 },
-  { key: 'bossMantis', path: 'assets/generated/boss-mantis.png', width: 390, height: 820 },
-  { key: 'bossOni', path: 'assets/generated/boss-oni.png', width: 410, height: 620 },
-  { key: 'bossFrostQueen', path: 'assets/generated/boss-frost-queen.png', width: 390, height: 820 },
+  { key: 'bossLeviathan', path: 'assets/generated/boss-leviathan.png', width: 390, height: 560, minLoop: 1 },
+  { key: 'bossVoid', path: 'assets/generated/boss-void.png', width: 390, height: 560, minLoop: 1 },
+  { key: 'bossMantis', path: 'assets/generated/boss-mantis.png', width: 390, height: 820, minLoop: 2 },
+  { key: 'bossOni', path: 'assets/generated/boss-oni.png', width: 410, height: 620, minLoop: 1 },
+  { key: 'bossFrostQueen', path: 'assets/generated/boss-frost-queen.png', width: 390, height: 820, minLoop: 2 },
   { key: 'bossStrawberryEmpress', path: 'assets/generated/boss-strawberry-empress.png', width: 390, height: 620 },
-  { key: 'bossClockworkKraken', path: 'assets/generated/boss-clockwork-kraken.png', width: 410, height: 620 },
-  { key: 'bossLunarKitsune', path: 'assets/generated/boss-lunar-kitsune.png', width: 410, height: 640 },
-  { key: 'bossNeonOrchardSeraph', path: 'assets/generated/boss-neon-orchard-seraph.png', width: 420, height: 746 },
-  { key: 'bossAbyssChromeHydra', path: 'assets/generated/boss-abyss-chrome-hydra.png', width: 420, height: 746 },
-  { key: 'bossCrownedBerryJuggernaut', path: 'assets/generated/boss-crowned-berry-juggernaut.png', width: 420, height: 746 },
+  { key: 'bossClockworkKraken', path: 'assets/generated/boss-clockwork-kraken.png', width: 410, height: 620, minLoop: 1 },
+  { key: 'bossLunarKitsune', path: 'assets/generated/boss-lunar-kitsune.png', width: 410, height: 640, minLoop: 2 },
+  { key: 'bossNeonOrchardSeraph', path: 'assets/generated/boss-neon-orchard-seraph.png', width: 420, height: 746, minLoop: 3 },
+  { key: 'bossAbyssChromeHydra', path: 'assets/generated/boss-abyss-chrome-hydra.png', width: 420, height: 746, minLoop: 3 },
+  { key: 'bossCrownedBerryJuggernaut', path: 'assets/generated/boss-crowned-berry-juggernaut.png', width: 420, height: 746, minLoop: 3 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -156,6 +163,13 @@ export function selectWeaponAssetKey(stats: PlayerStats): string {
 
 export function getBossAssetByLoop(loopIndex: number): BossImageAsset {
   return BOSS_IMAGE_ASSETS[loopIndex % BOSS_IMAGE_ASSETS.length];
+}
+
+export function getRandomBossAsset(loopIndex: number, recentKeys: string[] = []): BossImageAsset {
+  const unlocked = BOSS_IMAGE_ASSETS.filter((asset) => (asset.minLoop ?? 0) <= loopIndex);
+  const fresh = unlocked.filter((asset) => !recentKeys.includes(asset.key));
+  const pool = fresh.length >= 3 ? fresh : unlocked;
+  return pool[Math.floor(Math.random() * pool.length)] ?? BOSS_IMAGE_ASSETS[0];
 }
 
 export function getBossAsset(key: string): BossImageAsset {
