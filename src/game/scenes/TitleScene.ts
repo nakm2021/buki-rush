@@ -19,16 +19,7 @@ export default class TitleScene extends Phaser.Scene {
       this.add.line(x, height / 2, 0, 0, 0, height, 0xffffff, x === 200 ? 0.13 : 0.07).setLineWidth(x === 200 ? 3 : 1);
     });
 
-    const titleShadow = this.add.rectangle(width / 2, 152, 326, 104, 0x1f0906, 0.34);
-    titleShadow.setStrokeStyle(2, 0xfff1d6, 0.22);
-    this.add.text(width / 2, 132, 'ブキラッシュ', {
-      fontSize: '46px',
-      color: '#f8fafc',
-      fontStyle: 'bold',
-      fontFamily: 'Arial, sans-serif',
-      stroke: '#4a0f09',
-      strokeThickness: 7,
-    }).setOrigin(0.5);
+    this.createCuteTitle(width / 2, 132);
 
     this.add.text(width / 2, 186, '選んだブキで走り切る', {
       fontSize: '14px',
@@ -107,6 +98,97 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5);
     settings.setInteractive({ useHandCursor: true });
     settings.on('pointerdown', () => this.showSettingsOverlay());
+  }
+
+  private createCuteTitle(x: number, y: number): void {
+    const titleGlow = this.add.ellipse(x, y + 18, 320, 96, 0xff6b8a, 0.14);
+    titleGlow.setBlendMode(Phaser.BlendModes.ADD);
+    const softPlate = this.add.rectangle(x, y + 18, 300, 82, 0x4a0f09, 0.18);
+    softPlate.setStrokeStyle(1, 0xfff1d6, 0.16);
+
+    const title = 'ブキラッシュ';
+    const chars = [...title];
+    const spacing = 38;
+    const startX = x - ((chars.length - 1) * spacing) / 2;
+    const letters: Phaser.GameObjects.Text[] = [];
+    chars.forEach((char, index) => {
+      const letter = this.add.text(startX + index * spacing, y + (index % 2 === 0 ? -2 : 2), char, {
+        fontSize: index === 0 ? '44px' : '41px',
+        color: index % 2 === 0 ? '#fff7ed' : '#fef08a',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#7f1d1d',
+        strokeThickness: 6,
+      }).setOrigin(0.5);
+      letters.push(letter);
+      this.tweens.add({
+        targets: letter,
+        y: letter.y - 6,
+        angle: index % 2 === 0 ? -2 : 2,
+        scale: { from: 1, to: 1.045 },
+        duration: 820 + index * 52,
+        delay: index * 46,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    });
+
+    const leafLeft = this.add.triangle(x - 132, y - 44, 0, -10, 28, 0, 0, 12, 0x22c55e, 0.72).setAngle(-26);
+    const leafRight = this.add.triangle(x + 132, y - 42, 0, -10, 28, 0, 0, 12, 0x86efac, 0.68).setAngle(206);
+    [leafLeft, leafRight].forEach((leaf, index) => {
+      leaf.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: leaf,
+        angle: leaf.angle + (index === 0 ? -10 : 10),
+        y: leaf.y - 4,
+        duration: 1100 + index * 180,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    });
+
+    for (let i = 0; i < 10; i++) {
+      const seedX = x - 132 + (i % 5) * 66;
+      const seedY = y - 24 + Math.floor(i / 5) * 66 + (i % 2) * 8;
+      const seed = this.add.ellipse(seedX, seedY, 4, 8, i % 3 === 0 ? 0xfff176 : 0xfacc15, 0.34).setAngle(18);
+      seed.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: seed,
+        alpha: { from: 0.18, to: 0.78 },
+        scale: { from: 0.8, to: 1.25 },
+        y: seed.y - 6,
+        duration: 840 + (i % 5) * 120,
+        delay: i * 35,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    const shine = this.add.rectangle(x - 132, y + 28, 46, 5, 0xffffff, 0.28).setAngle(-12);
+    shine.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: shine,
+      x: x + 132,
+      alpha: { from: 0, to: 0.52 },
+      scaleX: { from: 0.35, to: 1.25 },
+      duration: 1520,
+      repeat: -1,
+      repeatDelay: 680,
+      ease: 'Cubic.easeInOut',
+    });
+
+    this.tweens.add({
+      targets: [titleGlow, softPlate],
+      alpha: { from: 0.14, to: 0.32 },
+      scaleX: { from: 1, to: 1.025 },
+      duration: 1280,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   private showSettingsOverlay(): void {
