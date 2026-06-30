@@ -1010,6 +1010,24 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
+    if (key.includes('PrismOrchard')) {
+      this.spawnBossFanShot(theme);
+      this.time.delayedCall(180, () => this.spawnBossBulletRain(theme, 10 + this.bossPhase * 5, 48));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('IronMochi')) {
+      this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
+      this.time.delayedCall(240, () => this.spawnBossWaveWall(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('ChronoSpider')) {
+      this.spawnBossSpiral(theme, 12 + this.bossPhase * 6);
+      if (this.bossPhase >= 2) this.time.delayedCall(260, () => this.spawnBossAimedShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
     if (key.includes('Lunar')) {
       this.spawnBossCrossSlash(theme);
       this.time.delayedCall(180, () => this.spawnBossFanShot(theme));
@@ -1332,6 +1350,23 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(280, () => this.spawnBossSpiral(theme, 18 + this.bossPhase * 4));
         return;
       }
+      if (key.includes('PrismOrchard')) {
+        this.spawnBossFanShot(theme);
+        this.spawnBossBulletRain(theme, 22 + this.bossPhase * 5, 34);
+        this.time.delayedCall(260, () => this.spawnBossNova(theme));
+        return;
+      }
+      if (key.includes('IronMochi')) {
+        this.spawnBossLaneStrike(theme, true);
+        this.spawnBossWaveWall(theme);
+        this.time.delayedCall(280, () => this.spawnBossLaneStrike(theme, true));
+        return;
+      }
+      if (key.includes('ChronoSpider')) {
+        this.spawnBossSpiral(theme, 30 + this.bossPhase * 6);
+        this.time.delayedCall(280, () => this.spawnBossWaveWall(theme));
+        return;
+      }
       if (key.includes('Lunar')) {
         this.spawnBossNova(theme);
         this.spawnBossCrossSlash(theme);
@@ -1618,6 +1653,9 @@ export default class GameScene extends Phaser.Scene {
     this.stats = applyGateEffect(this.stats, option);
     if (option.kind === 'heal' && option.good) {
       this.playerHp += option.value;
+    }
+    if (option.kind === 'special' && option.good) {
+      this.specialCharge = clamp(this.specialCharge + option.value, 0, 100);
     }
     this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
     this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);

@@ -260,15 +260,18 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
   { id: 'obsidian-gravity-cannon', title: 'OBSIDIAN GRAVITY', subtitle: '重力砲。鈍重だがBOSS火力が高い', module: 'nova-core', archetype: 'gigas', element: 'shadow', imageKey: 'weaponObsidianGravityCannon', specialStyle: 'anchor', power: 10, fireRate: -0.1, critRate: 0.035, pierce: 0, shield: 2, synergy: 2 },
   { id: 'sakura-mirror-fans', title: 'SAKURA MIRROR', subtitle: '鏡扇。反射花弁で広範囲を制圧する', module: 'mirror-shot', archetype: 'sakura', element: 'crystal', imageKey: 'weaponSakuraMirrorFans', specialStyle: 'nova', power: 5, fireRate: 0.18, critRate: 0.035, pierce: 1, shield: 0, synergy: 5 },
   { id: 'chrono-needle-spear', title: 'CHRONO NEEDLE', subtitle: '時針槍。貫通と遅延で敵を止める', module: 'sniper', archetype: 'chrono', element: 'thunder', imageKey: 'weaponChronoNeedleSpear', specialStyle: 'storm', power: 7, fireRate: 0.02, critRate: 0.05, pierce: 2, shield: 0, synergy: 3 },
+  { id: 'nebula-harp-launcher', title: 'NEBULA HARP', subtitle: '星弦ランチャー。広域必殺と連射を伸ばす', module: 'echo', archetype: 'nebula', element: 'light', imageKey: 'weaponNebulaHarpLauncher', specialStyle: 'nova', power: 5, fireRate: 0.18, critRate: 0.025, pierce: 1, shield: 0, synergy: 6 },
+  { id: 'magma-drill-trident', title: 'MAGMA DRILL', subtitle: '溶岩三叉槍。貫通と炎上に特化', module: 'drill', archetype: 'lance', element: 'fire', imageKey: 'weaponMagmaDrillTrident', specialStyle: 'phoenix', power: 8, fireRate: 0.02, critRate: 0.035, pierce: 2, shield: 0, synergy: 3 },
+  { id: 'crystal-lotus-shieldgun', title: 'CRYSTAL LOTUS', subtitle: '結晶盾砲。守りと回復の進化', module: 'aegis', archetype: 'lotus', element: 'crystal', imageKey: 'weaponCrystalLotusShieldgun', specialStyle: 'rune', power: 4, fireRate: 0.1, critRate: 0.015, pierce: 0, shield: 3, synergy: 5 },
 ];
 
 const EVOLUTION_POOLS_BY_STARTER: Record<string, string[]> = {
-  'runner-blaster': ['moon-guillotine', 'solar-dragon-rail', 'quantum-bloom-staff', 'abyss-needle-launcher', 'titan-orbit-hammer', 'prism-comet-bow', 'crimson-meteor-katana', 'azure-tempest-chakram', 'verdant-seraph-crossbow', 'obsidian-gravity-cannon', 'sakura-mirror-fans', 'chrono-needle-spear'],
-  'phoenix-cannon': ['solar-dragon-rail', 'prism-comet-bow', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram'],
-  'frost-lance': ['quantum-bloom-staff', 'prism-comet-bow', 'titan-orbit-hammer', 'verdant-seraph-crossbow', 'sakura-mirror-fans'],
-  'thunder-rail': ['moon-guillotine', 'solar-dragon-rail', 'prism-comet-bow', 'azure-tempest-chakram', 'chrono-needle-spear'],
-  'void-basilisk': ['abyss-needle-launcher', 'moon-guillotine', 'quantum-bloom-staff', 'obsidian-gravity-cannon', 'chrono-needle-spear'],
-  'anchor-breaker': ['titan-orbit-hammer', 'moon-guillotine', 'abyss-needle-launcher', 'obsidian-gravity-cannon', 'crimson-meteor-katana'],
+  'runner-blaster': ['moon-guillotine', 'solar-dragon-rail', 'quantum-bloom-staff', 'abyss-needle-launcher', 'titan-orbit-hammer', 'prism-comet-bow', 'crimson-meteor-katana', 'azure-tempest-chakram', 'verdant-seraph-crossbow', 'obsidian-gravity-cannon', 'sakura-mirror-fans', 'chrono-needle-spear', 'nebula-harp-launcher', 'magma-drill-trident', 'crystal-lotus-shieldgun'],
+  'phoenix-cannon': ['solar-dragon-rail', 'prism-comet-bow', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'magma-drill-trident'],
+  'frost-lance': ['quantum-bloom-staff', 'prism-comet-bow', 'titan-orbit-hammer', 'verdant-seraph-crossbow', 'sakura-mirror-fans', 'crystal-lotus-shieldgun'],
+  'thunder-rail': ['moon-guillotine', 'solar-dragon-rail', 'prism-comet-bow', 'azure-tempest-chakram', 'chrono-needle-spear', 'nebula-harp-launcher'],
+  'void-basilisk': ['abyss-needle-launcher', 'moon-guillotine', 'quantum-bloom-staff', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher'],
+  'anchor-breaker': ['titan-orbit-hammer', 'moon-guillotine', 'abyss-needle-launcher', 'obsidian-gravity-cannon', 'crimson-meteor-katana', 'crystal-lotus-shieldgun'],
 };
 
 export function getEvolutionBranches(_stats: PlayerStats, starterId = 'runner-blaster'): WeaponEvolutionBranch[] {

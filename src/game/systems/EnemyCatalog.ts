@@ -120,6 +120,10 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'photo-toxic-vial', name: 'Photo Toxic Vial', bodyColor: 0x84cc16, accentColor: 0xfef08a, coreColor: 0x1a2e05, shape: 'slime', hpScale: 1.58, radius: 22, damage: 2, imageKey: 'enemyToxicVialPhoto', statusEffect: 'poison', statusChance: 0.62 },
   { id: 'photo-neon-razor', name: 'Photo Neon Razor', bodyColor: 0x06b6d4, accentColor: 0xf0abfc, coreColor: 0x164e63, shape: 'wing', hpScale: 0.92, radius: 19, damage: 2, imageKey: 'enemyNeonRazorPhoto', statusEffect: 'paralyze', statusChance: 0.38 },
   { id: 'photo-hex-mirror', name: 'Photo Hex Mirror', bodyColor: 0x18181b, accentColor: 0xc084fc, coreColor: 0xf0abfc, shape: 'mask', hpScale: 1.9, radius: 23, damage: 3, imageKey: 'enemyHexMirrorPhoto', statusEffect: 'curse', statusChance: 0.52 },
+  { id: 'photo-strawberry-blade-drone', name: 'Photo Strawberry Blade Drone', bodyColor: 0xe11d48, accentColor: 0x38bdf8, coreColor: 0x4c0519, shape: 'wing', hpScale: 1.24, radius: 21, damage: 2, imageKey: 'enemyStrawberryBladeDronePhoto', statusEffect: 'burn', statusChance: 0.45 },
+  { id: 'photo-lemon-shock-turret', name: 'Photo Lemon Shock Turret', bodyColor: 0xfacc15, accentColor: 0x38bdf8, coreColor: 0x422006, shape: 'spider', hpScale: 1.72, radius: 23, damage: 2, imageKey: 'enemyLemonShockTurretPhoto', statusEffect: 'paralyze', statusChance: 0.62 },
+  { id: 'photo-grape-curse-idol', name: 'Photo Grape Curse Idol', bodyColor: 0x7c3aed, accentColor: 0xf0abfc, coreColor: 0x030712, shape: 'mask', hpScale: 2.18, radius: 24, damage: 3, imageKey: 'enemyGrapeCurseIdolPhoto', statusEffect: 'curse', statusChance: 0.68 },
+  { id: 'photo-kiwi-frost-wheel', name: 'Photo Kiwi Frost Wheel', bodyColor: 0x84cc16, accentColor: 0xbfdbfe, coreColor: 0x1a2e05, shape: 'spider', hpScale: 1.45, radius: 22, damage: 2, imageKey: 'enemyKiwiFrostWheelPhoto', statusEffect: 'freeze', statusChance: 0.58 },
 ];
 
 const PHOTO_ENEMY_IMAGE_KEYS = [
@@ -152,6 +156,10 @@ const PHOTO_ENEMY_IMAGE_KEYS = [
   'enemyRubyForkDronePhoto',
   'enemyIceSpoonHarrierPhoto',
   'enemyPepperGearIdolPhoto',
+  'enemyStrawberryBladeDronePhoto',
+  'enemyLemonShockTurretPhoto',
+  'enemyGrapeCurseIdolPhoto',
+  'enemyKiwiFrostWheelPhoto',
 ];
 
 function withPhotoImage(variant: EnemyVariant, index: number): EnemyVariant {

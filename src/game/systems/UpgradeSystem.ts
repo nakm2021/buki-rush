@@ -73,6 +73,25 @@ export function applyGateEffect(stats: PlayerStats, gate: GateOption): PlayerSta
       next.critRate += 0.03;
       next.synergy += 3;
       break;
+    case 'crit':
+      next.critRate = Math.min(0.7, next.critRate + gate.value * 0.01);
+      next.power += Math.max(1, Math.floor(gate.value / 3));
+      next.synergy += 1;
+      break;
+    case 'pierce':
+      next.pierce += gate.value;
+      next.power += gate.value;
+      next.synergy += 1;
+      break;
+    case 'shield':
+      next.shield += gate.value;
+      next.synergy += gate.value;
+      break;
+    case 'special':
+      next.level += 1;
+      next.fireRate += 0.08;
+      next.synergy += 2;
+      break;
     default:
       break;
   }

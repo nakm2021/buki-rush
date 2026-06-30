@@ -61,6 +61,9 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponObsidianGravityCannon', path: 'assets/optimized/weapon-obsidian-gravity-cannon.png', match: { elements: ['shadow'], archetypes: ['gigas', 'atlas', 'nova'] } },
   { key: 'weaponSakuraMirrorFans', path: 'assets/optimized/weapon-sakura-mirror-fans.png', match: { elements: ['crystal', 'light'], archetypes: ['mirror', 'sakura'] } },
   { key: 'weaponChronoNeedleSpear', path: 'assets/optimized/weapon-chrono-needle-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['chrono', 'needle', 'lance'] } },
+  { key: 'weaponNebulaHarpLauncher', path: 'assets/optimized/weapon-nebula-harp-launcher.png', match: { elements: ['light', 'crystal'], archetypes: ['nebula', 'rune'] } },
+  { key: 'weaponMagmaDrillTrident', path: 'assets/optimized/weapon-magma-drill-trident.png', match: { elements: ['fire'], archetypes: ['drill', 'lance', 'meteor'] } },
+  { key: 'weaponCrystalLotusShieldgun', path: 'assets/optimized/weapon-crystal-lotus-shieldgun.png', match: { elements: ['crystal', 'light'], archetypes: ['lotus', 'anchor', 'rune'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -80,6 +83,9 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossNeonOrchardSeraph', path: 'assets/generated/boss-neon-orchard-seraph.png', width: 420, height: 746, minLoop: 3 },
   { key: 'bossAbyssChromeHydra', path: 'assets/generated/boss-abyss-chrome-hydra.png', width: 420, height: 746, minLoop: 3 },
   { key: 'bossCrownedBerryJuggernaut', path: 'assets/generated/boss-crowned-berry-juggernaut.png', width: 420, height: 746, minLoop: 3 },
+  { key: 'bossPrismOrchardWyvern', path: 'assets/optimized/boss-prism-orchard-wyvern.png', width: 360, height: 640, minLoop: 2 },
+  { key: 'bossIronMochiColossus', path: 'assets/optimized/boss-iron-mochi-colossus.png', width: 360, height: 640, minLoop: 1 },
+  { key: 'bossChronoSpiderMatriarch', path: 'assets/optimized/boss-chrono-spider-matriarch.png', width: 380, height: 660, minLoop: 3 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -89,6 +95,9 @@ export const ITEM_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'itemRareChest', path: 'assets/optimized/item-rare-chest.png' },
   { key: 'itemLegendChest', path: 'assets/optimized/item-legend-chest.png' },
   { key: 'itemCursedBox', path: 'assets/optimized/item-cursed-box.png' },
+  { key: 'itemCritCrown', path: 'assets/optimized/item-crit-crown.png' },
+  { key: 'itemPierceDrill', path: 'assets/optimized/item-pierce-drill.png' },
+  { key: 'itemSpecialBattery', path: 'assets/optimized/item-special-battery.png' },
 ];
 
 export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
@@ -121,6 +130,10 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyRubyForkDronePhoto', path: 'assets/generated/enemy-ruby-fork-drone-photo.png' },
   { key: 'enemyIceSpoonHarrierPhoto', path: 'assets/generated/enemy-ice-spoon-harrier-photo.png' },
   { key: 'enemyPepperGearIdolPhoto', path: 'assets/generated/enemy-pepper-gear-idol-photo.png' },
+  { key: 'enemyStrawberryBladeDronePhoto', path: 'assets/optimized/enemy-strawberry-blade-drone.png' },
+  { key: 'enemyLemonShockTurretPhoto', path: 'assets/optimized/enemy-lemon-shock-turret.png' },
+  { key: 'enemyGrapeCurseIdolPhoto', path: 'assets/optimized/enemy-grape-curse-idol.png' },
+  { key: 'enemyKiwiFrostWheelPhoto', path: 'assets/optimized/enemy-kiwi-frost-wheel.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
@@ -210,6 +223,9 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossNeonOrchardSeraph', primary: 0xef4444, secondary: 0x22d3ee, accent: 0xfef08a, darkness: 0x21070d },
   { key: 'bossAbyssChromeHydra', primary: 0x1d4ed8, secondary: 0x18181b, accent: 0xc084fc, darkness: 0x020617 },
   { key: 'bossCrownedBerryJuggernaut', primary: 0xf43f5e, secondary: 0xfacc15, accent: 0xfef3c7, darkness: 0x25080c },
+  { key: 'bossPrismOrchardWyvern', primary: 0xf43f5e, secondary: 0x22d3ee, accent: 0xf0abfc, darkness: 0x180812 },
+  { key: 'bossIronMochiColossus', primary: 0xfef3c7, secondary: 0xef4444, accent: 0xfacc15, darkness: 0x1c1917 },
+  { key: 'bossChronoSpiderMatriarch', primary: 0xb45309, secondary: 0x38bdf8, accent: 0xfef3c7, darkness: 0x111827 },
 ];
 
 export function getBossTheme(key: string): BossTheme {

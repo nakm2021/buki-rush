@@ -8,7 +8,7 @@ export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
 
 export type StatusEffect = 'poison' | 'paralyze' | 'freeze' | 'curse' | 'burn';
 
-export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion';
+export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion' | 'crit' | 'pierce' | 'shield' | 'special';
 
 export interface PlayerStats {
   weaponCount: number;

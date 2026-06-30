@@ -71,6 +71,10 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
     'photo-ruby-fork-drone',
     'photo-ice-spoon-harrier',
     'photo-pepper-gear-idol',
+    'photo-strawberry-blade-drone',
+    'photo-lemon-shock-turret',
+    'photo-grape-curse-idol',
+    'photo-kiwi-frost-wheel',
   ];
   const dangerVariant = stepIndex % 13 === 9
     ? troubleVariants[Math.floor(stepIndex / 13) % troubleVariants.length]
@@ -136,6 +140,10 @@ function createGateLine(stepIndex: number): StageStep['gateLine'] {
     { label: '進化 +', kind: 'tier', value: 1, color: goodB, good: true },
     createModuleGate(stepIndex),
     { label: '融合 +', kind: 'fusion', value: 2, color: premiumColors[stepIndex % premiumColors.length], good: true },
+    { label: `会心 +${4 + (stepIndex % 4)}`, kind: 'crit', value: 4 + (stepIndex % 4), color: 0xfb7185, good: true },
+    { label: '貫通 +1', kind: 'pierce', value: 1, color: 0x60a5fa, good: true },
+    { label: '盾 +2', kind: 'shield', value: 2, color: 0x93c5fd, good: true },
+    { label: '必殺 +35', kind: 'special', value: 35, color: 0xfef08a, good: true },
   ];
 
   const badOption: GateOption = {
