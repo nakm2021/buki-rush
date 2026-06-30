@@ -55,6 +55,12 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponAbyssNeedleLauncher', path: 'assets/generated/weapon-abyss-needle-launcher.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
   { key: 'weaponTitanOrbitHammer', path: 'assets/generated/weapon-titan-orbit-hammer.png', match: { archetypes: ['hammer', 'atlas', 'anchor'] } },
   { key: 'weaponPrismCometBow', path: 'assets/generated/weapon-prism-comet-bow.png', match: { elements: ['crystal'], archetypes: ['comet', 'nova', 'mirror'] } },
+  { key: 'weaponCrimsonMeteorKatana', path: 'assets/generated/weapon-crimson-meteor-katana.png', match: { elements: ['fire'], archetypes: ['samurai', 'saber', 'meteor'] } },
+  { key: 'weaponAzureTempestChakram', path: 'assets/generated/weapon-azure-tempest-chakram.png', match: { elements: ['thunder', 'wind'], archetypes: ['tempest', 'vortex'] } },
+  { key: 'weaponVerdantSeraphCrossbow', path: 'assets/generated/weapon-verdant-seraph-crossbow.png', match: { elements: ['light', 'wind'], archetypes: ['seraph', 'centaur'] } },
+  { key: 'weaponObsidianGravityCannon', path: 'assets/generated/weapon-obsidian-gravity-cannon.png', match: { elements: ['shadow'], archetypes: ['gigas', 'atlas', 'nova'] } },
+  { key: 'weaponSakuraMirrorFans', path: 'assets/generated/weapon-sakura-mirror-fans.png', match: { elements: ['crystal', 'light'], archetypes: ['mirror', 'sakura'] } },
+  { key: 'weaponChronoNeedleSpear', path: 'assets/generated/weapon-chrono-needle-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['chrono', 'needle', 'lance'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [

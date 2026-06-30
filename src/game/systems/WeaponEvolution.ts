@@ -254,15 +254,21 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
   { id: 'abyss-needle-launcher', title: 'ABYSS NEEDLE', subtitle: '深淵の毒針砲。毒と影で削り続ける', module: 'poison', archetype: 'needle', element: 'shadow', imageKey: 'weaponAbyssNeedleLauncher', specialStyle: 'basilisk', power: 6, fireRate: 0.1, critRate: 0.025, pierce: 1, shield: 0, synergy: 4 },
   { id: 'titan-orbit-hammer', title: 'TITAN ORBIT', subtitle: '重力ハンマー。重い一撃と装甲を伸ばす', module: 'gravity', archetype: 'hammer', element: 'crystal', imageKey: 'weaponTitanOrbitHammer', specialStyle: 'anchor', power: 9, fireRate: -0.08, critRate: 0.03, pierce: 0, shield: 2, synergy: 3 },
   { id: 'prism-comet-bow', title: 'PRISM COMET', subtitle: '彗星弓。広域プリズム弾で掃討する', module: 'mirror-shot', archetype: 'comet', element: 'crystal', imageKey: 'weaponPrismCometBow', specialStyle: 'nova', power: 5, fireRate: 0.16, critRate: 0.035, pierce: 1, shield: 0, synergy: 4 },
+  { id: 'crimson-meteor-katana', title: 'CRIMSON METEOR', subtitle: '隕鉄刀。炎の斬撃と会心を伸ばす', module: 'flare', archetype: 'samurai', element: 'fire', imageKey: 'weaponCrimsonMeteorKatana', specialStyle: 'blade', power: 8, fireRate: 0.04, critRate: 0.06, pierce: 1, shield: 0, synergy: 3 },
+  { id: 'azure-tempest-chakram', title: 'AZURE TEMPEST', subtitle: '暴風輪。連射と雷撃で弾幕を作る', module: 'volt', archetype: 'tempest', element: 'thunder', imageKey: 'weaponAzureTempestChakram', specialStyle: 'storm', power: 5, fireRate: 0.2, critRate: 0.025, pierce: 1, shield: 0, synergy: 5 },
+  { id: 'verdant-seraph-crossbow', title: 'VERDANT SERAPH', subtitle: '聖樹弩。回復と結界で粘り強く戦う', module: 'repair', archetype: 'seraph', element: 'light', imageKey: 'weaponVerdantSeraphCrossbow', specialStyle: 'rune', power: 4, fireRate: 0.12, critRate: 0.02, pierce: 1, shield: 2, synergy: 5 },
+  { id: 'obsidian-gravity-cannon', title: 'OBSIDIAN GRAVITY', subtitle: '重力砲。鈍重だがBOSS火力が高い', module: 'nova-core', archetype: 'gigas', element: 'shadow', imageKey: 'weaponObsidianGravityCannon', specialStyle: 'anchor', power: 10, fireRate: -0.1, critRate: 0.035, pierce: 0, shield: 2, synergy: 2 },
+  { id: 'sakura-mirror-fans', title: 'SAKURA MIRROR', subtitle: '鏡扇。反射花弁で広範囲を制圧する', module: 'mirror-shot', archetype: 'sakura', element: 'crystal', imageKey: 'weaponSakuraMirrorFans', specialStyle: 'nova', power: 5, fireRate: 0.18, critRate: 0.035, pierce: 1, shield: 0, synergy: 5 },
+  { id: 'chrono-needle-spear', title: 'CHRONO NEEDLE', subtitle: '時針槍。貫通と遅延で敵を止める', module: 'sniper', archetype: 'chrono', element: 'thunder', imageKey: 'weaponChronoNeedleSpear', specialStyle: 'storm', power: 7, fireRate: 0.02, critRate: 0.05, pierce: 2, shield: 0, synergy: 3 },
 ];
 
 const EVOLUTION_POOLS_BY_STARTER: Record<string, string[]> = {
-  'runner-blaster': ['moon-guillotine', 'solar-dragon-rail', 'quantum-bloom-staff', 'abyss-needle-launcher', 'titan-orbit-hammer', 'prism-comet-bow'],
-  'phoenix-cannon': ['solar-dragon-rail', 'prism-comet-bow', 'moon-guillotine'],
-  'frost-lance': ['quantum-bloom-staff', 'prism-comet-bow', 'titan-orbit-hammer'],
-  'thunder-rail': ['moon-guillotine', 'solar-dragon-rail', 'prism-comet-bow'],
-  'void-basilisk': ['abyss-needle-launcher', 'moon-guillotine', 'quantum-bloom-staff'],
-  'anchor-breaker': ['titan-orbit-hammer', 'moon-guillotine', 'abyss-needle-launcher'],
+  'runner-blaster': ['moon-guillotine', 'solar-dragon-rail', 'quantum-bloom-staff', 'abyss-needle-launcher', 'titan-orbit-hammer', 'prism-comet-bow', 'crimson-meteor-katana', 'azure-tempest-chakram', 'verdant-seraph-crossbow', 'obsidian-gravity-cannon', 'sakura-mirror-fans', 'chrono-needle-spear'],
+  'phoenix-cannon': ['solar-dragon-rail', 'prism-comet-bow', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram'],
+  'frost-lance': ['quantum-bloom-staff', 'prism-comet-bow', 'titan-orbit-hammer', 'verdant-seraph-crossbow', 'sakura-mirror-fans'],
+  'thunder-rail': ['moon-guillotine', 'solar-dragon-rail', 'prism-comet-bow', 'azure-tempest-chakram', 'chrono-needle-spear'],
+  'void-basilisk': ['abyss-needle-launcher', 'moon-guillotine', 'quantum-bloom-staff', 'obsidian-gravity-cannon', 'chrono-needle-spear'],
+  'anchor-breaker': ['titan-orbit-hammer', 'moon-guillotine', 'abyss-needle-launcher', 'obsidian-gravity-cannon', 'crimson-meteor-katana'],
 };
 
 export function getEvolutionBranches(_stats: PlayerStats, starterId = 'runner-blaster'): WeaponEvolutionBranch[] {
