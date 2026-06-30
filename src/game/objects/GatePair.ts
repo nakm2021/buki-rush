@@ -78,10 +78,11 @@ export class GatePair extends Phaser.GameObjects.Container {
 
   private getItemAssetKey(option: GateOption): string {
     if (!option.good) return 'itemCursedBox';
+    if (option.kind === 'add' || option.kind === 'power' || option.kind === 'rapid') return 'itemWeaponCache';
     if (option.kind === 'crit') return 'itemCritCrown';
     if (option.kind === 'pierce') return 'itemPierceDrill';
-    if (option.kind === 'special') return 'itemSpecialBattery';
-    if (this.isLegendary(option)) return 'itemLegendChest';
+    if (option.kind === 'special') return 'itemOverdriveOrb';
+    if (this.isLegendary(option)) return option.kind === 'fusion' ? 'itemMythicRelicChest' : 'itemLegendChest';
     if (this.isRare(option)) return 'itemRareChest';
     return 'itemBukiCapsule';
   }

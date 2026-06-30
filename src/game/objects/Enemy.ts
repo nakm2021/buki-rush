@@ -51,10 +51,11 @@ export class Enemy extends Phaser.GameObjects.Container {
           strokeThickness: 3,
         }).setOrigin(0.5)
       : undefined;
-    const hpBack = scene.add.rectangle(0, -variant.radius - 14, 46, 10, 0x020617, 0.82);
+    const hpY = image ? -variant.radius * 3.55 : -variant.radius - 14;
+    const hpBack = scene.add.rectangle(0, hpY, 46, 10, 0x020617, 0.82);
     hpBack.setStrokeStyle(1, variant.accentColor, 0.72);
-    this.hpFill = scene.add.rectangle(-21, -variant.radius - 14, 42, 6, variant.lethal ? 0xff174d : variant.accentColor, 0.95).setOrigin(0, 0.5);
-    this.label = scene.add.text(0, -variant.radius - 15, String(hp), {
+    this.hpFill = scene.add.rectangle(-21, hpY, 42, 6, variant.lethal ? 0xff174d : variant.accentColor, 0.95).setOrigin(0, 0.5);
+    this.label = scene.add.text(0, hpY - 1, String(hp), {
       fontSize: '10px',
       color: '#fff7ed',
       fontStyle: 'bold',

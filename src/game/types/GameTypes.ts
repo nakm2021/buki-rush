@@ -30,6 +30,7 @@ export interface StarterWeapon {
   id: string;
   title: string;
   subtitle: string;
+  detail: string;
   element: WeaponElement;
   archetype: WeaponArchetype;
   imageKey: string;

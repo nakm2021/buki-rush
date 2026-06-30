@@ -7,7 +7,9 @@ import { PlayerWeapon } from '../objects/PlayerWeapon';
 import { getBossAssetByLoop, getBossTheme, getRandomBossAsset, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
+import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
 import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
+import { EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
 import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
 import { applyWeaponEvolutionBranch, getBuildRank, getEvolutionBranch, getEvolutionBranches, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
@@ -145,7 +147,7 @@ export default class GameScene extends Phaser.Scene {
   private evolutionCount = 0;
   private evolutionPath: string[] = [];
   private lockedWeaponSkinKey = 'weaponAnime';
-  private starterWeaponId = 'runner-blaster';
+  private starterWeaponId = 'balance-bow';
   private playerStatuses: PlayerStatusState = {
     poisonMs: 0,
     poisonTickMs: 0,
@@ -159,6 +161,12 @@ export default class GameScene extends Phaser.Scene {
   private permanentRank = 0;
   private bossPhaseText!: Phaser.GameObjects.Text;
   private stageBranchOffset = 0;
+  private statusPanelObjects: Phaser.GameObjects.GameObject[] = [];
+  private rareEvent?: RareRushEvent;
+  private rareEventKills = 0;
+  private rareEventSpawned = 0;
+  private rareEventSpawnTimer = 0;
+  private shotSoundTimer = 0;
 
   constructor() {
     super('GameScene');
@@ -255,6 +263,11 @@ export default class GameScene extends Phaser.Scene {
     this.evolutionPath = [];
     this.medalCount = 0;
     this.stageBranchOffset = 0;
+    this.rareEvent = undefined;
+    this.rareEventKills = 0;
+    this.rareEventSpawned = 0;
+    this.rareEventSpawnTimer = 0;
+    this.shotSoundTimer = 0;
     this.pauseOverlay = undefined;
     this.playerStatuses = {
       poisonMs: 0,
@@ -275,10 +288,12 @@ export default class GameScene extends Phaser.Scene {
     const smoothDelta = Math.min(delta, 33);
     this.stageTimer += smoothDelta;
     this.fireTimer += delta;
+    this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
     this.distance += (smoothDelta / 1000) * 22;
     this.bossDefeatGraceMs = Math.max(0, this.bossDefeatGraceMs - smoothDelta);
 
     this.spawnStageEvents();
+    this.updateRareEvent(smoothDelta);
     this.updatePlayerStatuses(smoothDelta);
     this.updateEnemyStatuses(smoothDelta);
     this.updateEnemyTactics(smoothDelta);
@@ -380,6 +395,7 @@ export default class GameScene extends Phaser.Scene {
     const panel = this.add.rectangle(200, 62, 364, 102, 0x09111f, 0.9);
     panel.setStrokeStyle(2, 0x38bdf8, 0.38);
     panel.setDepth(8);
+    this.statusPanelObjects = [panelGlow, panel];
 
     const items = [
       { label: '武器数', x: 58, color: '#86efac' },
@@ -389,7 +405,8 @@ export default class GameScene extends Phaser.Scene {
     ];
 
     items.forEach((item) => {
-      this.add.text(item.x, 27, item.label, { fontSize: '11px', color: item.color, fontFamily: 'Arial, sans-serif' }).setOrigin(0.5).setDepth(9);
+      const label = this.add.text(item.x, 27, item.label, { fontSize: '11px', color: item.color, fontFamily: 'Arial, sans-serif' }).setOrigin(0.5).setDepth(9);
+      this.statusPanelObjects.push(label);
     });
 
     this.weaponText = this.add.text(58, 50, '1', { fontSize: '22px', color: '#f8fafc', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
@@ -409,6 +426,7 @@ export default class GameScene extends Phaser.Scene {
     this.bestText = this.add.text(378, 77, 'BEST 0m', { fontSize: '12px', color: '#fde68a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
     this.bossPhaseText = this.add.text(378, 96, 'MEDAL 0', { fontSize: '10px', color: '#fca5a5', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
     this.specialText = this.add.text(200, 116, '必殺 12%', { fontSize: '11px', color: '#fef08a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
+    this.statusPanelObjects.push(this.weaponText, this.powerText, this.levelText, this.hpText, ...this.hpPips, this.weaponNameText, this.moduleText, this.buildText, this.distanceText, this.bestText, this.bossPhaseText, this.specialText);
   }
 
   private createPauseButton(): void {
@@ -447,6 +465,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnStageEvents(): void {
+    if (this.rareEvent) {
+      return;
+    }
+
     while (this.nextStageIndex < OPENING_STEPS.length && this.stageTimer >= OPENING_STEPS[this.nextStageIndex].time) {
       this.spawnStageStep(OPENING_STEPS[this.nextStageIndex]);
       this.nextStageIndex += 1;
@@ -461,6 +483,14 @@ export default class GameScene extends Phaser.Scene {
     }
 
     while (this.stageTimer >= this.nextLoopSpawnTime) {
+      if (!this.boss) {
+        const event = rollRareRushEvent();
+        if (event) {
+          this.startRareEvent(event);
+          this.nextLoopSpawnTime += LOOP_STEP_INTERVAL;
+          return;
+        }
+      }
       const difficulty = Math.floor(this.loopStepIndex / 6);
       this.spawnStageStep(createLoopStep(this.loopStepIndex + this.stageBranchOffset, difficulty + Math.floor(this.defeatedBossKeys.length / 2)));
       this.loopStepIndex += 1;
@@ -505,6 +535,88 @@ export default class GameScene extends Phaser.Scene {
       this.spawnBurst(enemy.x, enemy.y, 0xff174d, 28);
       this.showFlash('DANGER', '#fecaca', enemy.x, enemy.y + 44);
     }
+  }
+
+  private startRareEvent(event: RareRushEvent): void {
+    this.rareEvent = event;
+    this.rareEventKills = 0;
+    this.rareEventSpawned = 0;
+    this.rareEventSpawnTimer = 0;
+    this.clearBossAttacks();
+    this.enemies.clear(true, true);
+    this.gates.clear(true, true);
+    this.obstacles.clear(true, true);
+    this.showFlash(event.title, '#fef08a', 200, 180);
+    this.showFlash(event.subtitle, '#dcfce7', 200, 220);
+    this.cameras.main.shake(500, 0.004);
+    this.playSoundProfile(RARE_SOUND_PROFILE);
+  }
+
+  private updateRareEvent(delta: number): void {
+    if (!this.rareEvent) {
+      return;
+    }
+
+    this.rareEventSpawnTimer -= delta;
+    if (this.rareEventSpawnTimer <= 0 && this.rareEventSpawned < this.rareEvent.targetKills) {
+      const activeEnemies = this.enemies.getLength();
+      const room = Math.max(0, this.rareEvent.maxActiveEnemies - activeEnemies);
+      const count = Math.min(this.rareEvent.spawnBatchSize, room, this.rareEvent.targetKills - this.rareEventSpawned);
+      for (let i = 0; i < count; i++) {
+        const laneX = [72, 116, 160, 204, 248, 292, 336][(this.rareEventSpawned + i) % 7];
+        const y = -120 - Math.floor(i / 4) * 58 - Phaser.Math.Between(0, 22);
+        const hp = 12 + Math.floor(this.rareEventKills / 80) * 3;
+        this.spawnEnemy({ x: laneX, y, hp, variantId: this.rareEvent.enemyVariantId });
+      }
+      this.rareEventSpawned += count;
+      this.rareEventSpawnTimer = this.rareEvent.spawnIntervalMs;
+    }
+
+    if (this.rareEventKills >= this.rareEvent.targetKills) {
+      this.completeRareEvent();
+    } else if (this.rareEventSpawned >= this.rareEvent.targetKills && this.enemies.getLength() === 0) {
+      this.showFlash('EVENT MISSED', '#fecaca', 200, 200);
+      this.rareEvent = undefined;
+    }
+  }
+
+  private completeRareEvent(): void {
+    const event = this.rareEvent;
+    if (!event) {
+      return;
+    }
+
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
+    this.rareEvent = undefined;
+    this.rareEventSpawnTimer = 0;
+    this.showEventRewardChest(event.rewardItemKey);
+    this.stats = {
+      ...this.stats,
+      weaponCount: this.stats.weaponCount + 80,
+      power: this.stats.power + 35,
+      level: this.stats.level + 12,
+      critRate: Math.min(0.58, this.stats.critRate + 0.06),
+      shield: this.stats.shield + 8,
+      synergy: this.stats.synergy + 14,
+    };
+    this.playerHp += 8;
+    this.specialCharge = 100;
+    this.medalCount += 25;
+    this.playSoundProfile(EVENT_REWARD_PROFILE);
+    this.showFlash('激レア宝箱 GET', '#fef08a', 200, 256);
+    this.showStatGainFeedback(previousStats, previousHp, { label: 'MYTHIC CHEST', kind: 'fusion', value: 1, color: 0xfef08a, good: true });
+  }
+
+  private showEventRewardChest(itemKey: string): void {
+    const image = this.textures.exists(itemKey)
+      ? this.add.image(200, 260, itemKey).setDisplaySize(118, 118)
+      : this.add.star(200, 260, 7, 28, 62, 0xfef08a, 0.95);
+    image.setDepth(30);
+    image.setBlendMode(Phaser.BlendModes.ADD);
+    const ring = this.add.circle(200, 260, 78, 0xfef08a, 0).setStrokeStyle(5, 0xffffff, 0.86).setDepth(29);
+    this.tweens.add({ targets: image, scale: 1.24, angle: 12, duration: 420, yoyo: true, repeat: 2, ease: 'Back.easeOut', onComplete: () => image.destroy() });
+    this.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 1050, ease: 'Cubic.easeOut', onComplete: () => ring.destroy() });
   }
 
   private getBossPowerPressure(): number {
@@ -593,13 +705,15 @@ export default class GameScene extends Phaser.Scene {
         this.boss.x = clamp(200 + Math.sin(this.stageTimer * 0.0024 + this.bossLoopIndex) * sway, 82, 318);
       }
       (this.boss.body as Phaser.Physics.Arcade.Body).updateFromGameObject();
-      this.bossHpText.setPosition(this.boss.x, this.boss.y - 86);
-      this.bossHpBar.setPosition(this.boss.x, this.boss.y - 62);
-      this.bossHpFill.setPosition(this.boss.x - 90, this.boss.y - 62);
+      const hpY = clamp(this.boss.y + 132, 218, 336);
+      this.bossHpText.setPosition(this.boss.x, hpY - 24);
+      this.bossHpBar.setPosition(this.boss.x, hpY);
+      this.bossHpFill.setPosition(this.boss.x - 90, hpY);
     }
   }
 
   private fireWeapons(): void {
+    this.playWeaponShotSound();
     const branchBonus = Math.min(4, this.evolutionPath.length);
     const shotCount = Math.min(17, 1 + Math.floor(this.stats.weaponCount / 5) + Math.floor(branchBonus / 2));
     const center = (shotCount - 1) / 2;
@@ -644,6 +758,15 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBranchShard(this.player.x, this.player.y - 58, 0, -760, colors.bullet, undefined, 1.7, 3);
       }
     }
+  }
+
+  private playWeaponShotSound(): void {
+    if (this.shotSoundTimer > 0) {
+      return;
+    }
+
+    this.shotSoundTimer = 92;
+    this.playSoundProfile(getWeaponShotProfile(this.stats));
   }
 
   private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0): void {
@@ -1028,6 +1151,18 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
+    if (key.includes('EmeraldClock')) {
+      this.spawnBossOrbitMines(theme);
+      this.time.delayedCall(260, () => this.spawnBossSnipeWeb(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('CrimsonPrism')) {
+      this.spawnBossPrismScatter(theme);
+      this.time.delayedCall(240, () => this.spawnBossLaneStrike(theme, this.bossPhase >= 2));
+      this.bossPatternIndex += 1;
+      return;
+    }
     if (key.includes('Lunar')) {
       this.spawnBossCrossSlash(theme);
       this.time.delayedCall(180, () => this.spawnBossFanShot(theme));
@@ -1169,6 +1304,63 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBossProjectile(x, -24, Math.sin(index) * 42, 245 + this.bossPhase * 34, 10, index % 2 === 0 ? theme.primary : theme.accent, this.getBossDamage(1), 'diamond');
       });
     });
+  }
+
+  private spawnBossOrbitMines(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const count = 6 + this.bossPhase * 2;
+    for (let i = 0; i < count; i++) {
+      const angle = Phaser.Math.DegToRad((360 / count) * i + this.bossPatternIndex * 19);
+      const x = clamp(this.boss.x + Math.cos(angle) * 92, 46, 354);
+      const y = this.boss.y + 72 + Math.sin(angle) * 28;
+      const mine = this.spawnBossProjectile(x, y, Math.cos(angle) * 34, 118 + Math.sin(angle) * 32, 11, i % 2 === 0 ? theme.secondary : theme.primary, this.getBossDamage(1), 'diamond');
+      mine?.setData('spin', 7.5);
+    }
+    this.spawnBurst(this.boss.x, this.boss.y + 70, theme.secondary, 26);
+  }
+
+  private spawnBossSnipeWeb(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const lanes = [this.player.x, this.player.x - 58, this.player.x + 58].map((x) => clamp(x, 48, 352));
+    lanes.forEach((x, index) => {
+      const warning = this.add.rectangle(x, 384, 24, 680, theme.secondary, 0.16).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      warning.setData('bossAttackEffect', true);
+      warning.setStrokeStyle(2, theme.accent, 0.7);
+      this.tweens.add({
+        targets: warning,
+        alpha: 0.38,
+        yoyo: true,
+        repeat: 2,
+        duration: 90,
+        delay: index * 60,
+        onComplete: () => {
+          warning.destroy();
+          if (!this.boss) return;
+          this.spawnBossProjectile(x, -18, Phaser.Math.Between(-10, 10), 330 + this.bossPhase * 34, 8, theme.accent, this.getBossDamage(1), 'orb');
+        },
+      });
+    });
+  }
+
+  private spawnBossPrismScatter(theme: BossTheme): void {
+    if (!this.boss) {
+      return;
+    }
+
+    const count = 9 + this.bossPhase * 4;
+    for (let i = 0; i < count; i++) {
+      const t = count === 1 ? 0.5 : i / (count - 1);
+      const x = 48 + t * 304;
+      const vx = Math.sin(i * 1.7 + this.bossPatternIndex) * 86;
+      const vy = 190 + (i % 4) * 36 + this.bossPhase * 22;
+      this.spawnBossProjectile(x, -26 - (i % 3) * 24, vx, vy, i % 2 === 0 ? 7 : 9, i % 3 === 0 ? theme.accent : i % 3 === 1 ? theme.primary : theme.secondary, this.getBossDamage(1), i % 2 === 0 ? 'diamond' : 'orb');
+    }
   }
 
   private spawnBossPhoenixDive(theme: BossTheme): void {
@@ -1367,6 +1559,18 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(280, () => this.spawnBossWaveWall(theme));
         return;
       }
+      if (key.includes('EmeraldClock')) {
+        this.spawnBossOrbitMines(theme);
+        this.time.delayedCall(220, () => this.spawnBossSpiral(theme, 24 + this.bossPhase * 4));
+        this.time.delayedCall(460, () => this.spawnBossSnipeWeb(theme));
+        return;
+      }
+      if (key.includes('CrimsonPrism')) {
+        this.spawnBossPrismScatter(theme);
+        this.time.delayedCall(220, () => this.spawnBossBulletRain(theme, 24 + this.bossPhase * 5, 32));
+        this.time.delayedCall(420, () => this.spawnBossNova(theme));
+        return;
+      }
       if (key.includes('Lunar')) {
         this.spawnBossNova(theme);
         this.spawnBossCrossSlash(theme);
@@ -1406,9 +1610,9 @@ export default class GameScene extends Phaser.Scene {
     this.spawnBurst(originX, originY, theme.accent, 36);
   }
 
-  private spawnBossProjectile(x: number, y: number, vx: number, vy: number, radius: number, color: number, damage: number, shape: 'orb' | 'diamond'): void {
+  private spawnBossProjectile(x: number, y: number, vx: number, vy: number, radius: number, color: number, damage: number, shape: 'orb' | 'diamond'): Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle | undefined {
     if (!this.boss) {
-      return;
+      return undefined;
     }
 
     const projectile = shape === 'orb'
@@ -1436,6 +1640,7 @@ export default class GameScene extends Phaser.Scene {
       body.setSize(radius * 1.5, radius * 1.5);
       body.setOffset(-radius * 0.75, -radius * 0.75);
     }
+    return projectile;
   }
 
   private getBossDamage(baseDamage: number): number {
@@ -1464,7 +1669,11 @@ export default class GameScene extends Phaser.Scene {
     const modules = this.stats.modules.length > 0 ? this.stats.modules.map((module) => getModuleProfile(module).label).join(' / ') : 'none';
     this.moduleText.setText(`MOD: ${modules}`);
     this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
-    this.bossPhaseText.setText(this.boss ? `BOSS P${this.bossPhase}` : `MEDAL ${this.medalCount}`);
+    this.bossPhaseText.setText(this.rareEvent ? `EVENT ${this.rareEventKills}/${this.rareEvent.targetKills}` : this.boss ? `BOSS P${this.bossPhase}` : `MEDAL ${this.medalCount}`);
+    const panelAlpha = this.boss ? 0.58 : 1;
+    this.statusPanelObjects.forEach((object) => {
+      (object as Phaser.GameObjects.GameObject & { setAlpha?: (value: number) => void }).setAlpha?.(panelAlpha);
+    });
     const colors = getWeaponColors(this.stats);
     this.player.setPalette(colors.primary, colors.secondary);
     this.player.setWeaponSkin(this.getCurrentWeaponSkinKey());
@@ -1806,7 +2015,15 @@ export default class GameScene extends Phaser.Scene {
     this.applyEnemyStatus(enemyObject, bulletObject.getData('statusEffect') as StatusEffect | undefined);
     if (enemyObject.damage(damage)) {
       this.spawnBurst(enemyObject.x, enemyObject.y, 0xffb020, 20);
-      this.grantEnemyDefeatReward(enemyObject);
+      if (this.rareEvent) {
+        this.rareEventKills += 1;
+        this.specialCharge = clamp(this.specialCharge + 0.35, 0, 100);
+        if (this.rareEventKills % 100 === 0) {
+          this.showFlash(`${this.rareEventKills}/${this.rareEvent.targetKills}`, '#fef08a', 200, 168);
+        }
+      } else {
+        this.grantEnemyDefeatReward(enemyObject);
+      }
       enemyObject.destroy();
     }
     const pierceLeft = Number(bulletObject.getData('pierceLeft') ?? 0);
@@ -1960,11 +2177,11 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);
 
-    this.bossHpBar = this.add.rectangle(200, 96, 188, 16, 0x450a12, 0.92);
+    this.bossHpBar = this.add.rectangle(200, 218, 188, 16, 0x450a12, 0.92);
     this.bossHpBar.setStrokeStyle(2, 0xfda4af, 0.85);
     this.bossHpBar.setDepth(8);
-    this.bossHpFill = this.add.rectangle(110, 96, 180, 10, 0xfb7185, 0.96).setOrigin(0, 0.5).setDepth(9);
-    this.bossHpText = this.add.text(200, 68, `BOSS ${this.bossMaxHp} HP`, {
+    this.bossHpFill = this.add.rectangle(110, 218, 180, 10, 0xfb7185, 0.96).setOrigin(0, 0.5).setDepth(9);
+    this.bossHpText = this.add.text(200, 194, `BOSS ${this.bossMaxHp} HP`, {
       fontSize: '14px',
       color: '#fff7ed',
       fontStyle: 'bold',
@@ -2802,23 +3019,25 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private playUpgradeSound(kind: GateOption['kind']): void {
-    const base = kind === 'rarity' || kind === 'fusion' ? 660 : kind === 'module' ? 520 : 420;
-    this.playTone(base, 0.055, 0.035);
-    this.time.delayedCall(70, () => this.playTone(base * 1.5, 0.055, 0.028));
+    this.playSoundProfile(getUpgradeProfile(kind));
   }
 
   private playRareSound(): void {
-    [523, 659, 784, 1046].forEach((frequency, index) => {
-      this.time.delayedCall(index * 58, () => this.playTone(frequency, 0.08, 0.04));
+    this.playSoundProfile(RARE_SOUND_PROFILE);
+  }
+
+  private playSoundProfile(profile: SoundProfile): void {
+    profile.steps.forEach((step) => {
+      this.time.delayedCall(step.delay ?? 0, () => this.playTone(step.frequency, step.duration, step.volume, step.wave));
     });
   }
 
-  private playTone(frequency: number, duration: number, volume: number): void {
+  private playTone(frequency: number, duration: number, volume: number, wave: OscillatorType = 'triangle'): void {
     try {
       this.audioContext ??= new AudioContext();
       const oscillator = this.audioContext.createOscillator();
       const gain = this.audioContext.createGain();
-      oscillator.type = 'triangle';
+      oscillator.type = wave;
       oscillator.frequency.value = frequency;
       gain.gain.setValueAtTime(0.0001, this.audioContext.currentTime);
       gain.gain.exponentialRampToValueAtTime(volume, this.audioContext.currentTime + 0.01);

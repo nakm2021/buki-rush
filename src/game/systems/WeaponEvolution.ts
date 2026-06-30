@@ -248,6 +248,10 @@ const EVOLUTION_BRANCHES: Record<string, WeaponEvolutionBranch[]> = {
 };
 
 export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
+  { id: 'celestial-balance-bow', title: 'CELESTIAL BALANCE', subtitle: '均整弓。全距離に対応する万能射撃', module: 'homing', archetype: 'centaur', element: 'light', imageKey: 'weaponCelestialBalanceBow', specialStyle: 'nova', power: 5, fireRate: 0.13, critRate: 0.025, pierce: 1, shield: 1, synergy: 5 },
+  { id: 'scarlet-speed-saber', title: 'SCARLET SPEED', subtitle: '高速剣。斬撃と連射で押し切る', module: 'booster', archetype: 'saber', element: 'fire', imageKey: 'weaponScarletSpeedSaber', specialStyle: 'blade', power: 6, fireRate: 0.2, critRate: 0.045, pierce: 1, shield: 0, synergy: 4 },
+  { id: 'void-guardian-cannon', title: 'VOID GUARDIAN', subtitle: '守護砲。重い一撃と盾で耐える', module: 'aegis', archetype: 'atlas', element: 'shadow', imageKey: 'weaponVoidGuardianCannon', specialStyle: 'anchor', power: 9, fireRate: -0.07, critRate: 0.02, pierce: 0, shield: 3, synergy: 3 },
+  { id: 'lotus-aegis-bloom', title: 'LOTUS AEGIS', subtitle: '蓮華盾。回復と結界で崩れにくい', module: 'repair', archetype: 'lotus', element: 'crystal', imageKey: 'weaponLotusAegisBloom', specialStyle: 'rune', power: 4, fireRate: 0.11, critRate: 0.015, pierce: 0, shield: 3, synergy: 6 },
   { id: 'moon-guillotine', title: 'MOON GUILLOTINE', subtitle: '月光の大鎌剣。会心斬撃で押し切る', module: 'bladebit', archetype: 'saber', element: 'shadow', imageKey: 'weaponMoonGuillotine', specialStyle: 'blade', power: 7, fireRate: 0.02, critRate: 0.055, pierce: 1, shield: 0, synergy: 3 },
   { id: 'solar-dragon-rail', title: 'SOLAR DRAGON RAIL', subtitle: '太陽竜の軌道砲。高火力の雷火線', module: 'laser', archetype: 'rail', element: 'fire', imageKey: 'weaponSolarDragonRail', specialStyle: 'storm', power: 8, fireRate: -0.03, critRate: 0.035, pierce: 2, shield: 0, synergy: 2 },
   { id: 'quantum-bloom-staff', title: 'QUANTUM BLOOM', subtitle: '花弁結界の杖。守りながら制圧する', module: 'barrier', archetype: 'rune', element: 'light', imageKey: 'weaponQuantumBloomStaff', specialStyle: 'rune', power: 4, fireRate: 0.14, critRate: 0.015, pierce: 0, shield: 2, synergy: 5 },
@@ -266,16 +270,16 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
 ];
 
 const EVOLUTION_POOLS_BY_STARTER: Record<string, string[]> = {
-  'runner-blaster': ['moon-guillotine', 'solar-dragon-rail', 'quantum-bloom-staff', 'abyss-needle-launcher', 'titan-orbit-hammer', 'prism-comet-bow', 'crimson-meteor-katana', 'azure-tempest-chakram', 'verdant-seraph-crossbow', 'obsidian-gravity-cannon', 'sakura-mirror-fans', 'chrono-needle-spear', 'nebula-harp-launcher', 'magma-drill-trident', 'crystal-lotus-shieldgun'],
-  'phoenix-cannon': ['solar-dragon-rail', 'prism-comet-bow', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'magma-drill-trident'],
-  'frost-lance': ['quantum-bloom-staff', 'prism-comet-bow', 'titan-orbit-hammer', 'verdant-seraph-crossbow', 'sakura-mirror-fans', 'crystal-lotus-shieldgun'],
-  'thunder-rail': ['moon-guillotine', 'solar-dragon-rail', 'prism-comet-bow', 'azure-tempest-chakram', 'chrono-needle-spear', 'nebula-harp-launcher'],
-  'void-basilisk': ['abyss-needle-launcher', 'moon-guillotine', 'quantum-bloom-staff', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher'],
-  'anchor-breaker': ['titan-orbit-hammer', 'moon-guillotine', 'abyss-needle-launcher', 'obsidian-gravity-cannon', 'crimson-meteor-katana', 'crystal-lotus-shieldgun'],
+  'balance-bow': ['celestial-balance-bow', 'prism-comet-bow', 'verdant-seraph-crossbow', 'quantum-bloom-staff', 'sakura-mirror-fans', 'nebula-harp-launcher', 'moon-guillotine', 'solar-dragon-rail', 'abyss-needle-launcher', 'titan-orbit-hammer', 'crimson-meteor-katana', 'azure-tempest-chakram', 'obsidian-gravity-cannon', 'magma-drill-trident', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom'],
+  'slash-speed': ['scarlet-speed-saber', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'chrono-needle-spear', 'magma-drill-trident'],
+  'cannon-barrage': ['solar-dragon-rail', 'obsidian-gravity-cannon', 'nebula-harp-launcher', 'prism-comet-bow', 'azure-tempest-chakram', 'void-guardian-cannon'],
+  'guard-aegis': ['void-guardian-cannon', 'titan-orbit-hammer', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'quantum-bloom-staff', 'verdant-seraph-crossbow'],
+  'venom-curse': ['abyss-needle-launcher', 'moon-guillotine', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher', 'void-guardian-cannon'],
+  'burst-pierce': ['magma-drill-trident', 'chrono-needle-spear', 'solar-dragon-rail', 'crimson-meteor-katana', 'prism-comet-bow', 'scarlet-speed-saber'],
 };
 
-export function getEvolutionBranches(_stats: PlayerStats, starterId = 'runner-blaster'): WeaponEvolutionBranch[] {
-  const poolIds = EVOLUTION_POOLS_BY_STARTER[starterId] ?? EVOLUTION_POOLS_BY_STARTER['runner-blaster'];
+export function getEvolutionBranches(_stats: PlayerStats, starterId = 'balance-bow'): WeaponEvolutionBranch[] {
+  const poolIds = EVOLUTION_POOLS_BY_STARTER[starterId] ?? EVOLUTION_POOLS_BY_STARTER['balance-bow'];
   const branches = poolIds
     .map((id) => RANDOM_EVOLUTION_BRANCHES.find((branch) => branch.id === id))
     .filter((branch): branch is WeaponEvolutionBranch => Boolean(branch));
@@ -330,12 +334,12 @@ function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, 
 }
 
 export const STARTER_WEAPONS: StarterWeapon[] = [
-  { id: 'runner-blaster', title: 'Rush Mix', subtitle: '全進化候補が混ざる万能系', element: 'neutral', archetype: 'blaster', imageKey: 'weaponPrismCometBow', color: 0x38bdf8, stats: createStarterStats('neutral', 'blaster', 1, 1) },
-  { id: 'phoenix-cannon', title: 'Solar Rail', subtitle: '火力と雷火線の進化系統', element: 'fire', archetype: 'rail', imageKey: 'weaponSolarDragonRail', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 2, 0.96) },
-  { id: 'frost-lance', title: 'Quantum Guard', subtitle: '結界と範囲制圧の進化系統', element: 'light', archetype: 'rune', imageKey: 'weaponQuantumBloomStaff', color: 0x7dd3fc, stats: createStarterStats('light', 'rune', 2, 0.9) },
-  { id: 'thunder-rail', title: 'Moon Blade', subtitle: '斬撃と会心の進化系統', element: 'shadow', archetype: 'saber', imageKey: 'weaponMoonGuillotine', color: 0xfacc15, stats: createStarterStats('shadow', 'saber', 2, 0.94) },
-  { id: 'void-basilisk', title: 'Abyss Needle', subtitle: '毒と影で削る進化系統', element: 'shadow', archetype: 'needle', imageKey: 'weaponAbyssNeedleLauncher', color: 0x8b5cf6, stats: createStarterStats('shadow', 'needle', 2, 0.92) },
-  { id: 'anchor-breaker', title: 'Titan Anchor', subtitle: '重撃と防御の進化系統', element: 'crystal', archetype: 'hammer', imageKey: 'weaponTitanOrbitHammer', color: 0x99f6e4, stats: createStarterStats('crystal', 'hammer', 3, 0.84) },
+  { id: 'balance-bow', title: 'バランス弓型', subtitle: '全進化候補が混ざる万能系', detail: '弓・杖・砲・斬撃まで広く回るタイプ。迷ったらこれ。', element: 'neutral', archetype: 'centaur', imageKey: 'weaponCelestialBalanceBow', color: 0x38bdf8, stats: createStarterStats('neutral', 'centaur', 1, 1) },
+  { id: 'slash-speed', title: '斬撃スピード型', subtitle: '剣・刀・高速輪が多い会心系', detail: '弾より斬撃寄り。手数、移動感、会心でBOSSを削る。', element: 'shadow', archetype: 'saber', imageKey: 'weaponScarletSpeedSaber', color: 0xfacc15, stats: createStarterStats('shadow', 'saber', 2, 0.98) },
+  { id: 'cannon-barrage', title: '砲撃ラッシュ型', subtitle: 'レール砲・重力砲・弾幕系', detail: '遠距離火力と弾幕が中心。BOSSへの圧が強い。', element: 'fire', archetype: 'rail', imageKey: 'weaponSolarDragonRail', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 2, 0.94) },
+  { id: 'guard-aegis', title: '耐久ガード型', subtitle: '盾・結界・回復で粘る安定系', detail: '派手さより生存力。進むほど硬くなる守備タイプ。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponLotusAegisBloom', color: 0x7dd3fc, stats: createStarterStats('crystal', 'lotus', 2, 0.88) },
+  { id: 'venom-curse', title: '毒呪い技巧型', subtitle: '毒・影・遅延で削る厄介系', detail: '状態異常と特殊必殺が多め。強敵ほどじわじわ効く。', element: 'shadow', archetype: 'needle', imageKey: 'weaponAbyssNeedleLauncher', color: 0x8b5cf6, stats: createStarterStats('shadow', 'needle', 2, 0.92) },
+  { id: 'burst-pierce', title: '貫通バースト型', subtitle: '槍・ドリル・高火力突破系', detail: '一撃と貫通を重視。硬い敵を正面から割る。', element: 'fire', archetype: 'lance', imageKey: 'weaponMagmaDrillTrident', color: 0x99f6e4, stats: createStarterStats('fire', 'lance', 3, 0.86) },
 ];
 
 export function getStarterWeapon(id?: string): StarterWeapon {

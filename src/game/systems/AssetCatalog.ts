@@ -64,6 +64,10 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponNebulaHarpLauncher', path: 'assets/optimized/weapon-nebula-harp-launcher.png', match: { elements: ['light', 'crystal'], archetypes: ['nebula', 'rune'] } },
   { key: 'weaponMagmaDrillTrident', path: 'assets/optimized/weapon-magma-drill-trident.png', match: { elements: ['fire'], archetypes: ['drill', 'lance', 'meteor'] } },
   { key: 'weaponCrystalLotusShieldgun', path: 'assets/optimized/weapon-crystal-lotus-shieldgun.png', match: { elements: ['crystal', 'light'], archetypes: ['lotus', 'anchor', 'rune'] } },
+  { key: 'weaponCelestialBalanceBow', path: 'assets/optimized/weapon-celestial-balance-bow.png', match: { elements: ['neutral', 'light'], archetypes: ['centaur', 'comet'] } },
+  { key: 'weaponScarletSpeedSaber', path: 'assets/optimized/weapon-scarlet-speed-saber.png', match: { elements: ['fire'], archetypes: ['saber', 'samurai', 'levin'] } },
+  { key: 'weaponVoidGuardianCannon', path: 'assets/optimized/weapon-void-guardian-cannon.png', match: { elements: ['shadow'], archetypes: ['atlas', 'gigas'] } },
+  { key: 'weaponLotusAegisBloom', path: 'assets/optimized/weapon-lotus-aegis-bloom.png', match: { elements: ['crystal'], archetypes: ['lotus', 'rune'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -86,6 +90,8 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossPrismOrchardWyvern', path: 'assets/optimized/boss-prism-orchard-wyvern.png', width: 360, height: 640, minLoop: 2 },
   { key: 'bossIronMochiColossus', path: 'assets/optimized/boss-iron-mochi-colossus.png', width: 360, height: 640, minLoop: 1 },
   { key: 'bossChronoSpiderMatriarch', path: 'assets/optimized/boss-chrono-spider-matriarch.png', width: 380, height: 660, minLoop: 3 },
+  { key: 'bossEmeraldClockArachne', path: 'assets/optimized/boss-emerald-clock-arachne.png', width: 380, height: 660, minLoop: 2 },
+  { key: 'bossCrimsonPrismTyrant', path: 'assets/optimized/boss-crimson-prism-tyrant.png', width: 360, height: 640, minLoop: 4 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -98,6 +104,9 @@ export const ITEM_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'itemCritCrown', path: 'assets/optimized/item-crit-crown.png' },
   { key: 'itemPierceDrill', path: 'assets/optimized/item-pierce-drill.png' },
   { key: 'itemSpecialBattery', path: 'assets/optimized/item-special-battery.png' },
+  { key: 'itemWeaponCache', path: 'assets/optimized/item-weapon-cache.png' },
+  { key: 'itemOverdriveOrb', path: 'assets/optimized/item-overdrive-orb.png' },
+  { key: 'itemMythicRelicChest', path: 'assets/optimized/item-mythic-relic-chest.png' },
 ];
 
 export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
@@ -134,6 +143,10 @@ export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'enemyLemonShockTurretPhoto', path: 'assets/optimized/enemy-lemon-shock-turret.png' },
   { key: 'enemyGrapeCurseIdolPhoto', path: 'assets/optimized/enemy-grape-curse-idol.png' },
   { key: 'enemyKiwiFrostWheelPhoto', path: 'assets/optimized/enemy-kiwi-frost-wheel.png' },
+  { key: 'enemyMelonBladeSentinelPhoto', path: 'assets/optimized/enemy-melon-blade-sentinel.png' },
+  { key: 'enemyRoseShockTurretPhoto', path: 'assets/optimized/enemy-rose-shock-turret.png' },
+  { key: 'enemyCobaltCurseIdolPhoto', path: 'assets/optimized/enemy-cobalt-curse-idol.png' },
+  { key: 'enemySolarFrostWheelPhoto', path: 'assets/optimized/enemy-solar-frost-wheel.png' },
 ];
 
 export const MISC_IMAGE_ASSETS: ImageAsset[] = [
@@ -226,6 +239,8 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossPrismOrchardWyvern', primary: 0xf43f5e, secondary: 0x22d3ee, accent: 0xf0abfc, darkness: 0x180812 },
   { key: 'bossIronMochiColossus', primary: 0xfef3c7, secondary: 0xef4444, accent: 0xfacc15, darkness: 0x1c1917 },
   { key: 'bossChronoSpiderMatriarch', primary: 0xb45309, secondary: 0x38bdf8, accent: 0xfef3c7, darkness: 0x111827 },
+  { key: 'bossEmeraldClockArachne', primary: 0x22c55e, secondary: 0xfacc15, accent: 0xccfbf1, darkness: 0x052e16 },
+  { key: 'bossCrimsonPrismTyrant', primary: 0xef4444, secondary: 0x38bdf8, accent: 0xfef08a, darkness: 0x180812 },
 ];
 
 export function getBossTheme(key: string): BossTheme {

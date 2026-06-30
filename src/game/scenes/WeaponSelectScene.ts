@@ -34,13 +34,13 @@ export default class WeaponSelectScene extends Phaser.Scene {
       stroke: '#7f1d1d',
       strokeThickness: 6,
     }).setOrigin(0.5);
-    this.add.text(width / 2, 102, '選んだ系統の中でランダム進化', {
+    this.add.text(width / 2, 102, '最初に選ぶのは「武器タイプ」です', {
       fontSize: '12px',
       color: '#dcfce7',
       fontFamily: 'Arial, sans-serif',
       fontStyle: 'bold',
     }).setOrigin(0.5);
-    this.add.text(width / 2, 122, '最初の選択で進化候補の種類が決まります', {
+    this.add.text(width / 2, 122, '選んだタイプの候補内で、BOSS撃破ごとにランダム進化します', {
       fontSize: '11px',
       color: '#fef3c7',
       fontFamily: 'Arial, sans-serif',
@@ -81,9 +81,11 @@ export default class WeaponSelectScene extends Phaser.Scene {
         strokeThickness: 3,
       }).setOrigin(0.5);
       this.add.text(x, y + 64, weapon.subtitle, {
-        fontSize: '10px',
+        fontSize: '9px',
         color: '#cbd5e1',
         fontFamily: 'Arial, sans-serif',
+        align: 'center',
+        wordWrap: { width: 138 },
       }).setOrigin(0.5);
 
       card.setInteractive({ useHandCursor: true });
@@ -151,10 +153,11 @@ export default class WeaponSelectScene extends Phaser.Scene {
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
     const detail = this.add.text(width / 2, 382, [
+      weapon.detail,
       `ATK ${weapon.stats.power}   RATE ${weapon.stats.fireRate.toFixed(2)}`,
       `TYPE ${weapon.stats.element.toUpperCase()} / ${weapon.stats.archetype.toUpperCase()}`,
-      '最初の選択で進化候補の種類を制御',
-      'BOSS撃破時に候補内からランダム進化',
+      'このタイプの候補だけでランダム進化',
+      '途中でタイプ変更はできません',
     ], {
       fontSize: '12px',
       color: '#dbeafe',

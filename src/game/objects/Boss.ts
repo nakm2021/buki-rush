@@ -26,7 +26,8 @@ export class Boss extends Phaser.GameObjects.Container {
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
 
-    this.add(image ? [aura, glow, image, label] : [aura, glow, wing, core, eye, eye2, mouth, label]);
+    const parts: Phaser.GameObjects.GameObject[] = image ? [aura, glow, image] : [aura, glow, wing, core, eye, eye2, mouth, label];
+    this.add(parts);
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const bossBody = this.body as Phaser.Physics.Arcade.Body;
