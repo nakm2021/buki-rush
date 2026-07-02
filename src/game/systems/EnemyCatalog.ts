@@ -128,6 +128,12 @@ export const ENEMY_VARIANTS: EnemyVariant[] = [
   { id: 'photo-rose-shock-turret', name: 'Photo Rose Shock Turret', bodyColor: 0xfb7185, accentColor: 0x38bdf8, coreColor: 0x831843, shape: 'spider', hpScale: 1.86, radius: 23, damage: 3, imageKey: 'enemyRoseShockTurretPhoto', statusEffect: 'paralyze', statusChance: 0.72 },
   { id: 'photo-cobalt-curse-idol', name: 'Photo Cobalt Curse Idol', bodyColor: 0x2563eb, accentColor: 0xc084fc, coreColor: 0x020617, shape: 'mask', hpScale: 2.48, radius: 25, damage: 4, imageKey: 'enemyCobaltCurseIdolPhoto', statusEffect: 'curse', statusChance: 0.72 },
   { id: 'photo-solar-frost-wheel', name: 'Photo Solar Frost Wheel', bodyColor: 0xfacc15, accentColor: 0xbfdbfe, coreColor: 0x713f12, shape: 'spider', hpScale: 1.62, radius: 23, damage: 3, imageKey: 'enemySolarFrostWheelPhoto', statusEffect: 'freeze', statusChance: 0.66 },
+  { id: 'photo-plum-blade-drone', name: 'Photo Plum Blade Drone', bodyColor: 0x9333ea, accentColor: 0x38bdf8, coreColor: 0x2e1065, shape: 'wing', hpScale: 1.36, radius: 21, damage: 2, imageKey: 'enemyPlumBladeDronePhoto', statusEffect: 'curse', statusChance: 0.42 },
+  { id: 'photo-mint-shock-turret', name: 'Photo Mint Shock Turret', bodyColor: 0x5eead4, accentColor: 0xfef08a, coreColor: 0x134e4a, shape: 'spider', hpScale: 1.78, radius: 23, damage: 3, imageKey: 'enemyMintShockTurretPhoto', statusEffect: 'paralyze', statusChance: 0.7 },
+  { id: 'photo-lime-curse-idol', name: 'Photo Lime Curse Idol', bodyColor: 0x84cc16, accentColor: 0xf0abfc, coreColor: 0x1a2e05, shape: 'mask', hpScale: 2.28, radius: 24, damage: 3, imageKey: 'enemyLimeCurseIdolPhoto', statusEffect: 'poison', statusChance: 0.68 },
+  { id: 'photo-ruby-frost-wheel', name: 'Photo Ruby Frost Wheel', bodyColor: 0xe11d48, accentColor: 0xbfdbfe, coreColor: 0x4c0519, shape: 'spider', hpScale: 1.7, radius: 23, damage: 3, imageKey: 'enemyRubyFrostWheelPhoto', statusEffect: 'freeze', statusChance: 0.62 },
+  { id: 'photo-amethyst-blade-sentinel', name: 'Photo Amethyst Blade Sentinel', bodyColor: 0x7c3aed, accentColor: 0xfef08a, coreColor: 0x2e1065, shape: 'knight', hpScale: 2.55, radius: 26, damage: 4, imageKey: 'enemyAmethystBladeSentinelPhoto', statusEffect: 'curse', statusChance: 0.58 },
+  { id: 'photo-emerald-curse-idol', name: 'Photo Emerald Curse Idol', bodyColor: 0x22c55e, accentColor: 0xc084fc, coreColor: 0x052e16, shape: 'mask', hpScale: 2.12, radius: 24, damage: 3, imageKey: 'enemyEmeraldCurseIdolPhoto', statusEffect: 'poison', statusChance: 0.64 },
 ];
 
 const PHOTO_ENEMY_IMAGE_KEYS = [
@@ -168,6 +174,12 @@ const PHOTO_ENEMY_IMAGE_KEYS = [
   'enemyRoseShockTurretPhoto',
   'enemyCobaltCurseIdolPhoto',
   'enemySolarFrostWheelPhoto',
+  'enemyPlumBladeDronePhoto',
+  'enemyMintShockTurretPhoto',
+  'enemyLimeCurseIdolPhoto',
+  'enemyRubyFrostWheelPhoto',
+  'enemyAmethystBladeSentinelPhoto',
+  'enemyEmeraldCurseIdolPhoto',
 ];
 
 function withPhotoImage(variant: EnemyVariant, index: number): EnemyVariant {

@@ -1047,7 +1047,7 @@ export default class GameScene extends Phaser.Scene {
   private getBossSwayAmplitude(key: string): number {
     if (key.includes('Mantis') || key.includes('Phoenix')) return 92;
     if (key.includes('Leviathan') || key.includes('Hydra')) return 72;
-    if (key.includes('Titan') || key.includes('Oni')) return 34;
+    if (key.includes('Titan') || key.includes('Oni') || key.includes('Mochi')) return 34;
     return 54;
   }
 
@@ -1133,13 +1133,13 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
-    if (key.includes('PrismOrchard')) {
+    if (key.includes('PrismOrchard') || key.includes('OrchardWyvern')) {
       this.spawnBossFanShot(theme);
       this.time.delayedCall(180, () => this.spawnBossBulletRain(theme, 10 + this.bossPhase * 5, 48));
       this.bossPatternIndex += 1;
       return;
     }
-    if (key.includes('IronMochi')) {
+    if (key.includes('IronMochi') || key.includes('JadeMochi')) {
       this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
       this.time.delayedCall(240, () => this.spawnBossWaveWall(theme));
       this.bossPatternIndex += 1;
@@ -1542,13 +1542,13 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(280, () => this.spawnBossSpiral(theme, 18 + this.bossPhase * 4));
         return;
       }
-      if (key.includes('PrismOrchard')) {
+      if (key.includes('PrismOrchard') || key.includes('OrchardWyvern')) {
         this.spawnBossFanShot(theme);
         this.spawnBossBulletRain(theme, 22 + this.bossPhase * 5, 34);
         this.time.delayedCall(260, () => this.spawnBossNova(theme));
         return;
       }
-      if (key.includes('IronMochi')) {
+      if (key.includes('IronMochi') || key.includes('JadeMochi')) {
         this.spawnBossLaneStrike(theme, true);
         this.spawnBossWaveWall(theme);
         this.time.delayedCall(280, () => this.spawnBossLaneStrike(theme, true));

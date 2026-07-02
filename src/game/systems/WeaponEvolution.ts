@@ -252,6 +252,10 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
   { id: 'scarlet-speed-saber', title: 'SCARLET SPEED', subtitle: '高速剣。斬撃と連射で押し切る', module: 'booster', archetype: 'saber', element: 'fire', imageKey: 'weaponScarletSpeedSaber', specialStyle: 'blade', power: 6, fireRate: 0.2, critRate: 0.045, pierce: 1, shield: 0, synergy: 4 },
   { id: 'void-guardian-cannon', title: 'VOID GUARDIAN', subtitle: '守護砲。重い一撃と盾で耐える', module: 'aegis', archetype: 'atlas', element: 'shadow', imageKey: 'weaponVoidGuardianCannon', specialStyle: 'anchor', power: 9, fireRate: -0.07, critRate: 0.02, pierce: 0, shield: 3, synergy: 3 },
   { id: 'lotus-aegis-bloom', title: 'LOTUS AEGIS', subtitle: '蓮華盾。回復と結界で崩れにくい', module: 'repair', archetype: 'lotus', element: 'crystal', imageKey: 'weaponLotusAegisBloom', specialStyle: 'rune', power: 4, fireRate: 0.11, critRate: 0.015, pierce: 0, shield: 3, synergy: 6 },
+  { id: 'emerald-orbit-harp', title: 'EMERALD ORBIT', subtitle: '翠星琴。旋回弾と反響で面制圧', module: 'echo', archetype: 'orbit', element: 'wind', imageKey: 'weaponEmeraldOrbitHarp', specialStyle: 'nova', power: 5, fireRate: 0.19, critRate: 0.02, pierce: 1, shield: 1, synergy: 6 },
+  { id: 'garnet-breaker-axe', title: 'GARNET BREAKER', subtitle: '紅玉斧。鈍重だが装甲を割る重撃', module: 'berserk', archetype: 'hammer', element: 'fire', imageKey: 'weaponGarnetBreakerAxe', specialStyle: 'anchor', power: 10, fireRate: -0.12, critRate: 0.04, pierce: 1, shield: 1, synergy: 2 },
+  { id: 'jade-storm-fan', title: 'JADE STORM', subtitle: '翠嵐扇。高速風刃で弾幕を散らす', module: 'booster', archetype: 'tempest', element: 'wind', imageKey: 'weaponJadeStormFan', specialStyle: 'storm', power: 5, fireRate: 0.23, critRate: 0.03, pierce: 1, shield: 0, synergy: 5 },
+  { id: 'solar-venom-needle', title: 'SOLAR VENOM', subtitle: '陽毒針。毒と炎で継続ダメージ', module: 'poison', archetype: 'basilisk', element: 'fire', imageKey: 'weaponSolarVenomNeedle', specialStyle: 'basilisk', power: 6, fireRate: 0.12, critRate: 0.025, pierce: 2, shield: 0, synergy: 4 },
   { id: 'moon-guillotine', title: 'MOON GUILLOTINE', subtitle: '月光の大鎌剣。会心斬撃で押し切る', module: 'bladebit', archetype: 'saber', element: 'shadow', imageKey: 'weaponMoonGuillotine', specialStyle: 'blade', power: 7, fireRate: 0.02, critRate: 0.055, pierce: 1, shield: 0, synergy: 3 },
   { id: 'solar-dragon-rail', title: 'SOLAR DRAGON RAIL', subtitle: '太陽竜の軌道砲。高火力の雷火線', module: 'laser', archetype: 'rail', element: 'fire', imageKey: 'weaponSolarDragonRail', specialStyle: 'storm', power: 8, fireRate: -0.03, critRate: 0.035, pierce: 2, shield: 0, synergy: 2 },
   { id: 'quantum-bloom-staff', title: 'QUANTUM BLOOM', subtitle: '花弁結界の杖。守りながら制圧する', module: 'barrier', archetype: 'rune', element: 'light', imageKey: 'weaponQuantumBloomStaff', specialStyle: 'rune', power: 4, fireRate: 0.14, critRate: 0.015, pierce: 0, shield: 2, synergy: 5 },
@@ -270,12 +274,12 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
 ];
 
 const EVOLUTION_POOLS_BY_STARTER: Record<string, string[]> = {
-  'balance-bow': ['celestial-balance-bow', 'prism-comet-bow', 'verdant-seraph-crossbow', 'quantum-bloom-staff', 'sakura-mirror-fans', 'nebula-harp-launcher', 'moon-guillotine', 'solar-dragon-rail', 'abyss-needle-launcher', 'titan-orbit-hammer', 'crimson-meteor-katana', 'azure-tempest-chakram', 'obsidian-gravity-cannon', 'magma-drill-trident', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom'],
-  'slash-speed': ['scarlet-speed-saber', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'chrono-needle-spear', 'magma-drill-trident'],
-  'cannon-barrage': ['solar-dragon-rail', 'obsidian-gravity-cannon', 'nebula-harp-launcher', 'prism-comet-bow', 'azure-tempest-chakram', 'void-guardian-cannon'],
-  'guard-aegis': ['void-guardian-cannon', 'titan-orbit-hammer', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'quantum-bloom-staff', 'verdant-seraph-crossbow'],
-  'venom-curse': ['abyss-needle-launcher', 'moon-guillotine', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher', 'void-guardian-cannon'],
-  'burst-pierce': ['magma-drill-trident', 'chrono-needle-spear', 'solar-dragon-rail', 'crimson-meteor-katana', 'prism-comet-bow', 'scarlet-speed-saber'],
+  'balance-bow': ['celestial-balance-bow', 'emerald-orbit-harp', 'prism-comet-bow', 'verdant-seraph-crossbow', 'quantum-bloom-staff', 'sakura-mirror-fans', 'nebula-harp-launcher', 'moon-guillotine', 'solar-dragon-rail', 'abyss-needle-launcher', 'titan-orbit-hammer', 'crimson-meteor-katana', 'azure-tempest-chakram', 'obsidian-gravity-cannon', 'magma-drill-trident', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'jade-storm-fan', 'solar-venom-needle', 'garnet-breaker-axe'],
+  'slash-speed': ['scarlet-speed-saber', 'jade-storm-fan', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'chrono-needle-spear', 'magma-drill-trident'],
+  'cannon-barrage': ['solar-dragon-rail', 'obsidian-gravity-cannon', 'nebula-harp-launcher', 'prism-comet-bow', 'azure-tempest-chakram', 'void-guardian-cannon', 'emerald-orbit-harp'],
+  'guard-aegis': ['void-guardian-cannon', 'garnet-breaker-axe', 'titan-orbit-hammer', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'quantum-bloom-staff', 'verdant-seraph-crossbow'],
+  'venom-curse': ['solar-venom-needle', 'abyss-needle-launcher', 'moon-guillotine', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher', 'void-guardian-cannon'],
+  'burst-pierce': ['garnet-breaker-axe', 'magma-drill-trident', 'chrono-needle-spear', 'solar-dragon-rail', 'crimson-meteor-katana', 'prism-comet-bow', 'scarlet-speed-saber'],
 };
 
 export function getEvolutionBranches(_stats: PlayerStats, starterId = 'balance-bow'): WeaponEvolutionBranch[] {

@@ -79,6 +79,12 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
     'photo-rose-shock-turret',
     'photo-cobalt-curse-idol',
     'photo-solar-frost-wheel',
+    'photo-plum-blade-drone',
+    'photo-mint-shock-turret',
+    'photo-lime-curse-idol',
+    'photo-ruby-frost-wheel',
+    'photo-amethyst-blade-sentinel',
+    'photo-emerald-curse-idol',
   ];
   const dangerVariant = stepIndex % 13 === 9
     ? troubleVariants[Math.floor(stepIndex / 13) % troubleVariants.length]
