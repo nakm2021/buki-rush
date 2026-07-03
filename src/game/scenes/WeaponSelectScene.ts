@@ -35,6 +35,19 @@ export default class WeaponSelectScene extends Phaser.Scene {
     this.content = this.add.container(0, 0);
   }
 
+  private wrapText(text: string, maxChars: number): string {
+    return text
+      .split('\n')
+      .flatMap((line) => {
+        const chunks: string[] = [];
+        for (let i = 0; i < line.length; i += maxChars) {
+          chunks.push(line.slice(i, i + maxChars));
+        }
+        return chunks;
+      })
+      .join('\n');
+  }
+
   private renderCategorySelect(): void {
     this.clearContent();
     const { width, height } = this.scale;
@@ -62,34 +75,43 @@ export default class WeaponSelectScene extends Phaser.Scene {
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = 112 + col * 176;
-      const y = 206 + row * 142;
-      const card = this.add.rectangle(x, y, 160, 124, 0x111827, 0.94);
+      const y = 202 + row * 148;
+      const card = this.add.rectangle(x, y, 160, 132, 0x111827, 0.94);
       card.setStrokeStyle(2, category.color, 0.68);
-      const glow = this.add.circle(x, y - 16, 46, category.color, 0.14).setBlendMode(Phaser.BlendModes.ADD);
-      const titleText = this.add.text(x, y - 28, category.title, {
-        fontSize: '14px',
+      const glow = this.add.circle(x, y - 30, 48, category.color, 0.14).setBlendMode(Phaser.BlendModes.ADD);
+      const sampleWeapon = getStarterWeaponsByCategory(category.id)[0];
+      const image = sampleWeapon && this.textures.exists(sampleWeapon.imageKey)
+        ? this.add.image(x, y - 28, sampleWeapon.imageKey).setDisplaySize(56, 82)
+        : this.add.rectangle(x, y - 28, 32, 78, category.color, 0.9);
+      const titleText = this.add.text(x, y + 25, this.wrapText(category.title, 8), {
+        fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
         fontFamily: 'Arial, sans-serif',
         stroke: '#020617',
         strokeThickness: 3,
+        align: 'center',
+        fixedWidth: 138,
       }).setOrigin(0.5);
-      const sub = this.add.text(x, y + 2, category.subtitle, {
-        fontSize: '10px',
+      const sub = this.add.text(x, y + 54, this.wrapText(category.subtitle, 12), {
+        fontSize: '9px',
         color: '#fef3c7',
         fontStyle: 'bold',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
-        wordWrap: { width: 134 },
+        fixedWidth: 136,
+        wordWrap: { width: 134, useAdvancedWrap: true },
       }).setOrigin(0.5);
-      const detail = this.add.text(x, y + 42, category.detail, {
-        fontSize: '9px',
+      const detail = this.add.text(x, y + 74, this.wrapText(category.detail, 17), {
+        fontSize: '8px',
         color: '#cbd5e1',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
-        wordWrap: { width: 136 },
+        fixedWidth: 138,
+        lineSpacing: 1,
+        wordWrap: { width: 136, useAdvancedWrap: true },
       }).setOrigin(0.5);
-      content.add([card, glow, titleText, sub, detail]);
+      content.add([card, glow, image, titleText, sub, detail]);
 
       card.setInteractive({ useHandCursor: true });
       card.on('pointerover', () => {
@@ -216,46 +238,56 @@ export default class WeaponSelectScene extends Phaser.Scene {
 
   private renderSelectedWeaponDetail(content: Phaser.GameObjects.Container, weapon: StarterWeapon, accent: number): void {
     const { width, height } = this.scale;
-    const panel = this.add.rectangle(width / 2, 492, 350, 206, 0x08111f, 0.94);
+    const panel = this.add.rectangle(width / 2, 506, 350, 242, 0x08111f, 0.94);
     panel.setStrokeStyle(2, weapon.color, 0.78);
-    const name = this.add.text(32, 404, weapon.title, {
+    const name = this.add.text(32, 392, this.wrapText(weapon.title, 22), {
       fontSize: '17px',
       color: '#ffffff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#020617',
       strokeThickness: 4,
+      fixedWidth: 336,
     }).setOrigin(0, 0.5);
-    const stats = this.add.text(32, 430, `属性 ${weapon.attributeLabel}   ATK ${weapon.stats.power}   RATE ${weapon.stats.fireRate.toFixed(2)}   CRIT ${Math.round(weapon.stats.critRate * 100)}%`, {
+    const stats = this.add.text(32, 418, this.wrapText(`属性 ${weapon.attributeLabel} / ATK ${weapon.stats.power} / RATE ${weapon.stats.fireRate.toFixed(2)} / CRIT ${Math.round(weapon.stats.critRate * 100)}%`, 34), {
       fontSize: '10px',
       color: '#fef3c7',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
+      fixedWidth: 336,
+      wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0.5);
-    const detail = this.add.text(32, 456, weapon.detail, {
+    const detail = this.add.text(32, 440, this.wrapText(`概要: ${weapon.subtitle}`, 28), {
       fontSize: '10px',
       color: '#dbeafe',
       fontFamily: 'Arial, sans-serif',
-      lineSpacing: 4,
-      wordWrap: { width: 336 },
+      lineSpacing: 2,
+      fixedWidth: 336,
+      wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const strong = this.add.text(32, 520, `得意: ${weapon.strongAgainst}`, {
+    const strong = this.add.text(32, 480, this.wrapText(`得意: ${weapon.strongAgainst}`, 28), {
       fontSize: '10px',
       color: '#bbf7d0',
       fontFamily: 'Arial, sans-serif',
-      wordWrap: { width: 336 },
+      lineSpacing: 2,
+      fixedWidth: 336,
+      wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const strategy = this.add.text(32, 548, `戦い方: ${weapon.strategy}`, {
+    const strategy = this.add.text(32, 520, this.wrapText(`戦い方: ${weapon.strategy}`, 28), {
       fontSize: '10px',
       color: '#bae6fd',
       fontFamily: 'Arial, sans-serif',
-      wordWrap: { width: 336 },
+      lineSpacing: 2,
+      fixedWidth: 336,
+      wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const weak = this.add.text(32, 590, `注意: ${weapon.weakness}`, {
+    const weak = this.add.text(32, 584, this.wrapText(`注意: ${weapon.weakness}`, 28), {
       fontSize: '10px',
       color: '#fecaca',
       fontFamily: 'Arial, sans-serif',
-      wordWrap: { width: 336 },
+      lineSpacing: 2,
+      fixedWidth: 336,
+      wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0);
 
     const startButton = this.add.rectangle(width / 2, height - 34, 138, 38, 0x7f1d1d, 0.98);
