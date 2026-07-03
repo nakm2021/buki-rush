@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { Boss } from '../objects/Boss';
-import { Bullet } from '../objects/Bullet';
+import { Bullet, type BulletShape } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
@@ -9,8 +9,8 @@ import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
 import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
-import { EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
-import { BOSS_STEP_INTERVAL, createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
+import { BOSS_WARNING_PROFILE, EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
+import { createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
 import { applyWeaponEvolutionBranch, getBuildRank, getEvolutionBranch, getEvolutionBranches, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
 import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
@@ -142,6 +142,9 @@ export default class GameScene extends Phaser.Scene {
   private bossPatternIndex = 0;
   private bossPhase = 1;
   private bossDefeatGraceMs = 0;
+  private bossWarningActive = false;
+  private bossSpawnStartedAt = 0;
+  private nextBossStepTarget = 10;
   private firstBossPrepGranted = false;
   private defeatedBossKeys: string[] = [];
   private evolutionCount = 0;
@@ -257,6 +260,9 @@ export default class GameScene extends Phaser.Scene {
     this.bossPatternIndex = 0;
     this.bossPhase = 1;
     this.bossDefeatGraceMs = 0;
+    this.bossWarningActive = false;
+    this.bossSpawnStartedAt = 0;
+    this.nextBossStepTarget = Phaser.Math.Between(9, 12);
     this.firstBossPrepGranted = false;
     this.defeatedBossKeys = [];
     this.evolutionCount = 0;
@@ -496,18 +502,20 @@ export default class GameScene extends Phaser.Scene {
       this.loopStepIndex += 1;
       this.nextLoopSpawnTime += Math.max(1050, LOOP_STEP_INTERVAL - difficulty * 35);
 
-      if (this.loopStepIndex % BOSS_STEP_INTERVAL === 0 && !this.boss) {
-        this.spawnBoss();
+      if (this.loopStepIndex >= this.nextBossStepTarget && !this.boss && !this.bossWarningActive) {
+        this.triggerBossWarning();
       }
     }
   }
 
   private spawnStageStep(step: StageStep): void {
     if (step.gateLine) {
-      const pair = new GatePair(this, 200, step.gateLine.y, step.gateLine.left, step.gateLine.right);
+      const pair = new GatePair(this, 200, step.gateLine.y, step.gateLine.single ?? step.gateLine.left, step.gateLine.right, Boolean(step.gateLine.single));
       pair.setDepth(2);
       this.gates.add(pair.left);
-      this.gates.add(pair.right);
+      if (pair.right !== pair.left) {
+        this.gates.add(pair.right);
+      }
     }
 
     if (step.enemies) {
@@ -725,12 +733,13 @@ export default class GameScene extends Phaser.Scene {
     const hasZeroLance = this.evolutionPath.includes('zero-lance') || this.evolutionPath.includes('abyss-needle-launcher');
     const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor') || this.evolutionPath.includes('titan-orbit-hammer');
     const usesSlashShot = this.usesSlashShots();
+    const bulletShape = usesSlashShot ? 'slash' : this.getStarterBulletShape();
     const clashPower = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.45) * getWeaponPowerMultiplier(this.stats) * 0.32));
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
       const color = i % 3 === 0 ? colors.bullet : i % 3 === 1 ? colors.primary : colors.secondary;
-      const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color);
+      const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color, bulletShape);
       bullet.setDepth(2);
       bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0));
       bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0));
@@ -743,16 +752,13 @@ export default class GameScene extends Phaser.Scene {
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       body.setVelocityX(offset * 24 * spread + (hasSolarBarrage ? Math.sin(i + this.stageTimer * 0.01) * 28 : 0));
       body.setVelocityY(-440 - this.stats.power * 22);
-      if (usesSlashShot) {
-        this.attachSlashVisual(bullet, color, offset);
-      }
       this.bullets.add(bullet);
 
       if (hasSolarBarrage && i % 2 === 0) {
-        this.spawnBranchShard(this.player.x + offset * 12, this.player.y - 48, offset * 52, -520, colors.secondary, 'burn');
+        this.spawnBranchShard(this.player.x + offset * 12, this.player.y - 48, offset * 52, -520, colors.secondary, 'burn', 0.85, 0, 'rocket');
       }
       if (this.evolutionPath.includes('venom-gaze') && i % 3 === 0) {
-        this.spawnBranchShard(this.player.x + offset * 10, this.player.y - 42, offset * 20, -430, colors.primary, 'poison');
+        this.spawnBranchShard(this.player.x + offset * 10, this.player.y - 42, offset * 20, -430, colors.primary, 'poison', 0.85, 0, 'skull');
       }
       if (this.evolutionPath.includes('deadeye-line') && i === Math.floor(center)) {
         this.spawnBranchShard(this.player.x, this.player.y - 58, 0, -760, colors.bullet, undefined, 1.7, 3);
@@ -769,8 +775,8 @@ export default class GameScene extends Phaser.Scene {
     this.playSoundProfile(getWeaponShotProfile(this.stats));
   }
 
-  private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0): void {
-    const shard = new Bullet(this, x, y, color);
+  private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0, shape = this.getStarterBulletShape()): void {
+    const shard = new Bullet(this, x, y, color, shape);
     shard.setDepth(2);
     shard.setScale(scale);
     shard.setVelocity(Math.abs(vy));
@@ -789,16 +795,23 @@ export default class GameScene extends Phaser.Scene {
     return branch?.specialStyle === 'blade' || ['blade', 'saber', 'samurai'].includes(this.stats.archetype);
   }
 
-  private attachSlashVisual(bullet: Bullet, color: number, offset: number): void {
-    const slash = this.add.rectangle(bullet.x, bullet.y, 8, 46, color, 0.82);
-    slash.setDepth(3);
-    slash.setBlendMode(Phaser.BlendModes.ADD);
-    slash.setAngle(offset * 10 + Phaser.Math.Between(-8, 8));
-    slash.setStrokeStyle(2, 0xffffff, 0.52);
-    bullet.setAlpha(0.04);
-    bullet.setScale(1.7);
-    bullet.setData('slashVisual', slash);
-    bullet.setData('slashSpin', offset >= 0 ? 16 : -16);
+  private getStarterBulletShape(): BulletShape {
+    switch (this.starterWeaponId) {
+      case 'balance-bow':
+        return 'bow';
+      case 'slash-speed':
+        return 'slash';
+      case 'cannon-barrage':
+        return 'rocket';
+      case 'guard-aegis':
+        return 'guard';
+      case 'venom-curse':
+        return 'skull';
+      case 'burst-pierce':
+        return 'pierce';
+      default:
+        return 'orb';
+    }
   }
 
   private syncBulletVisual(bullet: Bullet): void {
@@ -1045,7 +1058,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private getBossSwayAmplitude(key: string): number {
-    if (key.includes('Mantis') || key.includes('Phoenix')) return 92;
+    if (key.includes('Mantis') || key.includes('Phoenix') || key.includes('Cerberus')) return 92;
     if (key.includes('Leviathan') || key.includes('Hydra')) return 72;
     if (key.includes('Titan') || key.includes('Oni') || key.includes('Mochi')) return 34;
     return 54;
@@ -1071,7 +1084,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const key = theme.key;
-    if (key.includes('Dragon')) {
+    if (key.includes('Dragon') || key.includes('Cerberus')) {
       this.spawnBossLaneStrike(theme, this.bossPhase >= 2);
       this.spawnBossBulletRain(theme, 8 + this.bossPhase * 4, 80);
       if (this.bossPhase >= 2) this.time.delayedCall(280, () => this.spawnBossFanShot(theme));
@@ -1170,7 +1183,7 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
-    if (key.includes('Void') || key.includes('Demon')) {
+    if (key.includes('Void') || key.includes('Demon') || key.includes('Cathedral')) {
       this.spawnBossNova(theme);
       this.spawnBossSpiral(theme, 12 + this.bossPhase * 4);
       if (this.bossPhase >= 2) this.time.delayedCall(260, () => this.spawnBossAimedShot(theme));
@@ -1329,12 +1342,12 @@ export default class GameScene extends Phaser.Scene {
 
     const lanes = [this.player.x, this.player.x - 58, this.player.x + 58].map((x) => clamp(x, 48, 352));
     lanes.forEach((x, index) => {
-      const warning = this.add.rectangle(x, 384, 24, 680, theme.secondary, 0.16).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      const warning = this.add.rectangle(x, 384, 24, 680, theme.secondary, 0.1).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
       warning.setData('bossAttackEffect', true);
       warning.setStrokeStyle(2, theme.accent, 0.7);
       this.tweens.add({
         targets: warning,
-        alpha: 0.38,
+        alpha: 0.24,
         yoyo: true,
         repeat: 2,
         duration: 90,
@@ -1370,12 +1383,12 @@ export default class GameScene extends Phaser.Scene {
 
     const startX = this.boss.x;
     const targetX = clamp(this.player.x + Phaser.Math.Between(-80, 80), 72, 328);
-    const warning = this.add.rectangle(targetX, 384, 58, 680, theme.secondary, 0.18).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+    const warning = this.add.rectangle(targetX, 384, 58, 680, theme.secondary, 0.12).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
     warning.setData('bossAttackEffect', true);
     warning.setStrokeStyle(2, theme.accent, 0.78);
     this.tweens.add({
       targets: warning,
-      alpha: 0.42,
+        alpha: 0.26,
       yoyo: true,
       repeat: 2,
       duration: 86,
@@ -1394,12 +1407,12 @@ export default class GameScene extends Phaser.Scene {
   private spawnBossCrossSlash(theme: BossTheme): void {
     const angles = [-18, 18];
     angles.forEach((angle, index) => {
-      const warning = this.add.rectangle(200, 384, 54, 760, theme.primary, 0.15).setAngle(angle).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      const warning = this.add.rectangle(200, 384, 54, 760, theme.primary, 0.1).setAngle(angle).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
       warning.setData('bossAttackEffect', true);
       warning.setStrokeStyle(2, theme.accent, 0.72);
       this.tweens.add({
         targets: warning,
-        alpha: 0.38,
+        alpha: 0.24,
         yoyo: true,
         repeat: 2,
         duration: 100,
@@ -1408,7 +1421,7 @@ export default class GameScene extends Phaser.Scene {
           if (!this.boss) {
             return;
           }
-          const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.55).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.34).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           slash.setData('bossAttackEffect', true);
           this.tweens.add({ targets: slash, alpha: 0, scaleX: 1.8, duration: 300, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
           const radians = Phaser.Math.DegToRad(angle);
@@ -1436,12 +1449,12 @@ export default class GameScene extends Phaser.Scene {
     const laneXs = empowered || this.bossPhase >= 3 ? [86, 146, 200, 254, 314] : [112, 200, 288];
     const selected = laneXs.filter((_, index) => empowered || (index + this.bossPatternIndex) % 2 === 0);
     selected.forEach((x, index) => {
-      const warning = this.add.rectangle(x, 395, empowered ? 38 : 30, 670, theme.primary, empowered ? 0.2 : 0.14).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
+      const warning = this.add.rectangle(x, 395, empowered ? 38 : 30, 670, theme.primary, empowered ? 0.14 : 0.09).setDepth(4).setBlendMode(Phaser.BlendModes.ADD);
       warning.setData('bossAttackEffect', true);
       warning.setStrokeStyle(2, theme.accent, empowered ? 0.82 : 0.52);
       this.tweens.add({
         targets: warning,
-        alpha: empowered ? 0.42 : 0.3,
+        alpha: empowered ? 0.28 : 0.2,
         yoyo: true,
         repeat: 2,
         duration: 120,
@@ -1450,7 +1463,7 @@ export default class GameScene extends Phaser.Scene {
           if (!this.boss) {
             return;
           }
-          const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.68 : 0.46).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.42 : 0.3).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           beam.setData('bossAttackEffect', true);
           this.tweens.add({ targets: beam, alpha: 0, scaleX: 1.7, duration: 310, ease: 'Quad.easeOut', onComplete: () => beam.destroy() });
           if (Math.abs(this.player.x - x) < (empowered ? 34 : 26)) {
@@ -1479,7 +1492,7 @@ export default class GameScene extends Phaser.Scene {
     this.playRareSound();
 
     const { width, height } = this.scale;
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.2).setDepth(24).setBlendMode(Phaser.BlendModes.ADD);
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.12).setDepth(24).setBlendMode(Phaser.BlendModes.ADD);
     const sigil = this.add.circle(this.boss.x, this.boss.y + 44, 74, theme.secondary, 0).setStrokeStyle(6, theme.accent, 0.92).setDepth(25);
     veil.setData('bossAttackEffect', true);
     sigil.setData('bossAttackEffect', true);
@@ -1488,7 +1501,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(620, () => {
       const key = theme.key;
-      if (key.includes('Dragon') || key.includes('Oni')) {
+      if (key.includes('Dragon') || key.includes('Oni') || key.includes('Cerberus')) {
         this.spawnBossLaneStrike(theme, true);
         this.spawnBossBulletRain(theme, 16 + this.bossPhase * 4, 42);
         return;
@@ -1582,7 +1595,7 @@ export default class GameScene extends Phaser.Scene {
         this.spawnBossSpiral(theme, 20 + this.bossPhase * 4);
         return;
       }
-      if (key.includes('Void') || key.includes('Demon')) {
+      if (key.includes('Void') || key.includes('Demon') || key.includes('Cathedral')) {
         this.spawnBossNova(theme);
         this.spawnBossSpiral(theme, 24 + this.bossPhase * 5);
         this.time.delayedCall(260, () => this.spawnBossAimedShot(theme));
@@ -1616,8 +1629,8 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const projectile = shape === 'orb'
-      ? this.add.circle(x, y, radius, color, 0.96)
-      : this.add.rectangle(x, y, radius * 1.8, radius * 1.8, color, 0.94);
+      ? this.add.circle(x, y, radius, color, 0.74)
+      : this.add.rectangle(x, y, radius * 1.8, radius * 1.8, color, 0.72);
     projectile.setDepth(12);
     projectile.setBlendMode(Phaser.BlendModes.ADD);
     projectile.setData('vx', vx);
@@ -1625,7 +1638,7 @@ export default class GameScene extends Phaser.Scene {
     projectile.setData('damage', damage);
     projectile.setData('spin', shape === 'diamond' ? 4.6 : 0.8);
     projectile.setData('bossAttackEffect', true);
-    projectile.setStrokeStyle(2, 0xffffff, 0.55);
+    projectile.setStrokeStyle(2, 0xffffff, 0.34);
     if (shape === 'diamond') {
       projectile.setAngle(45);
     }
@@ -1880,7 +1893,9 @@ export default class GameScene extends Phaser.Scene {
 
     if (pair) {
       pair.left.destroy();
-      pair.right.destroy();
+      if (pair.right !== pair.left) {
+        pair.right.destroy();
+      }
       pair.destroy();
     } else {
       gateObject.destroy();
@@ -2136,6 +2151,9 @@ export default class GameScene extends Phaser.Scene {
   private handleBossDefeated(bossKey: string): void {
     this.defeatedBossKeys.push(bossKey);
     this.stageBranchOffset = Math.abs([...bossKey].reduce((sum, char) => sum + char.charCodeAt(0), 0)) % 17;
+    const fightMs = Math.max(0, this.stageTimer - this.bossSpawnStartedAt);
+    const adaptiveGap = Math.min(9, Math.floor(fightMs / 4500));
+    this.nextBossStepTarget = this.loopStepIndex + Phaser.Math.Between(8, 14) + adaptiveGap + Math.min(5, this.bossLoopIndex);
     const medals = 3 + this.bossLoopIndex + this.bossPhase;
     this.medalCount += medals;
     this.showFlash('STAGE BRANCH', '#bae6fd', 200, 254);
@@ -2162,6 +2180,48 @@ export default class GameScene extends Phaser.Scene {
     this.playRareSound();
   }
 
+  private triggerBossWarning(): void {
+    this.bossWarningActive = true;
+    this.nextBossStepTarget = Number.POSITIVE_INFINITY;
+    this.playSoundProfile(BOSS_WARNING_PROFILE);
+    navigator.vibrate?.([140, 60, 220, 80, 360]);
+    this.cameras.main.shake(1050, 0.006);
+
+    const { width, height } = this.scale;
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x7f1d1d, 0.16).setDepth(32);
+    const top = this.add.rectangle(width / 2, 138, width + 40, 56, 0x7f1d1d, 0.86).setDepth(33);
+    top.setStrokeStyle(3, 0xfef08a, 0.9);
+    const label = this.add.text(width / 2, 138, 'BOSS WARNING', {
+      fontSize: '24px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#450a0a',
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(34);
+    const sub = this.add.text(width / 2, 178, '巨大反応 接近中', {
+      fontSize: '13px',
+      color: '#fee2e2',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#450a0a',
+      strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(34);
+    const scan = this.add.rectangle(width / 2, -40, width, 26, 0xfef08a, 0.35).setDepth(33).setBlendMode(Phaser.BlendModes.ADD);
+    [veil, top, label, sub, scan].forEach((object) => object.setData('bossWarningEffect', true));
+    this.tweens.add({ targets: [top, label, sub], alpha: 0.28, duration: 120, yoyo: true, repeat: 7 });
+    this.tweens.add({ targets: scan, y: height + 40, duration: 1280, ease: 'Cubic.easeIn', onComplete: () => scan.destroy() });
+    this.tweens.add({ targets: veil, alpha: 0, delay: 1450, duration: 360, onComplete: () => veil.destroy() });
+    this.tweens.add({ targets: [top, label, sub], alpha: 0, delay: 1450, duration: 300, onComplete: () => { top.destroy(); label.destroy(); sub.destroy(); } });
+
+    this.time.delayedCall(1700, () => {
+      this.bossWarningActive = false;
+      if (!this.isGameOver && !this.boss) {
+        this.spawnBoss();
+      }
+    });
+  }
+
   private spawnBoss(): void {
     this.bossMaxHp = createBossHp(this.bossLoopIndex, this.getBossPowerPressure());
     this.bossHp = this.bossMaxHp;
@@ -2173,6 +2233,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossAttackTimer = this.bossLoopIndex === 0 ? 1280 : 820;
     this.bossSpecialTimer = (this.bossLoopIndex === 0 ? 4200 : 2800) + Phaser.Math.Between(0, 900);
     this.bossPatternIndex = this.bossLoopIndex;
+    this.bossSpawnStartedAt = this.stageTimer;
     this.grantFirstBossPrep();
     this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);

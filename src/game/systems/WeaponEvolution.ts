@@ -256,6 +256,12 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
   { id: 'garnet-breaker-axe', title: 'GARNET BREAKER', subtitle: '紅玉斧。鈍重だが装甲を割る重撃', module: 'berserk', archetype: 'hammer', element: 'fire', imageKey: 'weaponGarnetBreakerAxe', specialStyle: 'anchor', power: 10, fireRate: -0.12, critRate: 0.04, pierce: 1, shield: 1, synergy: 2 },
   { id: 'jade-storm-fan', title: 'JADE STORM', subtitle: '翠嵐扇。高速風刃で弾幕を散らす', module: 'booster', archetype: 'tempest', element: 'wind', imageKey: 'weaponJadeStormFan', specialStyle: 'storm', power: 5, fireRate: 0.23, critRate: 0.03, pierce: 1, shield: 0, synergy: 5 },
   { id: 'solar-venom-needle', title: 'SOLAR VENOM', subtitle: '陽毒針。毒と炎で継続ダメージ', module: 'poison', archetype: 'basilisk', element: 'fire', imageKey: 'weaponSolarVenomNeedle', specialStyle: 'basilisk', power: 6, fireRate: 0.12, critRate: 0.025, pierce: 2, shield: 0, synergy: 4 },
+  { id: 'ichigo-balance-bow', title: 'ICHIGO BALANCE', subtitle: '苺弓。弓形エネルギーで万能射撃', module: 'homing', archetype: 'centaur', element: 'light', imageKey: 'weaponIchigoBalanceBow', specialStyle: 'nova', power: 5, fireRate: 0.14, critRate: 0.03, pierce: 1, shield: 1, synergy: 5 },
+  { id: 'ichigo-speed-saber', title: 'ICHIGO SABER', subtitle: '苺閃刀。斬撃速度を極める', module: 'bladebit', archetype: 'saber', element: 'fire', imageKey: 'weaponIchigoSpeedSaber', specialStyle: 'blade', power: 7, fireRate: 0.18, critRate: 0.05, pierce: 1, shield: 0, synergy: 4 },
+  { id: 'ichigo-rocket-cannon', title: 'ICHIGO ROCKET', subtitle: '苺砲。ロケット弾で押し込む', module: 'burst', archetype: 'rail', element: 'fire', imageKey: 'weaponIchigoRocketCannon', specialStyle: 'storm', power: 8, fireRate: 0.02, critRate: 0.025, pierce: 1, shield: 0, synergy: 3 },
+  { id: 'ichigo-aegis-shield', title: 'ICHIGO AEGIS', subtitle: '苺盾砲。守りと反撃を両立', module: 'aegis', archetype: 'lotus', element: 'crystal', imageKey: 'weaponIchigoAegisShield', specialStyle: 'rune', power: 4, fireRate: 0.1, critRate: 0.015, pierce: 0, shield: 4, synergy: 6 },
+  { id: 'ichigo-curse-needle', title: 'ICHIGO CURSE', subtitle: '苺呪針。毒と呪いで削る', module: 'poison', archetype: 'basilisk', element: 'shadow', imageKey: 'weaponIchigoCurseNeedle', specialStyle: 'basilisk', power: 6, fireRate: 0.11, critRate: 0.025, pierce: 2, shield: 0, synergy: 5 },
+  { id: 'ichigo-pierce-lance', title: 'ICHIGO PIERCE', subtitle: '苺穿槍。一直線に貫く突破型', module: 'drill', archetype: 'lance', element: 'fire', imageKey: 'weaponIchigoPierceLance', specialStyle: 'phoenix', power: 8, fireRate: 0.03, critRate: 0.035, pierce: 3, shield: 0, synergy: 3 },
   { id: 'moon-guillotine', title: 'MOON GUILLOTINE', subtitle: '月光の大鎌剣。会心斬撃で押し切る', module: 'bladebit', archetype: 'saber', element: 'shadow', imageKey: 'weaponMoonGuillotine', specialStyle: 'blade', power: 7, fireRate: 0.02, critRate: 0.055, pierce: 1, shield: 0, synergy: 3 },
   { id: 'solar-dragon-rail', title: 'SOLAR DRAGON RAIL', subtitle: '太陽竜の軌道砲。高火力の雷火線', module: 'laser', archetype: 'rail', element: 'fire', imageKey: 'weaponSolarDragonRail', specialStyle: 'storm', power: 8, fireRate: -0.03, critRate: 0.035, pierce: 2, shield: 0, synergy: 2 },
   { id: 'quantum-bloom-staff', title: 'QUANTUM BLOOM', subtitle: '花弁結界の杖。守りながら制圧する', module: 'barrier', archetype: 'rune', element: 'light', imageKey: 'weaponQuantumBloomStaff', specialStyle: 'rune', power: 4, fireRate: 0.14, critRate: 0.015, pierce: 0, shield: 2, synergy: 5 },
@@ -274,12 +280,12 @@ export const RANDOM_EVOLUTION_BRANCHES: WeaponEvolutionBranch[] = [
 ];
 
 const EVOLUTION_POOLS_BY_STARTER: Record<string, string[]> = {
-  'balance-bow': ['celestial-balance-bow', 'emerald-orbit-harp', 'prism-comet-bow', 'verdant-seraph-crossbow', 'quantum-bloom-staff', 'sakura-mirror-fans', 'nebula-harp-launcher', 'moon-guillotine', 'solar-dragon-rail', 'abyss-needle-launcher', 'titan-orbit-hammer', 'crimson-meteor-katana', 'azure-tempest-chakram', 'obsidian-gravity-cannon', 'magma-drill-trident', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'jade-storm-fan', 'solar-venom-needle', 'garnet-breaker-axe'],
-  'slash-speed': ['scarlet-speed-saber', 'jade-storm-fan', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'chrono-needle-spear', 'magma-drill-trident'],
-  'cannon-barrage': ['solar-dragon-rail', 'obsidian-gravity-cannon', 'nebula-harp-launcher', 'prism-comet-bow', 'azure-tempest-chakram', 'void-guardian-cannon', 'emerald-orbit-harp'],
-  'guard-aegis': ['void-guardian-cannon', 'garnet-breaker-axe', 'titan-orbit-hammer', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'quantum-bloom-staff', 'verdant-seraph-crossbow'],
-  'venom-curse': ['solar-venom-needle', 'abyss-needle-launcher', 'moon-guillotine', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher', 'void-guardian-cannon'],
-  'burst-pierce': ['garnet-breaker-axe', 'magma-drill-trident', 'chrono-needle-spear', 'solar-dragon-rail', 'crimson-meteor-katana', 'prism-comet-bow', 'scarlet-speed-saber'],
+  'balance-bow': ['ichigo-balance-bow', 'celestial-balance-bow', 'emerald-orbit-harp', 'prism-comet-bow', 'verdant-seraph-crossbow', 'quantum-bloom-staff', 'sakura-mirror-fans', 'nebula-harp-launcher', 'moon-guillotine', 'solar-dragon-rail', 'abyss-needle-launcher', 'titan-orbit-hammer', 'crimson-meteor-katana', 'azure-tempest-chakram', 'obsidian-gravity-cannon', 'magma-drill-trident', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'jade-storm-fan', 'solar-venom-needle', 'garnet-breaker-axe'],
+  'slash-speed': ['ichigo-speed-saber', 'scarlet-speed-saber', 'jade-storm-fan', 'moon-guillotine', 'crimson-meteor-katana', 'azure-tempest-chakram', 'chrono-needle-spear', 'magma-drill-trident'],
+  'cannon-barrage': ['ichigo-rocket-cannon', 'solar-dragon-rail', 'obsidian-gravity-cannon', 'nebula-harp-launcher', 'prism-comet-bow', 'azure-tempest-chakram', 'void-guardian-cannon', 'emerald-orbit-harp'],
+  'guard-aegis': ['ichigo-aegis-shield', 'void-guardian-cannon', 'garnet-breaker-axe', 'titan-orbit-hammer', 'crystal-lotus-shieldgun', 'lotus-aegis-bloom', 'quantum-bloom-staff', 'verdant-seraph-crossbow'],
+  'venom-curse': ['ichigo-curse-needle', 'solar-venom-needle', 'abyss-needle-launcher', 'moon-guillotine', 'obsidian-gravity-cannon', 'chrono-needle-spear', 'nebula-harp-launcher', 'void-guardian-cannon'],
+  'burst-pierce': ['ichigo-pierce-lance', 'garnet-breaker-axe', 'magma-drill-trident', 'chrono-needle-spear', 'solar-dragon-rail', 'crimson-meteor-katana', 'prism-comet-bow', 'scarlet-speed-saber'],
 };
 
 export function getEvolutionBranches(_stats: PlayerStats, starterId = 'balance-bow'): WeaponEvolutionBranch[] {
@@ -338,12 +344,12 @@ function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, 
 }
 
 export const STARTER_WEAPONS: StarterWeapon[] = [
-  { id: 'balance-bow', title: 'バランス弓型', subtitle: '全進化候補が混ざる万能系', detail: '弓・杖・砲・斬撃まで広く回るタイプ。迷ったらこれ。', element: 'neutral', archetype: 'centaur', imageKey: 'weaponCelestialBalanceBow', color: 0x38bdf8, stats: createStarterStats('neutral', 'centaur', 1, 1) },
-  { id: 'slash-speed', title: '斬撃スピード型', subtitle: '剣・刀・高速輪が多い会心系', detail: '弾より斬撃寄り。手数、移動感、会心でBOSSを削る。', element: 'shadow', archetype: 'saber', imageKey: 'weaponScarletSpeedSaber', color: 0xfacc15, stats: createStarterStats('shadow', 'saber', 2, 0.98) },
-  { id: 'cannon-barrage', title: '砲撃ラッシュ型', subtitle: 'レール砲・重力砲・弾幕系', detail: '遠距離火力と弾幕が中心。BOSSへの圧が強い。', element: 'fire', archetype: 'rail', imageKey: 'weaponSolarDragonRail', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 2, 0.94) },
-  { id: 'guard-aegis', title: '耐久ガード型', subtitle: '盾・結界・回復で粘る安定系', detail: '派手さより生存力。進むほど硬くなる守備タイプ。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponLotusAegisBloom', color: 0x7dd3fc, stats: createStarterStats('crystal', 'lotus', 2, 0.88) },
-  { id: 'venom-curse', title: '毒呪い技巧型', subtitle: '毒・影・遅延で削る厄介系', detail: '状態異常と特殊必殺が多め。強敵ほどじわじわ効く。', element: 'shadow', archetype: 'needle', imageKey: 'weaponAbyssNeedleLauncher', color: 0x8b5cf6, stats: createStarterStats('shadow', 'needle', 2, 0.92) },
-  { id: 'burst-pierce', title: '貫通バースト型', subtitle: '槍・ドリル・高火力突破系', detail: '一撃と貫通を重視。硬い敵を正面から割る。', element: 'fire', archetype: 'lance', imageKey: 'weaponMagmaDrillTrident', color: 0x99f6e4, stats: createStarterStats('fire', 'lance', 3, 0.86) },
+  { id: 'balance-bow', title: 'バランス弓型', subtitle: '全進化候補が混ざる万能系', detail: '弓・杖・砲・斬撃まで広く回るタイプ。迷ったらこれ。', element: 'neutral', archetype: 'centaur', imageKey: 'weaponIchigoBalanceBow', color: 0x38bdf8, stats: createStarterStats('neutral', 'centaur', 1, 1) },
+  { id: 'slash-speed', title: '斬撃スピード型', subtitle: '剣・刀・高速輪が多い会心系', detail: '弾より斬撃寄り。手数、移動感、会心でBOSSを削る。', element: 'shadow', archetype: 'saber', imageKey: 'weaponIchigoSpeedSaber', color: 0xfacc15, stats: createStarterStats('shadow', 'saber', 2, 0.98) },
+  { id: 'cannon-barrage', title: '砲撃ラッシュ型', subtitle: 'レール砲・重力砲・弾幕系', detail: '遠距離火力と弾幕が中心。BOSSへの圧が強い。', element: 'fire', archetype: 'rail', imageKey: 'weaponIchigoRocketCannon', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 2, 0.94) },
+  { id: 'guard-aegis', title: '耐久ガード型', subtitle: '盾・結界・回復で粘る安定系', detail: '派手さより生存力。進むほど硬くなる守備タイプ。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponIchigoAegisShield', color: 0x7dd3fc, stats: createStarterStats('crystal', 'lotus', 2, 0.88) },
+  { id: 'venom-curse', title: '毒呪い技巧型', subtitle: '毒・影・遅延で削る厄介系', detail: '状態異常と特殊必殺が多め。強敵ほどじわじわ効く。', element: 'shadow', archetype: 'needle', imageKey: 'weaponIchigoCurseNeedle', color: 0x8b5cf6, stats: createStarterStats('shadow', 'needle', 2, 0.92) },
+  { id: 'burst-pierce', title: '貫通バースト型', subtitle: '槍・ドリル・高火力突破系', detail: '一撃と貫通を重視。硬い敵を正面から割る。', element: 'fire', archetype: 'lance', imageKey: 'weaponIchigoPierceLance', color: 0x99f6e4, stats: createStarterStats('fire', 'lance', 3, 0.86) },
 ];
 
 export function getStarterWeapon(id?: string): StarterWeapon {

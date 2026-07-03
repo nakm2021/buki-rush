@@ -5,25 +5,28 @@ export class GatePair extends Phaser.GameObjects.Container {
   public readonly left: Phaser.GameObjects.Container;
   public readonly right: Phaser.GameObjects.Container;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, left: GateOption, right: GateOption) {
+  constructor(scene: Phaser.Scene, x: number, y: number, left: GateOption, right: GateOption, single = false) {
     super(scene, x, y);
 
-    this.left = this.createGate(scene, x - 82, y, left);
-    this.right = this.createGate(scene, x + 82, y, right);
+    this.left = this.createGate(scene, single ? x : x - 82, y, left, single ? 1.28 : 1);
+    this.right = single ? this.left : this.createGate(scene, x + 82, y, right);
     scene.add.existing(this);
 
     scene.physics.add.existing(this.left);
-    scene.physics.add.existing(this.right);
     const leftBody = this.left.body as Phaser.Physics.Arcade.Body;
-    const rightBody = this.right.body as Phaser.Physics.Arcade.Body;
-    leftBody.setSize(120, 72);
-    rightBody.setSize(120, 72);
-    leftBody.setOffset(-60, -36);
-    rightBody.setOffset(-60, -36);
+    leftBody.setSize(single ? 176 : 120, single ? 92 : 72);
+    leftBody.setOffset(single ? -88 : -60, single ? -46 : -36);
+    if (!single) {
+      scene.physics.add.existing(this.right);
+      const rightBody = this.right.body as Phaser.Physics.Arcade.Body;
+      rightBody.setSize(120, 72);
+      rightBody.setOffset(-60, -36);
+    }
   }
 
-  private createGate(scene: Phaser.Scene, x: number, y: number, option: GateOption): Phaser.GameObjects.Container {
+  private createGate(scene: Phaser.Scene, x: number, y: number, option: GateOption, scale = 1): Phaser.GameObjects.Container {
     const container = scene.add.container(x, y);
+    container.setScale(scale);
     container.setData('kind', option.kind);
     container.setData('value', option.value);
     container.setData('label', option.label);

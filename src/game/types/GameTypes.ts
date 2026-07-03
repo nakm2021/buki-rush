@@ -52,6 +52,7 @@ export interface GateOption {
 
 export interface GateLine {
   y: number;
+  single?: GateOption;
   left: GateOption;
   right: GateOption;
 }

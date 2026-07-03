@@ -23,8 +23,9 @@ export const OPENING_STEPS: StageStep[] = [
     time: 2500,
     gateLine: {
       y: -80,
+      single: { label: '×3', kind: 'multiply', value: 3, color: 0x818cf8, good: true },
       left: { label: '×3', kind: 'multiply', value: 3, color: 0x818cf8, good: true },
-      right: { label: 'BOSS KIT', kind: 'fusion', value: 4, color: 0xfef08a, good: true },
+      right: { label: '×3', kind: 'multiply', value: 3, color: 0x818cf8, good: true },
     },
     enemies: [
       { x: 250, y: -170, hp: 10, variantId: 'ember-imp' },

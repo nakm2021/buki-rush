@@ -1,6 +1,6 @@
 import type { GateKind, PlayerStats } from '../types/GameTypes';
 
-export type SoundEventId = 'weapon-shot' | 'upgrade' | 'rare' | 'boss-attack' | 'event-reward';
+export type SoundEventId = 'weapon-shot' | 'upgrade' | 'rare' | 'boss-attack' | 'boss-warning' | 'event-reward';
 
 export interface ToneStep {
   frequency: number;
@@ -75,4 +75,16 @@ export const RARE_SOUND_PROFILE: SoundProfile = {
 export const EVENT_REWARD_PROFILE: SoundProfile = {
   id: 'event-reward',
   steps: [392, 523, 659, 784, 1175].map((frequency, index) => ({ frequency, duration: 0.09, volume: 0.045, delay: index * 72, wave: 'triangle' })),
+};
+
+export const BOSS_WARNING_PROFILE: SoundProfile = {
+  id: 'boss-warning',
+  steps: [
+    { frequency: 82, duration: 0.26, volume: 0.08, wave: 'sawtooth' },
+    { frequency: 196, duration: 0.18, volume: 0.045, delay: 40, wave: 'square' },
+    { frequency: 74, duration: 0.28, volume: 0.08, delay: 380, wave: 'sawtooth' },
+    { frequency: 220, duration: 0.18, volume: 0.045, delay: 430, wave: 'square' },
+    { frequency: 68, duration: 0.34, volume: 0.09, delay: 780, wave: 'sawtooth' },
+    { frequency: 247, duration: 0.24, volume: 0.05, delay: 850, wave: 'square' },
+  ],
 };

@@ -72,6 +72,12 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponGarnetBreakerAxe', path: 'assets/optimized/weapon-garnet-breaker-axe.png', match: { elements: ['fire', 'shadow'], archetypes: ['hammer', 'atlas', 'gigas'] } },
   { key: 'weaponJadeStormFan', path: 'assets/optimized/weapon-jade-storm-fan.png', match: { elements: ['wind', 'thunder'], archetypes: ['tempest', 'vortex', 'sakura'] } },
   { key: 'weaponSolarVenomNeedle', path: 'assets/optimized/weapon-solar-venom-needle.png', match: { elements: ['fire', 'shadow'], archetypes: ['needle', 'basilisk', 'levin'] } },
+  { key: 'weaponIchigoBalanceBow', path: 'assets/optimized/weapon-ichigo-balance-bow.png', match: { elements: ['neutral', 'light'], archetypes: ['centaur', 'comet'] } },
+  { key: 'weaponIchigoSpeedSaber', path: 'assets/optimized/weapon-ichigo-speed-saber.png', match: { archetypes: ['saber', 'samurai', 'levin'] } },
+  { key: 'weaponIchigoRocketCannon', path: 'assets/optimized/weapon-ichigo-rocket-cannon.png', match: { elements: ['fire'], archetypes: ['rail', 'dragon', 'magnum'] } },
+  { key: 'weaponIchigoAegisShield', path: 'assets/optimized/weapon-ichigo-aegis-shield.png', match: { elements: ['crystal'], archetypes: ['lotus', 'atlas', 'anchor'] } },
+  { key: 'weaponIchigoCurseNeedle', path: 'assets/optimized/weapon-ichigo-curse-needle.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
+  { key: 'weaponIchigoPierceLance', path: 'assets/optimized/weapon-ichigo-pierce-lance.png', match: { archetypes: ['lance', 'drill', 'chrono'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -99,6 +105,8 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossJadeMochiColossus', path: 'assets/optimized/boss-jade-mochi-colossus.png', width: 360, height: 640, minLoop: 1 },
   { key: 'bossVioletOrchardWyvern', path: 'assets/optimized/boss-violet-orchard-wyvern.png', width: 360, height: 640, minLoop: 3 },
   { key: 'bossAquaClockworkSpider', path: 'assets/optimized/boss-aqua-clockwork-spider.png', width: 380, height: 660, minLoop: 2 },
+  { key: 'bossStrawberryCerberus', path: 'assets/optimized/boss-strawberry-cerberus.png', width: 380, height: 512, minLoop: 1 },
+  { key: 'bossAbyssalBerryCathedral', path: 'assets/optimized/boss-abyssal-berry-cathedral.png', width: 360, height: 640, minLoop: 3 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -261,6 +269,8 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossJadeMochiColossus', primary: 0x22c55e, secondary: 0xfef3c7, accent: 0xfef08a, darkness: 0x052e16 },
   { key: 'bossVioletOrchardWyvern', primary: 0x8b5cf6, secondary: 0xf43f5e, accent: 0xf0abfc, darkness: 0x12071f },
   { key: 'bossAquaClockworkSpider', primary: 0x06b6d4, secondary: 0xfacc15, accent: 0xccfbf1, darkness: 0x082f49 },
+  { key: 'bossStrawberryCerberus', primary: 0xef4444, secondary: 0x22c55e, accent: 0x67e8f9, darkness: 0x180812 },
+  { key: 'bossAbyssalBerryCathedral', primary: 0x8b5cf6, secondary: 0xef4444, accent: 0xf0abfc, darkness: 0x09051a },
 ];
 
 export function getBossTheme(key: string): BossTheme {
