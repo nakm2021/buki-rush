@@ -91,6 +91,9 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponTonkotsuRamenCannon', path: 'assets/optimized/weapon-tonkotsu-ramen-cannon.png', match: { elements: ['light'], archetypes: ['blaster', 'rune'] } },
   { key: 'weaponPoseidonTridentCannon', path: 'assets/optimized/weapon-poseidon-trident-cannon.png', match: { elements: ['ice'], archetypes: ['lance', 'anchor', 'kraken'] } },
   { key: 'weaponSnsSignalSpear', path: 'assets/optimized/weapon-sns-signal-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['pulse', 'echo', 'nebula'] } },
+  { key: 'weaponAphroditeRoseBow', path: 'assets/optimized/weapon-aphrodite-rose-bow.png', match: { elements: ['light'], archetypes: ['seraph', 'centaur', 'lotus'] } },
+  { key: 'weaponMoistCalicoCatCannon', path: 'assets/optimized/weapon-moist-calico-cat-cannon.png', match: { elements: ['crystal', 'light'], archetypes: ['lotus', 'rune', 'blaster'] } },
+  { key: 'weaponFlameMonkeyStaff', path: 'assets/optimized/weapon-flame-monkey-staff.png', match: { elements: ['fire'], archetypes: ['samurai', 'saber', 'vortex'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [

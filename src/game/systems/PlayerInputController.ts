@@ -11,6 +11,12 @@ export class PlayerInputController {
 
   public setup(): void {
     this.scene.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (this.getActivePointerCount() >= 2) {
+        this.dragPointerId = null;
+        this.scene.events.emit('player-pointer-release');
+        return;
+      }
+
       if (pointer.downTime - this.lastTapAt < 280) {
         this.scene.events.emit('player-special-trigger');
       }
@@ -20,6 +26,12 @@ export class PlayerInputController {
     });
 
     this.scene.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      if (this.getActivePointerCount() >= 2) {
+        this.dragPointerId = null;
+        this.scene.events.emit('player-pointer-release');
+        return;
+      }
+
       if (this.dragPointerId !== pointer.pointerId) {
         return;
       }
@@ -38,5 +50,9 @@ export class PlayerInputController {
       this.dragPointerId = null;
       this.scene.events.emit('player-pointer-release');
     });
+  }
+
+  private getActivePointerCount(): number {
+    return this.scene.input.manager.pointers.filter((pointer) => pointer.isDown).length;
   }
 }

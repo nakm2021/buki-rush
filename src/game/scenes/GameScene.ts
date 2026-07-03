@@ -106,6 +106,7 @@ export default class GameScene extends Phaser.Scene {
   private bossHpFill!: Phaser.GameObjects.Rectangle;
   private bossHpText!: Phaser.GameObjects.Text;
   private pauseButton!: Phaser.GameObjects.Text;
+  private homeButton!: Phaser.GameObjects.Text;
   private pauseOverlay?: Phaser.GameObjects.Container;
   private bossMaxHp = createBossHp(0);
   private bossHp = this.bossMaxHp;
@@ -186,6 +187,11 @@ export default class GameScene extends Phaser.Scene {
   private rareEventSpawned = 0;
   private rareEventSpawnTimer = 0;
   private shotSoundTimer = 0;
+  private performanceMode = false;
+  private gameZoom = 1;
+  private isPinching = false;
+  private pinchStartDistance = 0;
+  private pinchStartZoom = 1;
 
   constructor() {
     super('GameScene');
@@ -227,8 +233,12 @@ export default class GameScene extends Phaser.Scene {
   private resetRunState(starterId?: string): void {
     this.time.timeScale = 1;
     this.physics.world.timeScale = 1;
+    this.cameras.main.setZoom(1);
+    this.cameras.main.centerOn(200, 360);
     const meta = loadPlayerMeta();
     const starter = getStarterWeapon(starterId);
+    const userAgent = navigator.userAgent.toLowerCase();
+    this.performanceMode = /iphone|ipad|ipod|android|mobile/.test(userAgent);
     this.permanentRank = meta.permanentRank;
     this.starterCategoryId = starter.categoryId;
     this.lockedWeaponSkinKey = starter.imageKey;
@@ -255,6 +265,10 @@ export default class GameScene extends Phaser.Scene {
     this.bossLoopIndex = 0;
     this.distance = 0;
     this.pointerTarget = null;
+    this.gameZoom = 1;
+    this.isPinching = false;
+    this.pinchStartDistance = 0;
+    this.pinchStartZoom = 1;
     this.weaponParts = [];
     this.squadUnits = [];
     this.speedLines = [];
@@ -336,7 +350,8 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossBar();
     this.updateStatusPanel();
 
-    const fireInterval = Math.max(45, 265 - this.stats.fireRate * 38 - Math.min(this.stats.weaponCount, 60) * 3);
+    const weaponPressure = Math.min(this.stats.weaponCount, this.performanceMode ? 34 : 54);
+    const fireInterval = Math.max(this.performanceMode ? 82 : 58, 265 - this.stats.fireRate * 36 - weaponPressure * 2.35);
     if (this.fireTimer >= fireInterval) {
       this.fireTimer = 0;
       this.fireWeapons();
@@ -456,6 +471,19 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private createPauseButton(): void {
+    const homeBg = this.add.circle(326, 126, 20, 0x09111f, 0.92).setDepth(12);
+    homeBg.setStrokeStyle(2, 0xfacc15, 0.62);
+    this.homeButton = this.add.text(326, 126, 'TOP', {
+      fontSize: '10px',
+      color: '#fef3c7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5).setDepth(13);
+    homeBg.setInteractive({ useHandCursor: true });
+    homeBg.on('pointerdown', () => this.returnToTitle());
+    this.homeButton.setInteractive({ useHandCursor: true });
+    this.homeButton.on('pointerdown', () => this.returnToTitle());
+
     const bg = this.add.circle(370, 126, 20, 0x09111f, 0.92).setDepth(12);
     bg.setStrokeStyle(2, 0x38bdf8, 0.6);
     this.pauseButton = this.add.text(370, 126, 'II', {
@@ -474,11 +502,19 @@ export default class GameScene extends Phaser.Scene {
 
   private createInput(): void {
     this.controlKeys = this.input.keyboard!.addKeys('W,S,A,D,UP,DOWN,LEFT,RIGHT') as ControlKeys;
+    const missingTouchPointers = Math.max(0, 3 - this.input.manager.pointers.length);
+    if (missingTouchPointers > 0) {
+      this.input.addPointer(missingTouchPointers);
+    }
     this.inputController = new PlayerInputController(this);
     this.inputController.setup();
 
     this.events.on('player-pointer-target', (x: number, y: number) => {
-      this.pointerTarget = new Phaser.Math.Vector2(clamp(x, PLAYER_MIN_X, PLAYER_MAX_X), clamp(y, PLAYER_MIN_Y, PLAYER_MAX_Y));
+      if (this.isPinching) {
+        return;
+      }
+      const world = this.cameras.main.getWorldPoint(x, y);
+      this.pointerTarget = new Phaser.Math.Vector2(clamp(world.x, PLAYER_MIN_X, PLAYER_MAX_X), clamp(world.y, PLAYER_MIN_Y, PLAYER_MAX_Y));
     });
 
     this.events.on('player-pointer-release', () => {
@@ -486,8 +522,64 @@ export default class GameScene extends Phaser.Scene {
     });
 
     this.events.on('player-special-trigger', () => {
+      if (this.isPinching) {
+        return;
+      }
       this.activateSpecial();
     });
+
+    this.input.on('pointerdown', () => this.beginPinchIfReady());
+    this.input.on('pointermove', () => this.updatePinchZoom());
+    this.input.on('pointerup', () => this.endPinchIfNeeded());
+    this.input.on('pointercancel', () => this.endPinchIfNeeded());
+  }
+
+  private getActivePointers(): Phaser.Input.Pointer[] {
+    return this.input.manager.pointers.filter((pointer) => pointer.isDown);
+  }
+
+  private beginPinchIfReady(): void {
+    const pointers = this.getActivePointers();
+    if (pointers.length < 2) {
+      return;
+    }
+
+    this.isPinching = true;
+    this.pointerTarget = null;
+    this.pinchStartDistance = Phaser.Math.Distance.Between(pointers[0].x, pointers[0].y, pointers[1].x, pointers[1].y);
+    this.pinchStartZoom = this.gameZoom;
+  }
+
+  private updatePinchZoom(): void {
+    const pointers = this.getActivePointers();
+    if (pointers.length < 2) {
+      return;
+    }
+
+    if (!this.isPinching) {
+      this.beginPinchIfReady();
+      return;
+    }
+
+    const distance = Phaser.Math.Distance.Between(pointers[0].x, pointers[0].y, pointers[1].x, pointers[1].y);
+    if (this.pinchStartDistance <= 0) {
+      return;
+    }
+    this.setGameZoom(this.pinchStartZoom * (distance / this.pinchStartDistance));
+  }
+
+  private endPinchIfNeeded(): void {
+    if (this.getActivePointers().length >= 2) {
+      return;
+    }
+    this.isPinching = false;
+    this.pinchStartDistance = 0;
+  }
+
+  private setGameZoom(value: number): void {
+    this.gameZoom = clamp(value, 1, 1.45);
+    this.cameras.main.setZoom(this.gameZoom);
+    this.cameras.main.centerOn(200, 360);
   }
 
   private spawnStageEvents(): void {
@@ -741,9 +833,18 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private fireWeapons(): void {
+    const activeBullets = this.bullets.getLength();
+    const maxActiveBullets = this.performanceMode ? 78 : 122;
+    if (activeBullets > maxActiveBullets) {
+      return;
+    }
+
     this.playWeaponShotSound();
     const branchBonus = Math.min(4, this.evolutionPath.length);
-    const shotCount = Math.min(17, 1 + Math.floor(this.stats.weaponCount / 5) + Math.floor(branchBonus / 2));
+    const renderedWeaponCount = this.performanceMode
+      ? 1 + Math.floor(Math.sqrt(this.stats.weaponCount) * 1.45)
+      : 1 + Math.floor(this.stats.weaponCount / 6);
+    const shotCount = Math.min(this.performanceMode ? 8 : 12, renderedWeaponCount + Math.floor(branchBonus / 2));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
@@ -754,7 +855,8 @@ export default class GameScene extends Phaser.Scene {
     const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor') || this.evolutionPath.includes('titan-orbit-hammer');
     const usesSlashShot = this.usesSlashShots();
     const bulletShape = usesSlashShot ? 'slash' : this.getStarterBulletShape();
-    const clashPower = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.45) * getWeaponPowerMultiplier(this.stats) * 0.32));
+    const virtualWeaponPower = Math.max(0, this.stats.weaponCount - shotCount * 4) * (this.performanceMode ? 0.2 : 0.16);
+    const clashPower = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.45 + virtualWeaponPower) * getWeaponPowerMultiplier(this.stats) * 0.34));
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
@@ -775,9 +877,15 @@ export default class GameScene extends Phaser.Scene {
       this.bullets.add(bullet);
 
       if (hasSolarBarrage && i % 2 === 0) {
+        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 8) {
+          continue;
+        }
         this.spawnBranchShard(this.player.x + offset * 12, this.player.y - 48, offset * 52, -520, colors.secondary, 'burn', 0.85, 0, 'rocket');
       }
       if (this.evolutionPath.includes('venom-gaze') && i % 3 === 0) {
+        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 8) {
+          continue;
+        }
         this.spawnBranchShard(this.player.x + offset * 10, this.player.y - 42, offset * 20, -430, colors.primary, 'poison', 0.85, 0, 'skull');
       }
       if (this.evolutionPath.includes('deadeye-line') && i === Math.floor(center)) {
@@ -796,6 +904,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0, shape = this.getStarterBulletShape()): void {
+    if (this.performanceMode && this.bullets.getLength() > 86) {
+      return;
+    }
+
     const shard = new Bullet(this, x, y, color, shape);
     shard.setDepth(2);
     shard.setScale(scale);
@@ -3399,7 +3511,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.isPaused) {
       this.physics.pause();
-      const panel = this.add.rectangle(200, 360, 310, 202, 0x020617, 0.86);
+      const panel = this.add.rectangle(200, 360, 310, 238, 0x020617, 0.86);
       panel.setStrokeStyle(2, 0x38bdf8, 0.65);
       const title = this.add.text(200, 304, 'PAUSED', {
         fontSize: '34px',
@@ -3421,15 +3533,31 @@ export default class GameScene extends Phaser.Scene {
         color: '#bae6fd',
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
-      this.pauseOverlay = this.add.container(0, 0, [panel, title, build, resume]).setDepth(30);
+      const top = this.add.text(200, 462, 'START画面へ戻る', {
+        fontSize: '13px',
+        color: '#fef3c7',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+      }).setOrigin(0.5);
+      this.pauseOverlay = this.add.container(0, 0, [panel, title, build, resume, top]).setDepth(30);
       panel.setInteractive({ useHandCursor: true });
       panel.on('pointerdown', () => this.togglePause());
+      top.setInteractive({ useHandCursor: true });
+      top.on('pointerdown', () => this.returnToTitle());
       return;
     }
 
     this.physics.resume();
     this.pauseOverlay?.destroy();
     this.pauseOverlay = undefined;
+  }
+
+  private returnToTitle(): void {
+    this.isPaused = false;
+    this.time.timeScale = 1;
+    this.physics.world.timeScale = 1;
+    this.physics.resume();
+    this.scene.start('TitleScene');
   }
 
   private animateWeaponUpgrade(color: number): void {

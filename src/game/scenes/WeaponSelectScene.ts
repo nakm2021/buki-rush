@@ -48,6 +48,25 @@ export default class WeaponSelectScene extends Phaser.Scene {
       .join('\n');
   }
 
+  private getCategoryCardDetail(categoryId: string): string {
+    switch (categoryId) {
+      case 'balance-bow':
+        return '迷ったらこれ\n回避も火力も安定';
+      case 'slash-speed':
+        return '手数と会心\n素早い敵に強い';
+      case 'cannon-barrage':
+        return '重火力で押す\nBOSS戦向け';
+      case 'guard-aegis':
+        return '盾と回復\n事故に強い';
+      case 'venom-curse':
+        return '毒と遅延\n硬い敵に強い';
+      case 'burst-pierce':
+        return '直線貫通\n敵弾相殺向き';
+      default:
+        return '固定ブキで\n最後まで戦う';
+    }
+  }
+
   private renderCategorySelect(): void {
     this.clearContent();
     const { width, height } = this.scale;
@@ -83,7 +102,7 @@ export default class WeaponSelectScene extends Phaser.Scene {
       const image = sampleWeapon && this.textures.exists(sampleWeapon.imageKey)
         ? this.add.image(x, y - 28, sampleWeapon.imageKey).setDisplaySize(56, 82)
         : this.add.rectangle(x, y - 28, 32, 78, category.color, 0.9);
-      const titleText = this.add.text(x, y + 25, this.wrapText(category.title, 8), {
+      const titleText = this.add.text(x, y + 23, this.wrapText(category.title, 8), {
         fontSize: '12px',
         color: '#ffffff',
         fontStyle: 'bold',
@@ -93,7 +112,7 @@ export default class WeaponSelectScene extends Phaser.Scene {
         align: 'center',
         fixedWidth: 138,
       }).setOrigin(0.5);
-      const sub = this.add.text(x, y + 54, this.wrapText(category.subtitle, 12), {
+      const sub = this.add.text(x, y + 49, this.wrapText(category.subtitle, 11), {
         fontSize: '9px',
         color: '#fef3c7',
         fontStyle: 'bold',
@@ -102,13 +121,13 @@ export default class WeaponSelectScene extends Phaser.Scene {
         fixedWidth: 136,
         wordWrap: { width: 134, useAdvancedWrap: true },
       }).setOrigin(0.5);
-      const detail = this.add.text(x, y + 74, this.wrapText(category.detail, 17), {
+      const detail = this.add.text(x, y + 78, this.getCategoryCardDetail(category.id), {
         fontSize: '8px',
         color: '#cbd5e1',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
         fixedWidth: 138,
-        lineSpacing: 1,
+        lineSpacing: 2,
         wordWrap: { width: 136, useAdvancedWrap: true },
       }).setOrigin(0.5);
       content.add([card, glow, image, titleText, sub, detail]);
@@ -238,7 +257,7 @@ export default class WeaponSelectScene extends Phaser.Scene {
 
   private renderSelectedWeaponDetail(content: Phaser.GameObjects.Container, weapon: StarterWeapon, accent: number): void {
     const { width, height } = this.scale;
-    const panel = this.add.rectangle(width / 2, 506, 350, 242, 0x08111f, 0.94);
+    const panel = this.add.rectangle(width / 2, 508, 350, 248, 0x08111f, 0.94);
     panel.setStrokeStyle(2, weapon.color, 0.78);
     const name = this.add.text(32, 392, this.wrapText(weapon.title, 22), {
       fontSize: '17px',
@@ -257,37 +276,37 @@ export default class WeaponSelectScene extends Phaser.Scene {
       fixedWidth: 336,
       wordWrap: { width: 336, useAdvancedWrap: true },
     }).setOrigin(0, 0.5);
-    const detail = this.add.text(32, 440, this.wrapText(`概要: ${weapon.subtitle}`, 28), {
-      fontSize: '10px',
+    const detail = this.add.text(32, 440, this.wrapText(`概要: ${weapon.subtitle}`, 25), {
+      fontSize: '9px',
       color: '#dbeafe',
       fontFamily: 'Arial, sans-serif',
       lineSpacing: 2,
       fixedWidth: 336,
-      wordWrap: { width: 336, useAdvancedWrap: true },
+      wordWrap: { width: 328, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const strong = this.add.text(32, 480, this.wrapText(`得意: ${weapon.strongAgainst}`, 28), {
-      fontSize: '10px',
+    const strong = this.add.text(32, 476, this.wrapText(`得意: ${weapon.strongAgainst}`, 25), {
+      fontSize: '9px',
       color: '#bbf7d0',
       fontFamily: 'Arial, sans-serif',
       lineSpacing: 2,
       fixedWidth: 336,
-      wordWrap: { width: 336, useAdvancedWrap: true },
+      wordWrap: { width: 328, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const strategy = this.add.text(32, 520, this.wrapText(`戦い方: ${weapon.strategy}`, 28), {
-      fontSize: '10px',
+    const strategy = this.add.text(32, 514, this.wrapText(`戦い方: ${weapon.strategy}`, 25), {
+      fontSize: '9px',
       color: '#bae6fd',
       fontFamily: 'Arial, sans-serif',
       lineSpacing: 2,
       fixedWidth: 336,
-      wordWrap: { width: 336, useAdvancedWrap: true },
+      wordWrap: { width: 328, useAdvancedWrap: true },
     }).setOrigin(0, 0);
-    const weak = this.add.text(32, 584, this.wrapText(`注意: ${weapon.weakness}`, 28), {
-      fontSize: '10px',
+    const weak = this.add.text(32, 590, this.wrapText(`注意: ${weapon.weakness}`, 25), {
+      fontSize: '9px',
       color: '#fecaca',
       fontFamily: 'Arial, sans-serif',
       lineSpacing: 2,
       fixedWidth: 336,
-      wordWrap: { width: 336, useAdvancedWrap: true },
+      wordWrap: { width: 328, useAdvancedWrap: true },
     }).setOrigin(0, 0);
 
     const startButton = this.add.rectangle(width / 2, height - 34, 138, 38, 0x7f1d1d, 0.98);
