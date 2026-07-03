@@ -1,32 +1,48 @@
 import Phaser from 'phaser';
-import { STARTER_WEAPONS } from '../systems/WeaponEvolution';
+import { WEAPON_CATEGORIES, getStarterWeaponsByCategory } from '../systems/WeaponEvolution';
 import type { StarterWeapon } from '../types/GameTypes';
 
 export default class WeaponSelectScene extends Phaser.Scene {
+  private content?: Phaser.GameObjects.Container;
+  private selectedCategoryId = WEAPON_CATEGORIES[0]?.id ?? 'balance-bow';
+  private selectedWeapon?: StarterWeapon;
+  private weaponPage = 0;
+
   constructor() {
     super('WeaponSelectScene');
   }
 
   create(): void {
-    const { width, height } = this.scale;
-    this.add.rectangle(width / 2, height / 2, width, height, 0x19070b, 1);
-    this.add.rectangle(width / 2, height / 2, 352, height, 0x3b0a13, 0.92);
-    this.add.rectangle(width / 2, height / 2, 300, height + 40, 0x0f172a, 0.28);
-    for (let i = 0; i < 42; i++) {
-      const x = 36 + (i % 6) * 64 + (Math.floor(i / 6) % 2) * 18;
-      const y = 26 + Math.floor(i / 6) * 96;
-      this.add.ellipse(x, y, 5, 9, 0xfacc15, 0.34).setAngle(18);
-    }
-    for (let i = 0; i < 10; i++) {
-      const leaf = this.add.triangle(20 + i * 42, 106 + (i % 3) * 170, 0, -18, 34, 0, 0, 18, 0x22c55e, 0.16).setAngle(i % 2 === 0 ? -18 : 22);
-      leaf.setBlendMode(Phaser.BlendModes.ADD);
-    }
+    this.drawBackground();
+    this.renderCategorySelect();
+  }
 
-    const titleBack = this.add.rectangle(width / 2, 60, 330, 66, 0x7f1d1d, 0.82);
-    titleBack.setStrokeStyle(3, 0xfacc15, 0.8);
-    const titleGlow = this.add.circle(width / 2, 60, 82, 0xfb7185, 0.18).setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: titleGlow, scale: 1.18, alpha: 0.28, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-    this.add.text(width / 2, 60, 'WEAPON SELECT', {
+  private drawBackground(): void {
+    const { width, height } = this.scale;
+    this.add.rectangle(width / 2, height / 2, width, height, 0x16051e, 1);
+    this.add.rectangle(width / 2, height / 2, 354, height, 0x100f24, 0.82);
+    for (let i = 0; i < 34; i++) {
+      const x = 28 + (i * 57) % 344;
+      const y = 24 + (i * 83) % 690;
+      const mote = this.add.ellipse(x, y, 5 + (i % 3), 11 + (i % 4) * 3, i % 2 === 0 ? 0xfacc15 : 0x86efac, 0.22);
+      mote.setAngle(i * 19);
+      mote.setBlendMode(Phaser.BlendModes.ADD);
+    }
+  }
+
+  private clearContent(): void {
+    this.content?.destroy();
+    this.content = this.add.container(0, 0);
+  }
+
+  private renderCategorySelect(): void {
+    this.clearContent();
+    const { width, height } = this.scale;
+    const content = this.content!;
+
+    const titleBack = this.add.rectangle(width / 2, 58, 330, 62, 0x7f1d1d, 0.78);
+    titleBack.setStrokeStyle(3, 0xfacc15, 0.78);
+    const title = this.add.text(width / 2, 58, 'WEAPON TYPE', {
       fontSize: '27px',
       color: '#fef08a',
       fontStyle: 'bold',
@@ -34,92 +50,65 @@ export default class WeaponSelectScene extends Phaser.Scene {
       stroke: '#7f1d1d',
       strokeThickness: 6,
     }).setOrigin(0.5);
-    this.add.text(width / 2, 102, '最初に選ぶのは「武器タイプ」です', {
-      fontSize: '12px',
-      color: '#dcfce7',
-      fontFamily: 'Arial, sans-serif',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
-    this.add.text(width / 2, 122, '選んだタイプの候補内で、BOSS撃破ごとにランダム進化します', {
+    const guide = this.add.text(width / 2, 106, 'タイプを選ぶと、該当ブキの詳細一覧へ進みます', {
       fontSize: '11px',
-      color: '#fef3c7',
-      fontFamily: 'Arial, sans-serif',
+      color: '#dcfce7',
       fontStyle: 'bold',
-      stroke: '#4a0f09',
-      strokeThickness: 3,
+      fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
+    content.add([titleBack, title, guide]);
 
-    let lastTapAt = 0;
-    let lastTapWeaponId = '';
-    let pendingStart: Phaser.Time.TimerEvent | undefined;
-
-    STARTER_WEAPONS.forEach((weapon, index) => {
+    WEAPON_CATEGORIES.forEach((category, index) => {
       const col = index % 2;
       const row = Math.floor(index / 2);
       const x = 112 + col * 176;
-      const y = 218 + row * 154;
-      const card = this.add.rectangle(x, y, 160, 142, 0x1f0a10, 0.96);
-      card.setStrokeStyle(2, 0xfacc15, 0.56);
-      const inner = this.add.rectangle(x, y, 148, 130, 0x450a12, 0.58);
-      inner.setStrokeStyle(1, weapon.color, 0.58);
-      const glow = this.add.circle(x, y - 24, 48, weapon.color, 0.13).setBlendMode(Phaser.BlendModes.ADD);
-      this.add.ellipse(x - 60, y - 52, 5, 9, 0xfacc15, 0.68).setAngle(18);
-      this.add.ellipse(x + 60, y - 52, 5, 9, 0xfacc15, 0.68).setAngle(-18);
-      this.add.triangle(x - 46, y - 50, 0, -12, 22, 0, 0, 12, 0x22c55e, 0.52).setAngle(-22);
-      this.add.triangle(x + 46, y - 50, 0, -12, 22, 0, 0, 12, 0x22c55e, 0.52).setAngle(202);
-      if (this.textures.exists(weapon.imageKey)) {
-        this.add.image(x, y - 28, weapon.imageKey).setDisplaySize(78, 126).setTint(weapon.color, 0xffffff, weapon.color, 0xffffff);
-      } else {
-        this.add.rectangle(x, y - 22, 32, 92, weapon.color, 0.92);
-      }
-      this.add.text(x, y + 42, weapon.title, {
-        fontSize: '13px',
+      const y = 206 + row * 142;
+      const card = this.add.rectangle(x, y, 160, 124, 0x111827, 0.94);
+      card.setStrokeStyle(2, category.color, 0.68);
+      const glow = this.add.circle(x, y - 16, 46, category.color, 0.14).setBlendMode(Phaser.BlendModes.ADD);
+      const titleText = this.add.text(x, y - 28, category.title, {
+        fontSize: '14px',
         color: '#ffffff',
         fontStyle: 'bold',
         fontFamily: 'Arial, sans-serif',
         stroke: '#020617',
         strokeThickness: 3,
       }).setOrigin(0.5);
-      this.add.text(x, y + 64, weapon.subtitle, {
+      const sub = this.add.text(x, y + 2, category.subtitle, {
+        fontSize: '10px',
+        color: '#fef3c7',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        align: 'center',
+        wordWrap: { width: 134 },
+      }).setOrigin(0.5);
+      const detail = this.add.text(x, y + 42, category.detail, {
         fontSize: '9px',
         color: '#cbd5e1',
         fontFamily: 'Arial, sans-serif',
         align: 'center',
-        wordWrap: { width: 138 },
+        wordWrap: { width: 136 },
       }).setOrigin(0.5);
+      content.add([card, glow, titleText, sub, detail]);
 
       card.setInteractive({ useHandCursor: true });
       card.on('pointerover', () => {
         card.setStrokeStyle(4, 0xfef08a, 1);
-        inner.setStrokeStyle(2, weapon.color, 1);
-        glow.setAlpha(0.3);
+        glow.setAlpha(0.28);
       });
       card.on('pointerout', () => {
-        card.setStrokeStyle(2, 0xfacc15, 0.56);
-        inner.setStrokeStyle(1, weapon.color, 0.58);
-        glow.setAlpha(0.13);
+        card.setStrokeStyle(2, category.color, 0.68);
+        glow.setAlpha(0.14);
       });
       card.on('pointerdown', () => {
-        const now = this.time.now;
-        const isDoubleTap = lastTapWeaponId === weapon.id && now - lastTapAt < 320;
-        lastTapAt = now;
-        lastTapWeaponId = weapon.id;
-
-        if (isDoubleTap) {
-          pendingStart?.remove(false);
-          pendingStart = undefined;
-          this.showWeaponDetail(weapon);
-          return;
-        }
-
-        pendingStart?.remove(false);
-        pendingStart = this.time.delayedCall(240, () => {
-          this.scene.start('GameScene', { starterId: weapon.id });
-        });
+        this.selectedCategoryId = category.id;
+        this.weaponPage = 0;
+        this.selectedWeapon = getStarterWeaponsByCategory(category.id)[0];
+        this.renderWeaponSelect();
       });
     });
 
-    const back = this.add.text(width / 2, height - 54, 'BACK', {
+    const back = this.add.text(width / 2, height - 42, 'BACK', {
       fontSize: '15px',
       color: '#bfdbfe',
       fontStyle: 'bold',
@@ -127,65 +116,161 @@ export default class WeaponSelectScene extends Phaser.Scene {
     }).setOrigin(0.5);
     back.setInteractive({ useHandCursor: true });
     back.on('pointerdown', () => this.scene.start('TitleScene'));
+    content.add(back);
   }
 
-  private showWeaponDetail(weapon: StarterWeapon): void {
+  private renderWeaponSelect(): void {
+    this.clearContent();
     const { width, height } = this.scale;
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.78);
-    const panel = this.add.rectangle(width / 2, height / 2, 334, 468, 0x111827, 0.98);
-    panel.setStrokeStyle(2, weapon.color, 0.9);
-    const glow = this.add.circle(width / 2, 236, 92, weapon.color, 0.16).setBlendMode(Phaser.BlendModes.ADD);
-    const image = this.textures.exists(weapon.imageKey)
-      ? this.add.image(width / 2, 242, weapon.imageKey).setDisplaySize(126, 220).setTint(weapon.color, 0xffffff, weapon.color, 0xffffff)
-      : this.add.rectangle(width / 2, 242, 58, 178, weapon.color, 0.92);
-    const title = this.add.text(width / 2, 86, weapon.title.toUpperCase(), {
-      fontSize: '22px',
+    const content = this.content!;
+    const category = WEAPON_CATEGORIES.find((item) => item.id === this.selectedCategoryId) ?? WEAPON_CATEGORIES[0];
+    const weapons = getStarterWeaponsByCategory(category.id);
+    this.selectedWeapon ??= weapons[0];
+    const pageSize = 4;
+    const pageCount = Math.max(1, Math.ceil(weapons.length / pageSize));
+    this.weaponPage = Phaser.Math.Clamp(this.weaponPage, 0, pageCount - 1);
+    const pageWeapons = weapons.slice(this.weaponPage * pageSize, this.weaponPage * pageSize + pageSize);
+
+    const title = this.add.text(width / 2, 38, category.title, {
+      fontSize: '21px',
+      color: '#fef08a',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 5,
+    }).setOrigin(0.5);
+    const guide = this.add.text(width / 2, 66, 'ブキを選んで詳細を確認。START後はこのブキ固定です。', {
+      fontSize: '10px',
+      color: '#dcfce7',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    content.add([title, guide]);
+
+    pageWeapons.forEach((weapon, index) => {
+      const col = index % 2;
+      const row = Math.floor(index / 2);
+      const x = 112 + col * 176;
+      const y = 154 + row * 144;
+      const selected = this.selectedWeapon?.id === weapon.id;
+      const card = this.add.rectangle(x, y, 160, 128, selected ? 0x2a1634 : 0x111827, 0.96);
+      card.setStrokeStyle(selected ? 4 : 2, selected ? 0xfef08a : weapon.color, selected ? 1 : 0.66);
+      const glow = this.add.circle(x, y - 24, 44, weapon.color, selected ? 0.22 : 0.11).setBlendMode(Phaser.BlendModes.ADD);
+      const image = this.textures.exists(weapon.imageKey)
+        ? this.add.image(x, y - 24, weapon.imageKey).setDisplaySize(66, 104)
+        : this.add.rectangle(x, y - 24, 34, 92, weapon.color, 0.9);
+      const name = this.add.text(x, y + 43, weapon.title, {
+        fontSize: '12px',
+        color: '#ffffff',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#020617',
+        strokeThickness: 3,
+      }).setOrigin(0.5);
+      const attr = this.add.text(x, y + 62, weapon.attributeLabel, {
+        fontSize: '9px',
+        color: '#fef3c7',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+      }).setOrigin(0.5);
+      content.add([card, glow, image, name, attr]);
+
+      card.setInteractive({ useHandCursor: true });
+      card.on('pointerdown', () => {
+        this.selectedWeapon = weapon;
+        this.renderWeaponSelect();
+      });
+    });
+
+    if (pageCount > 1) {
+      const prev = this.add.text(60, 360, '<', { fontSize: '22px', color: '#bfdbfe', fontStyle: 'bold', fontFamily: 'Arial, sans-serif' }).setOrigin(0.5);
+      const next = this.add.text(340, 360, '>', { fontSize: '22px', color: '#bfdbfe', fontStyle: 'bold', fontFamily: 'Arial, sans-serif' }).setOrigin(0.5);
+      const page = this.add.text(width / 2, 360, `${this.weaponPage + 1}/${pageCount}`, { fontSize: '11px', color: '#cbd5e1', fontFamily: 'Arial, sans-serif' }).setOrigin(0.5);
+      prev.setInteractive({ useHandCursor: true });
+      next.setInteractive({ useHandCursor: true });
+      prev.on('pointerdown', () => {
+        this.weaponPage = (this.weaponPage + pageCount - 1) % pageCount;
+        this.selectedWeapon = weapons[this.weaponPage * pageSize];
+        this.renderWeaponSelect();
+      });
+      next.on('pointerdown', () => {
+        this.weaponPage = (this.weaponPage + 1) % pageCount;
+        this.selectedWeapon = weapons[this.weaponPage * pageSize];
+        this.renderWeaponSelect();
+      });
+      content.add([prev, next, page]);
+    }
+
+    this.renderSelectedWeaponDetail(content, this.selectedWeapon ?? weapons[0], category.color);
+
+    const typeBack = this.add.text(64, height - 34, 'TYPE', {
+      fontSize: '13px',
+      color: '#bfdbfe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    typeBack.setInteractive({ useHandCursor: true });
+    typeBack.on('pointerdown', () => this.renderCategorySelect());
+    content.add(typeBack);
+  }
+
+  private renderSelectedWeaponDetail(content: Phaser.GameObjects.Container, weapon: StarterWeapon, accent: number): void {
+    const { width, height } = this.scale;
+    const panel = this.add.rectangle(width / 2, 492, 350, 206, 0x08111f, 0.94);
+    panel.setStrokeStyle(2, weapon.color, 0.78);
+    const name = this.add.text(32, 404, weapon.title, {
+      fontSize: '17px',
       color: '#ffffff',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#020617',
-      strokeThickness: 6,
-    }).setOrigin(0.5);
-    const subtitle = this.add.text(width / 2, 116, weapon.subtitle, {
-      fontSize: '13px',
+      strokeThickness: 4,
+    }).setOrigin(0, 0.5);
+    const stats = this.add.text(32, 430, `属性 ${weapon.attributeLabel}   ATK ${weapon.stats.power}   RATE ${weapon.stats.fireRate.toFixed(2)}   CRIT ${Math.round(weapon.stats.critRate * 100)}%`, {
+      fontSize: '10px',
       color: '#fef3c7',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
-    }).setOrigin(0.5);
-    const detail = this.add.text(width / 2, 382, [
-      weapon.detail,
-      `ATK ${weapon.stats.power}   RATE ${weapon.stats.fireRate.toFixed(2)}`,
-      `TYPE ${weapon.stats.element.toUpperCase()} / ${weapon.stats.archetype.toUpperCase()}`,
-      'このタイプの候補だけでランダム進化',
-      '途中でタイプ変更はできません',
-    ], {
-      fontSize: '12px',
+    }).setOrigin(0, 0.5);
+    const detail = this.add.text(32, 456, weapon.detail, {
+      fontSize: '10px',
       color: '#dbeafe',
-      align: 'center',
       fontFamily: 'Arial, sans-serif',
-      lineSpacing: 8,
-    }).setOrigin(0.5);
-    const startButton = this.add.rectangle(width / 2 - 72, 520, 120, 44, 0x7f1d1d, 0.96);
-    startButton.setStrokeStyle(2, 0xfef08a, 0.88);
-    const closeButton = this.add.rectangle(width / 2 + 72, 520, 120, 44, 0x172554, 0.96);
-    closeButton.setStrokeStyle(2, 0x93c5fd, 0.76);
-    const startText = this.add.text(width / 2 - 72, 520, 'START', {
+      lineSpacing: 4,
+      wordWrap: { width: 336 },
+    }).setOrigin(0, 0);
+    const strong = this.add.text(32, 520, `得意: ${weapon.strongAgainst}`, {
+      fontSize: '10px',
+      color: '#bbf7d0',
+      fontFamily: 'Arial, sans-serif',
+      wordWrap: { width: 336 },
+    }).setOrigin(0, 0);
+    const strategy = this.add.text(32, 548, `戦い方: ${weapon.strategy}`, {
+      fontSize: '10px',
+      color: '#bae6fd',
+      fontFamily: 'Arial, sans-serif',
+      wordWrap: { width: 336 },
+    }).setOrigin(0, 0);
+    const weak = this.add.text(32, 590, `注意: ${weapon.weakness}`, {
+      fontSize: '10px',
+      color: '#fecaca',
+      fontFamily: 'Arial, sans-serif',
+      wordWrap: { width: 336 },
+    }).setOrigin(0, 0);
+
+    const startButton = this.add.rectangle(width / 2, height - 34, 138, 38, 0x7f1d1d, 0.98);
+    startButton.setStrokeStyle(2, 0xfef08a, 0.9);
+    const startText = this.add.text(width / 2, height - 34, 'START', {
       fontSize: '14px',
       color: '#fef3c7',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const closeText = this.add.text(width / 2 + 72, 520, 'CLOSE', {
-      fontSize: '14px',
-      color: '#dbeafe',
-      fontStyle: 'bold',
-      fontFamily: 'Arial, sans-serif',
-    }).setOrigin(0.5);
-    const overlay = this.add.container(0, 0, [veil, panel, glow, image, title, subtitle, detail, startButton, closeButton, startText, closeText]).setDepth(50);
+    const glow = this.add.rectangle(width / 2, height - 34, 152, 44, accent, 0.1).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: glow, alpha: 0.24, duration: 720, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     startButton.setInteractive({ useHandCursor: true });
     startButton.on('pointerdown', () => this.scene.start('GameScene', { starterId: weapon.id }));
-    closeButton.setInteractive({ useHandCursor: true });
-    closeButton.on('pointerdown', () => overlay.destroy());
-    veil.setInteractive();
+
+    content.add([panel, name, stats, detail, strong, strategy, weak, glow, startButton, startText]);
   }
 }

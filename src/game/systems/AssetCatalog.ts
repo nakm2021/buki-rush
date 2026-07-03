@@ -84,6 +84,13 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponGrapeAegisShield', path: 'assets/optimized/weapon-grape-aegis-shield.png', match: { elements: ['crystal'], archetypes: ['lotus', 'atlas', 'anchor'] } },
   { key: 'weaponGrapeCurseNeedle', path: 'assets/optimized/weapon-grape-curse-needle.png', match: { elements: ['shadow'], archetypes: ['needle', 'basilisk'] } },
   { key: 'weaponGrapePierceLance', path: 'assets/optimized/weapon-grape-pierce-lance.png', match: { archetypes: ['lance', 'drill', 'chrono'] } },
+  { key: 'weaponKijiFeatherBow', path: 'assets/optimized/weapon-kiji-feather-bow.png', match: { elements: ['wind'], archetypes: ['centaur', 'falcon'] } },
+  { key: 'weaponRocketLauncherBarrage', path: 'assets/optimized/weapon-rocket-launcher-barrage.png', match: { elements: ['fire'], archetypes: ['rail', 'magnum', 'blaster'] } },
+  { key: 'weaponRuriAzureLance', path: 'assets/optimized/weapon-ruri-azure-lance.png', match: { elements: ['crystal', 'ice'], archetypes: ['lance', 'rail'] } },
+  { key: 'weaponJoTanSaltBlade', path: 'assets/optimized/weapon-jo-tan-salt-blade.png', match: { elements: ['fire'], archetypes: ['saber', 'samurai'] } },
+  { key: 'weaponTonkotsuRamenCannon', path: 'assets/optimized/weapon-tonkotsu-ramen-cannon.png', match: { elements: ['light'], archetypes: ['blaster', 'rune'] } },
+  { key: 'weaponPoseidonTridentCannon', path: 'assets/optimized/weapon-poseidon-trident-cannon.png', match: { elements: ['ice'], archetypes: ['lance', 'anchor', 'kraken'] } },
+  { key: 'weaponSnsSignalSpear', path: 'assets/optimized/weapon-sns-signal-spear.png', match: { elements: ['thunder', 'light'], archetypes: ['pulse', 'echo', 'nebula'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [

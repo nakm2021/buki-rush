@@ -331,7 +331,31 @@ export function applyWeaponEvolutionBranch(stats: PlayerStats, branch: WeaponEvo
   };
 }
 
-function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, power: number, fireRate: number): PlayerStats {
+export interface WeaponCategory {
+  id: string;
+  title: string;
+  subtitle: string;
+  detail: string;
+  color: number;
+}
+
+export const WEAPON_CATEGORIES: WeaponCategory[] = [
+  { id: 'balance-bow', title: 'バランス弓型', subtitle: '万能・誘導・会心の標準型', detail: '扱いやすい射撃武器が中心。雑魚処理、BOSS削り、アイテム回収のどれも崩れにくい。', color: 0x38bdf8 },
+  { id: 'slash-speed', title: '斬撃スピード型', subtitle: '高速斬撃・会心・接近制圧', detail: '剣や刀の斬撃でテンポよく削る型。硬い敵より、数で押す敵や素早い敵を捌きやすい。', color: 0xfacc15 },
+  { id: 'cannon-barrage', title: '砲撃ラッシュ型', subtitle: '重火力・弾幕・BOSS圧', detail: 'ロケットやレール砲で正面を押しつぶす型。BOSSや大型敵に強いが、細かい回避はやや苦手。', color: 0xfb923c },
+  { id: 'guard-aegis', title: '耐久ガード型', subtitle: '盾・回復・粘り勝ち', detail: '守りと反撃を軸に長く戦う型。事故に強く、状態異常や弾幕が多いステージで安定しやすい。', color: 0x7dd3fc },
+  { id: 'venom-curse', title: '毒呪い技巧型', subtitle: '毒・遅延・継続ダメージ', detail: '状態異常でじわじわ削る技巧型。硬い敵や厄介な敵に強いが、瞬間火力は武器ごとに差がある。', color: 0x8b5cf6 },
+  { id: 'burst-pierce', title: '貫通バースト型', subtitle: '槍・ドリル・一点突破', detail: '貫通と一撃火力で直線上の敵をまとめて抜く型。BOSSの攻撃相殺にも向いている。', color: 0x99f6e4 },
+];
+
+function createStarterStats(
+  element: WeaponElement,
+  archetype: WeaponArchetype,
+  power: number,
+  fireRate: number,
+  modules: WeaponModule[] = [],
+  extra: Partial<PlayerStats> = {},
+): PlayerStats {
   return {
     weaponCount: 1,
     power,
@@ -339,25 +363,47 @@ function createStarterStats(element: WeaponElement, archetype: WeaponArchetype, 
     fireRate,
     element,
     archetype,
-    modules: [],
-    rarity: 'common',
-    tier: 1,
-    critRate: 0.04,
-    pierce: 0,
-    shield: 0,
-    synergy: 0,
+    modules,
+    rarity: extra.rarity ?? 'common',
+    tier: extra.tier ?? 1,
+    critRate: extra.critRate ?? 0.04,
+    pierce: extra.pierce ?? 0,
+    shield: extra.shield ?? 0,
+    synergy: extra.synergy ?? 0,
   };
 }
 
 export const STARTER_WEAPONS: StarterWeapon[] = [
-  { id: 'balance-bow', title: 'バランス弓型', subtitle: '全進化候補が混ざる万能系', detail: '弓・杖・砲・斬撃まで広く回るタイプ。迷ったらこれ。', element: 'neutral', archetype: 'centaur', imageKey: 'weaponIchigoBalanceBow', color: 0x38bdf8, stats: createStarterStats('neutral', 'centaur', 1, 1) },
-  { id: 'slash-speed', title: '斬撃スピード型', subtitle: '剣・刀・高速輪が多い会心系', detail: '弾より斬撃寄り。手数、移動感、会心でBOSSを削る。', element: 'shadow', archetype: 'saber', imageKey: 'weaponIchigoSpeedSaber', color: 0xfacc15, stats: createStarterStats('shadow', 'saber', 2, 0.98) },
-  { id: 'cannon-barrage', title: '砲撃ラッシュ型', subtitle: 'レール砲・重力砲・弾幕系', detail: '遠距離火力と弾幕が中心。BOSSへの圧が強い。', element: 'fire', archetype: 'rail', imageKey: 'weaponIchigoRocketCannon', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 2, 0.94) },
-  { id: 'guard-aegis', title: '耐久ガード型', subtitle: '盾・結界・回復で粘る安定系', detail: '派手さより生存力。進むほど硬くなる守備タイプ。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponIchigoAegisShield', color: 0x7dd3fc, stats: createStarterStats('crystal', 'lotus', 2, 0.88) },
-  { id: 'venom-curse', title: '毒呪い技巧型', subtitle: '毒・影・遅延で削る厄介系', detail: '状態異常と特殊必殺が多め。強敵ほどじわじわ効く。', element: 'shadow', archetype: 'needle', imageKey: 'weaponIchigoCurseNeedle', color: 0x8b5cf6, stats: createStarterStats('shadow', 'needle', 2, 0.92) },
-  { id: 'burst-pierce', title: '貫通バースト型', subtitle: '槍・ドリル・高火力突破系', detail: '一撃と貫通を重視。硬い敵を正面から割る。', element: 'fire', archetype: 'lance', imageKey: 'weaponIchigoPierceLance', color: 0x99f6e4, stats: createStarterStats('fire', 'lance', 3, 0.86) },
+  { id: 'ichigo-balance-bow', categoryId: 'balance-bow', title: 'ICHIGO BALANCE', subtitle: '苺弓。万能射撃で安定', detail: '属性: 光 / 得意: 雑魚の群れ、初見BOSS / 戦い方: 画面中央を維持し、弓形弾を広く当てながら安全に育てる。', attributeLabel: '光・万能', strongAgainst: '雑魚群、遠距離BOSS、弾の薄い相手', strategy: '癖が少ないので、アイテム回収と回避を優先して長く伸ばす。必殺は苺系の溜め会心。', weakness: '尖った瞬間火力は専門武器に劣る。', element: 'light', archetype: 'centaur', imageKey: 'weaponIchigoBalanceBow', color: 0xfb7185, stats: createStarterStats('light', 'centaur', 5, 1.04, ['homing'], { critRate: 0.07, pierce: 1, synergy: 3 }) },
+  { id: 'grape-balance-bow', categoryId: 'balance-bow', title: 'GRAPE BALANCE', subtitle: '葡萄弓。会心寄りの安定型', detail: '属性: 光 / 得意: 動く敵、分散した敵 / 戦い方: 誘導と会心で削り、必殺は溜めて葡萄の一撃を叩き込む。', attributeLabel: '光・会心', strongAgainst: '回避しながら迫る敵、分散配置の敵', strategy: '無理に正面へ出ず、誘導弾で安全に削る。会心系アイテムと相性がいい。', weakness: '直線貫通火力は控えめ。', element: 'light', archetype: 'centaur', imageKey: 'weaponGrapeBalanceBow', color: 0x8b5cf6, stats: createStarterStats('light', 'centaur', 6, 1.03, ['homing'], { critRate: 0.08, pierce: 1, synergy: 4 }) },
+  { id: 'kiji-feather-bow', categoryId: 'balance-bow', title: 'KIJI FEATHER', subtitle: '雉羽弓。軽快な追尾弾', detail: '属性: 風 / 得意: 高速雑魚、横移動する敵 / 戦い方: 風の追尾弾で動く敵を捕まえ、軽い連射で数を減らす。', attributeLabel: '風・追尾', strongAgainst: '素早い敵、横に逃げる敵、低耐久の群れ', strategy: '動き回りながら撃ち続ける。連射と会心を伸ばすと軽快に化ける。', weakness: '重装BOSSへの一撃は弱め。', element: 'wind', archetype: 'falcon', imageKey: 'weaponKijiFeatherBow', color: 0x22c55e, stats: createStarterStats('wind', 'falcon', 5, 1.14, ['homing'], { critRate: 0.075, pierce: 1, synergy: 3 }) },
+  { id: 'ruri-azure-lance', categoryId: 'burst-pierce', title: 'RURI AZURE', subtitle: '瑠璃槍。美しい一点突破', detail: '属性: 晶 / 得意: 縦に並ぶ敵、装甲持ち / 戦い方: 瑠璃色の貫通線で正面を抜く。BOSS攻撃の相殺にも強い。', attributeLabel: '晶・貫通', strongAgainst: '直線配置、装甲敵、BOSS弾', strategy: '敵の列に正面を合わせる。貫通と攻撃力を伸ばすほど分かりやすく強い。', weakness: '横に広い群れは苦手。', element: 'crystal', archetype: 'lance', imageKey: 'weaponRuriAzureLance', color: 0x2563eb, stats: createStarterStats('crystal', 'lance', 8, 0.94, ['drill'], { critRate: 0.07, pierce: 3, synergy: 2 }) },
+  { id: 'ichigo-speed-saber', categoryId: 'slash-speed', title: 'ICHIGO SABER', subtitle: '苺閃刀。高速斬撃', detail: '属性: 火 / 得意: 低中耐久の群れ、近距離BOSS / 戦い方: 斬撃でテンポよく削り、苺必殺で会心の一撃を狙う。', attributeLabel: '火・斬撃', strongAgainst: '密集雑魚、素早い敵、低耐久BOSS', strategy: '攻撃回数と会心を伸ばす。正面維持より、避けながら削る動きが強い。', weakness: '弾幕相殺力は砲撃型に劣る。', element: 'fire', archetype: 'saber', imageKey: 'weaponIchigoSpeedSaber', color: 0xfb7185, stats: createStarterStats('fire', 'saber', 7, 1.1, ['bladebit'], { critRate: 0.1, pierce: 1, synergy: 3 }) },
+  { id: 'grape-speed-saber', categoryId: 'slash-speed', title: 'GRAPE SABER', subtitle: '葡萄剣。影の会心斬り', detail: '属性: 影 / 得意: 厄介な中型敵、BOSS削り / 戦い方: 影の斬撃で削り、溜め必殺で大きく割る。', attributeLabel: '影・会心', strongAgainst: '中型敵、硬めの雑魚、BOSS', strategy: '会心と攻撃力を優先。必殺は安全な位置で溜め切る。', weakness: '序盤の雑魚処理はやや忙しい。', element: 'shadow', archetype: 'saber', imageKey: 'weaponGrapeSpeedSaber', color: 0xa855f7, stats: createStarterStats('shadow', 'saber', 7, 1.08, ['bladebit'], { critRate: 0.11, pierce: 1, synergy: 3 }) },
+  { id: 'jo-tan-salt-blade', categoryId: 'slash-speed', title: 'JO-TAN SALT', subtitle: '上タン塩刃。塩晶の切断', detail: '属性: 火 / 得意: 斬れる雑魚、突進敵 / 戦い方: 塩晶の斬撃で前方を切り払い、会心で一気に削る。', attributeLabel: '火・料理刃', strongAgainst: '突進敵、軽装雑魚、短期戦BOSS', strategy: '会心、連射、攻撃力を伸ばす。被弾しない距離で切り続ける。', weakness: '長期戦の耐久は低め。', element: 'fire', archetype: 'samurai', imageKey: 'weaponJoTanSaltBlade', color: 0xfacc15, stats: createStarterStats('fire', 'samurai', 8, 1.02, ['critical'], { critRate: 0.13, pierce: 1, synergy: 2 }) },
+  { id: 'moon-guillotine', categoryId: 'slash-speed', title: 'MOON GUILLOTINE', subtitle: '月光鎌。広い斬撃線', detail: '属性: 影 / 得意: 横に広い敵、BOSS取り巻き / 戦い方: 鎌の広い斬撃で周囲を巻き込み、会心で削る。', attributeLabel: '影・大鎌', strongAgainst: '横並びの敵、取り巻き召喚、影に弱い敵', strategy: '攻撃範囲と会心を伸ばす。取り巻きを消しながらBOSSに当て続ける。', weakness: '一点突破は槍型ほど鋭くない。', element: 'shadow', archetype: 'saber', imageKey: 'weaponMoonGuillotine', color: 0xc084fc, stats: createStarterStats('shadow', 'saber', 7, 0.98, ['bladebit'], { critRate: 0.12, pierce: 1, synergy: 3 }) },
+  { id: 'ichigo-rocket-cannon', categoryId: 'cannon-barrage', title: 'ICHIGO ROCKET', subtitle: '苺ロケット。爆発弾幕', detail: '属性: 火 / 得意: 大型BOSS、まとまった敵 / 戦い方: 正面火力で押し込み、苺必殺をBOSSへ合わせる。', attributeLabel: '火・爆裂', strongAgainst: '大型BOSS、密集敵、低速弾幕', strategy: '正面を取り続ける。攻撃力と弾数を伸ばすとBOSS戦が安定する。', weakness: '細かい横移動の敵には当てにくい。', element: 'fire', archetype: 'rail', imageKey: 'weaponIchigoRocketCannon', color: 0xfb923c, stats: createStarterStats('fire', 'rail', 8, 0.96, ['burst'], { critRate: 0.065, pierce: 2, synergy: 2 }) },
+  { id: 'rocket-launcher-barrage', categoryId: 'cannon-barrage', title: 'ROCKET BARRAGE', subtitle: '重ロケラン。純粋火力', detail: '属性: 火 / 得意: BOSS、装甲敵、弾幕相殺 / 戦い方: 重いロケットで敵弾ごと押し返す。', attributeLabel: '火・重砲', strongAgainst: 'BOSS、装甲敵、丸弾/菱形弾', strategy: '攻撃力と貫通を優先。移動より位置取りで正面を取る。', weakness: '連射が遅く、取りこぼしやすい。', element: 'fire', archetype: 'magnum', imageKey: 'weaponRocketLauncherBarrage', color: 0xef4444, stats: createStarterStats('fire', 'magnum', 10, 0.86, ['burst'], { critRate: 0.075, pierce: 2, synergy: 2 }) },
+  { id: 'tonkotsu-ramen-cannon', categoryId: 'cannon-barrage', title: 'TONKOTSU CORE', subtitle: 'とんこつ砲。濃厚制圧', detail: '属性: 光 / 得意: 群れ、持久戦、回復が欲しい場面 / 戦い方: 濃厚な弾幕で押し、MODで粘りを伸ばす。', attributeLabel: '光・制圧', strongAgainst: '群れ、長期戦、じわじわ迫る敵', strategy: '弾数と盾を伸ばす。危険な敵を先に削りながら中央を守る。', weakness: '瞬間火力はロケランより低い。', element: 'light', archetype: 'blaster', imageKey: 'weaponTonkotsuRamenCannon', color: 0xfef3c7, stats: createStarterStats('light', 'blaster', 7, 1.0, ['repair'], { critRate: 0.055, shield: 1, synergy: 4 }) },
+  { id: 'sns-signal-spear', categoryId: 'cannon-barrage', title: 'SNS SIGNAL', subtitle: '通知槍。連鎖拡散', detail: '属性: 雷 / 得意: 分散した敵、連鎖で削れる群れ / 戦い方: 通知弾をばらまき、雷の溜め必殺で締める。', attributeLabel: '雷・連鎖', strongAgainst: '分散雑魚、素早い敵、低耐久の群れ', strategy: '連射と会心を伸ばす。BOSS戦では弾幕相殺も意識する。', weakness: '単体への重い一撃は専門砲より控えめ。', element: 'thunder', archetype: 'pulse', imageKey: 'weaponSnsSignalSpear', color: 0x38bdf8, stats: createStarterStats('thunder', 'pulse', 6, 1.12, ['echo'], { critRate: 0.075, pierce: 1, synergy: 5 }) },
+  { id: 'ichigo-aegis-shield', categoryId: 'guard-aegis', title: 'ICHIGO AEGIS', subtitle: '苺盾砲。守りの基本', detail: '属性: 晶 / 得意: 弾幕BOSS、事故が多い場面 / 戦い方: 盾と回復で耐え、苺必殺で反撃する。', attributeLabel: '晶・盾', strongAgainst: '弾幕BOSS、状態異常敵、長期戦', strategy: '盾と耐久を伸ばして粘る。焦らず生存を最優先にする。', weakness: '序盤火力は控えめ。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponIchigoAegisShield', color: 0x7dd3fc, stats: createStarterStats('crystal', 'lotus', 5, 0.95, ['aegis'], { critRate: 0.045, shield: 4, synergy: 5 }) },
+  { id: 'grape-aegis-shield', categoryId: 'guard-aegis', title: 'GRAPE AEGIS', subtitle: '葡萄盾。蔓の結界', detail: '属性: 晶 / 得意: 持久戦、毒や呪いを撒く敵 / 戦い方: 結界で耐え、葡萄必殺の一撃に繋げる。', attributeLabel: '晶・結界', strongAgainst: '長期戦、状態異常敵、取り巻きBOSS', strategy: '盾とシナジーを伸ばす。必殺ゲージを大切に使う。', weakness: '派手な瞬間火力は溜め必殺依存。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponGrapeAegisShield', color: 0x8b5cf6, stats: createStarterStats('crystal', 'lotus', 5, 0.94, ['aegis'], { critRate: 0.05, shield: 4, synergy: 6 }) },
+  { id: 'poseidon-trident-cannon', categoryId: 'guard-aegis', title: 'POSEIDON TRIDENT', subtitle: '海神槍。波と守護', detail: '属性: 氷 / 得意: 弾幕、直線BOSS、押し寄せる敵 / 戦い方: 波のような貫通と守りで、敵弾を抑えながら進む。', attributeLabel: '氷・海神', strongAgainst: '弾幕BOSS、直線配置、押し寄せる群れ', strategy: '貫通と盾を両方伸ばす。守りながらBOSSへ圧をかける。', weakness: '横に散った敵にはやや時間がかかる。', element: 'ice', archetype: 'anchor', imageKey: 'weaponPoseidonTridentCannon', color: 0x38bdf8, stats: createStarterStats('ice', 'anchor', 8, 0.9, ['barrier'], { critRate: 0.06, pierce: 2, shield: 3, synergy: 4 }) },
+  { id: 'crystal-lotus-shieldgun', categoryId: 'guard-aegis', title: 'CRYSTAL LOTUS', subtitle: '結晶盾砲。回復守備', detail: '属性: 晶 / 得意: 長期戦、事故回避 / 戦い方: 回復と盾で崩れにくい盤面を作る。', attributeLabel: '晶・回復', strongAgainst: '長期戦、持続ダメージ、取り巻き戦', strategy: '耐久を伸ばして堅実に進む。攻撃力アイテムも忘れず拾う。', weakness: 'BOSSを倒す速度は遅め。', element: 'crystal', archetype: 'lotus', imageKey: 'weaponCrystalLotusShieldgun', color: 0x99f6e4, stats: createStarterStats('crystal', 'lotus', 5, 0.96, ['repair'], { critRate: 0.05, shield: 3, synergy: 5 }) },
+  { id: 'ichigo-curse-needle', categoryId: 'venom-curse', title: 'ICHIGO CURSE', subtitle: '苺呪針。毒と呪い', detail: '属性: 影 / 得意: 硬い敵、厄介な中型 / 戦い方: 状態異常で削り、苺必殺の一撃で仕留める。', attributeLabel: '影・毒', strongAgainst: '硬い雑魚、中型敵、回避しにくい敵', strategy: '毒、会心、貫通を伸ばす。即殺より継続ダメージで優位を取る。', weakness: '初速火力は控えめ。', element: 'shadow', archetype: 'basilisk', imageKey: 'weaponIchigoCurseNeedle', color: 0xfb7185, stats: createStarterStats('shadow', 'basilisk', 6, 0.98, ['poison'], { critRate: 0.07, pierce: 2, synergy: 5 }) },
+  { id: 'grape-curse-needle', categoryId: 'venom-curse', title: 'GRAPE CURSE', subtitle: '葡萄呪針。濃い毒影', detail: '属性: 影 / 得意: BOSS、硬い雑魚、毒が効く敵 / 戦い方: 毒を重ね、葡萄必殺で大きく削る。', attributeLabel: '影・濃毒', strongAgainst: 'BOSS、硬い敵、状態異常に弱い敵', strategy: 'シナジーと貫通を伸ばす。長期戦になるほど味が出る。', weakness: '軽い雑魚の大群には処理が遅れることがある。', element: 'shadow', archetype: 'basilisk', imageKey: 'weaponGrapeCurseNeedle', color: 0x8b5cf6, stats: createStarterStats('shadow', 'basilisk', 7, 0.96, ['poison'], { critRate: 0.075, pierce: 2, synergy: 6 }) },
+  { id: 'abyss-needle-launcher', categoryId: 'venom-curse', title: 'ABYSS NEEDLE', subtitle: '深淵針砲。影の削り', detail: '属性: 影 / 得意: 高耐久敵、遠距離BOSS / 戦い方: 影針を当て続け、毒と貫通で体力を削る。', attributeLabel: '影・針砲', strongAgainst: '高耐久敵、遠距離BOSS、遅い敵', strategy: '正面維持で毒針を重ねる。貫通を伸ばすとかなり強い。', weakness: '素早い敵には外しやすい。', element: 'shadow', archetype: 'needle', imageKey: 'weaponAbyssNeedleLauncher', color: 0x6d28d9, stats: createStarterStats('shadow', 'needle', 7, 0.95, ['poison'], { critRate: 0.08, pierce: 2, synergy: 4 }) },
+  { id: 'solar-venom-needle', categoryId: 'venom-curse', title: 'SOLAR VENOM', subtitle: '陽毒針。燃える継続毒', detail: '属性: 火 / 得意: 再生系、硬い敵 / 戦い方: 炎と毒で継続ダメージを重ねる。', attributeLabel: '火・毒', strongAgainst: '再生系、硬い雑魚、長期戦BOSS', strategy: '毒と火力を両立。逃げながら継続ダメージを稼ぐ。', weakness: '一撃で敵を止める力は低め。', element: 'fire', archetype: 'basilisk', imageKey: 'weaponSolarVenomNeedle', color: 0xfb923c, stats: createStarterStats('fire', 'basilisk', 6, 1.0, ['poison'], { critRate: 0.07, pierce: 2, synergy: 4 }) },
+  { id: 'ichigo-pierce-lance', categoryId: 'burst-pierce', title: 'ICHIGO PIERCE', subtitle: '苺穿槍。直線突破', detail: '属性: 火 / 得意: 縦並び、BOSS弾相殺 / 戦い方: 正面を合わせて貫通弾を通し、苺必殺で仕上げる。', attributeLabel: '火・貫通', strongAgainst: '縦並び、BOSS弾、装甲敵', strategy: '敵の列に軸を合わせる。攻撃力と貫通を拾うほど強い。', weakness: '横広がりの敵は苦手。', element: 'fire', archetype: 'lance', imageKey: 'weaponIchigoPierceLance', color: 0xfb7185, stats: createStarterStats('fire', 'lance', 8, 0.94, ['drill'], { critRate: 0.075, pierce: 3, synergy: 3 }) },
+  { id: 'grape-pierce-lance', categoryId: 'burst-pierce', title: 'GRAPE PIERCE', subtitle: '葡萄穿槍。影ドリル', detail: '属性: 影 / 得意: 高耐久BOSS、直線敵 / 戦い方: 影の貫通で削り、葡萄必殺で割る。', attributeLabel: '影・ドリル', strongAgainst: 'BOSS、装甲敵、縦列雑魚', strategy: '貫通と会心を伸ばす。BOSSの正面で相殺しながら攻める。', weakness: '横移動する敵は追いづらい。', element: 'shadow', archetype: 'lance', imageKey: 'weaponGrapePierceLance', color: 0x8b5cf6, stats: createStarterStats('shadow', 'lance', 9, 0.9, ['drill'], { critRate: 0.08, pierce: 3, synergy: 3 }) },
+  { id: 'magma-drill-trident', categoryId: 'burst-pierce', title: 'MAGMA DRILL', subtitle: '溶岩三叉槍。重貫通', detail: '属性: 火 / 得意: 装甲敵、BOSS、直線群れ / 戦い方: 重い貫通で正面を焼き抜く。', attributeLabel: '火・重貫通', strongAgainst: '装甲敵、直線群れ、大型BOSS', strategy: '攻撃力を伸ばして一撃を重くする。正面の取り方が重要。', weakness: '連射は遅め。', element: 'fire', archetype: 'lance', imageKey: 'weaponMagmaDrillTrident', color: 0xef4444, stats: createStarterStats('fire', 'lance', 9, 0.88, ['drill'], { critRate: 0.075, pierce: 3, synergy: 2 }) },
+  { id: 'chrono-needle-spear', categoryId: 'burst-pierce', title: 'CHRONO NEEDLE', subtitle: '時針槍。雷の一点突破', detail: '属性: 雷 / 得意: BOSS、危険弾の相殺 / 戦い方: 雷針で正面を抜き、溜め必殺で大ダメージを狙う。', attributeLabel: '雷・時針', strongAgainst: 'BOSS弾、直線配置、高速BOSS', strategy: '貫通と会心を伸ばす。雷必殺はBOSS出現中に合わせたい。', weakness: '範囲処理は狭い。', element: 'thunder', archetype: 'chrono', imageKey: 'weaponChronoNeedleSpear', color: 0xfef08a, stats: createStarterStats('thunder', 'chrono', 8, 0.94, ['sniper'], { critRate: 0.1, pierce: 3, synergy: 3 }) },
 ];
 
 export function getStarterWeapon(id?: string): StarterWeapon {
   return STARTER_WEAPONS.find((weapon) => weapon.id === id) ?? STARTER_WEAPONS[0];
+}
+
+export function getStarterWeaponsByCategory(categoryId: string): StarterWeapon[] {
+  return STARTER_WEAPONS.filter((weapon) => weapon.categoryId === categoryId);
 }

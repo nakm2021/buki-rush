@@ -28,9 +28,14 @@ export interface PlayerStats {
 
 export interface StarterWeapon {
   id: string;
+  categoryId: string;
   title: string;
   subtitle: string;
   detail: string;
+  attributeLabel: string;
+  strongAgainst: string;
+  strategy: string;
+  weakness: string;
   element: WeaponElement;
   archetype: WeaponArchetype;
   imageKey: string;

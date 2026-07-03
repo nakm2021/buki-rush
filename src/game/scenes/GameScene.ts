@@ -4,7 +4,7 @@ import { Bullet, type BulletShape } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, getBossTheme, getRandomBossAsset, selectWeaponAssetKey, type BossTheme } from '../systems/AssetCatalog';
+import { getBossAssetByLoop, getBossTheme, getRandomBossAsset, type BossTheme } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
@@ -12,7 +12,7 @@ import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBes
 import { BOSS_WARNING_PROFILE, EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
 import { createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
-import { applyWeaponEvolutionBranch, getBuildRank, getEvolutionBranch, getEvolutionBranches, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
+import { getBuildRank, getEvolutionBranch, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
 import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
@@ -165,7 +165,8 @@ export default class GameScene extends Phaser.Scene {
   private evolutionCount = 0;
   private evolutionPath: string[] = [];
   private lockedWeaponSkinKey = 'weaponAnime';
-  private starterWeaponId = 'balance-bow';
+  private lockedWeaponTitle = 'Buki';
+  private starterCategoryId = 'balance-bow';
   private playerStatuses: PlayerStatusState = {
     poisonMs: 0,
     poisonTickMs: 0,
@@ -229,8 +230,9 @@ export default class GameScene extends Phaser.Scene {
     const meta = loadPlayerMeta();
     const starter = getStarterWeapon(starterId);
     this.permanentRank = meta.permanentRank;
-    this.starterWeaponId = starter.id;
+    this.starterCategoryId = starter.categoryId;
     this.lockedWeaponSkinKey = starter.imageKey;
+    this.lockedWeaponTitle = starter.title;
     this.stats = {
       ...starter.stats,
       modules: [...starter.stats.modules],
@@ -814,7 +816,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private getStarterBulletShape(): BulletShape {
-    switch (this.starterWeaponId) {
+    switch (this.starterCategoryId) {
       case 'balance-bow':
         return 'bow';
       case 'slash-speed':
@@ -1723,7 +1725,7 @@ export default class GameScene extends Phaser.Scene {
     this.specialText.setText(this.specialActive ? '必殺発動中' : this.specialCooldown > 0 ? `必殺CT ${Math.ceil(this.specialCooldown / 1000)}s` : `必殺 ${Math.floor(this.specialCharge)}%`);
     this.specialText.setColor(specialReady ? '#fef08a' : this.specialActive ? '#ffffff' : '#bae6fd');
     this.bestText.setText(`BEST ${Math.max(this.bestDistance, Math.floor(this.distance))}m`);
-    this.weaponNameText.setText(getWeaponName(this.stats));
+    this.weaponNameText.setText(this.lockedWeaponTitle);
     const modules = this.stats.modules.length > 0 ? this.stats.modules.map((module) => getModuleProfile(module).label).join(' / ') : 'none';
     this.moduleText.setText(`MOD: ${modules}`);
     this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
@@ -1742,12 +1744,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private getCurrentWeaponSkinKey(): string {
-    const branch = getEvolutionBranch(this.evolutionPath.at(-1));
-    if (branch?.imageKey) {
-      return branch.imageKey;
-    }
-    const evolved = this.evolutionCount > 0 || this.stats.tier >= 3 || this.stats.rarity !== 'common';
-    return evolved ? selectWeaponAssetKey(this.stats) : this.lockedWeaponSkinKey;
+    return this.lockedWeaponSkinKey;
   }
 
   private updateStageMood(primary: number, secondary: number, aura: number): void {
@@ -1814,7 +1811,7 @@ export default class GameScene extends Phaser.Scene {
       return this.findStageThemeIndex('AEGIS SANCTUM');
     }
 
-    switch (this.starterWeaponId) {
+    switch (this.starterCategoryId) {
       case 'balance-bow':
         return this.findStageThemeIndex('ARROW AURORA');
       case 'slash-speed':
@@ -2267,19 +2264,68 @@ export default class GameScene extends Phaser.Scene {
     const previousStats = { ...this.stats, modules: [...this.stats.modules] };
     const previousHp = this.playerHp;
     this.evolutionCount += 1;
-    const branches = getEvolutionBranches(this.stats, this.starterWeaponId);
-    const unseenBranches = branches.filter((candidate) => !this.evolutionPath.includes(candidate.id));
-    const branch = Phaser.Utils.Array.GetRandom(unseenBranches.length > 0 ? unseenBranches : branches);
-    this.evolutionPath.push(branch.id);
-    this.stats = applyWeaponEvolutionBranch(this.stats, branch, this.evolutionCount);
+    const masteryModule = this.getFixedWeaponMasteryModule();
+    const modules = masteryModule && !this.stats.modules.includes(masteryModule)
+      ? [...this.stats.modules, masteryModule]
+      : [...this.stats.modules];
+    const rarity = this.evolutionCount >= 6 ? 'mythic' : this.evolutionCount >= 4 ? 'legend' : this.evolutionCount >= 2 ? 'epic' : 'rare';
+    this.stats = {
+      ...this.stats,
+      modules,
+      rarity,
+      level: this.stats.level + 2,
+      tier: this.stats.tier + 1,
+      power: this.stats.power + 4 + Math.ceil(this.evolutionCount * 0.7),
+      fireRate: Math.max(0.78, this.stats.fireRate + this.getFixedWeaponFireBonus()),
+      critRate: Math.min(0.62, this.stats.critRate + 0.025 + (this.starterCategoryId === 'slash-speed' ? 0.01 : 0)),
+      pierce: this.stats.pierce + (this.starterCategoryId === 'burst-pierce' || this.starterCategoryId === 'cannon-barrage' ? 1 : 0),
+      shield: this.stats.shield + (this.starterCategoryId === 'guard-aegis' ? 2 : 0),
+      synergy: this.stats.synergy + 2 + (masteryModule ? 1 : 0),
+    };
     this.playerHp += 1;
     const color = getWeaponColors(this.stats).aura;
-    this.showFlash(branch.title, '#fef3c7', this.player.x, this.player.y - 132);
+    this.showFlash(`${this.lockedWeaponTitle} +${this.evolutionCount}`, '#fef3c7', this.player.x, this.player.y - 132);
     this.specialCharge = clamp(this.specialCharge + 28, 0, 100);
-    this.showStatGainFeedback(previousStats, previousHp, { label: 'BUKI EVOLVE', kind: 'fusion', value: 1, color, good: true });
-    this.showEvolutionCutIn(branch.title, branch.subtitle, color);
-    this.showRareEvolution(color, branch.title);
+    this.showStatGainFeedback(previousStats, previousHp, { label: 'BUKI MASTERY', kind: 'fusion', value: 1, color, good: true });
+    this.showEvolutionCutIn(this.lockedWeaponTitle, '選んだブキを固定したまま熟練強化', color);
+    this.showRareEvolution(color, this.lockedWeaponTitle);
     this.playRareSound();
+  }
+
+  private getFixedWeaponMasteryModule(): string | undefined {
+    switch (this.starterCategoryId) {
+      case 'balance-bow':
+        return 'homing';
+      case 'slash-speed':
+        return 'bladebit';
+      case 'cannon-barrage':
+        return 'burst';
+      case 'guard-aegis':
+        return 'aegis';
+      case 'venom-curse':
+        return 'poison';
+      case 'burst-pierce':
+        return 'drill';
+      default:
+        return undefined;
+    }
+  }
+
+  private getFixedWeaponFireBonus(): number {
+    switch (this.starterCategoryId) {
+      case 'slash-speed':
+        return 0.18;
+      case 'balance-bow':
+      case 'venom-curse':
+        return 0.1;
+      case 'guard-aegis':
+        return 0.06;
+      case 'cannon-barrage':
+      case 'burst-pierce':
+        return 0.04;
+      default:
+        return 0.08;
+    }
   }
 
   private triggerBossWarning(): void {
@@ -2533,7 +2579,7 @@ export default class GameScene extends Phaser.Scene {
   private getChargeBurstSpecialTheme(): ChargeBurstTheme | undefined {
     const branch = getEvolutionBranch(this.evolutionPath.at(-1));
     const skinKey = this.getCurrentWeaponSkinKey();
-    const signature = `${skinKey} ${branch?.id ?? ''} ${branch?.title ?? ''} ${getWeaponName(this.stats)}`.toLowerCase();
+    const signature = `${skinKey} ${this.lockedWeaponTitle} ${branch?.id ?? ''} ${branch?.title ?? ''} ${getWeaponName(this.stats)}`.toLowerCase();
     if (signature.includes('grape') || signature.includes('vineyard')) return 'grape';
     if (signature.includes('ichigo') || signature.includes('strawberry')) return 'strawberry';
     if (this.stats.element === 'thunder' || ['rail', 'tempest', 'levin', 'chrono'].includes(this.stats.archetype) || signature.includes('thunder') || signature.includes('storm') || signature.includes('volt') || signature.includes('tesla')) {
@@ -2550,6 +2596,12 @@ export default class GameScene extends Phaser.Scene {
       return { primary: 0xfb7185, secondary: 0x22c55e, aura: 0xfef3c7, text: 'STRAWBERRY CRITICAL', status: 'burn' };
     }
     return { primary: 0x8b5cf6, secondary: 0x86efac, aura: 0xf0abfc, text: 'GRAPE CRITICAL', status: 'poison' };
+  }
+
+  private getChargeBurstLabel(theme: ChargeBurstTheme): string {
+    if (theme === 'thunder') return '雷鳴一閃';
+    if (theme === 'strawberry') return '苺芯撃';
+    return '葡萄裂星';
   }
 
   private emitChargeBurstCharge(theme: ChargeBurstTheme): void {
@@ -2582,34 +2634,8 @@ export default class GameScene extends Phaser.Scene {
     const enemyDamage = Math.round(baseDamage * (4.6 + chargeRatio * 2.1 + variant * 0.9));
     const bossDamage = Math.round(baseDamage * (3.2 + chargeRatio * 1.35 + variant * 0.72));
     const impactY = this.player.y - 260;
-    const { width, height } = this.scale;
 
-    const flash = this.add.rectangle(width / 2, height / 2, width, height, palette.aura, 0.34).setDepth(28).setBlendMode(Phaser.BlendModes.ADD);
-    const beamWidth = theme === 'strawberry' ? 72 : theme === 'grape' ? 92 : 58;
-    const beam = this.add.rectangle(this.player.x, impactY, beamWidth, height * 0.82, palette.primary, 0.7).setDepth(29).setBlendMode(Phaser.BlendModes.ADD);
-    const core = this.add.circle(this.player.x, impactY, 34 + variant * 8, palette.secondary, 0.32).setStrokeStyle(8, palette.aura, 0.9).setDepth(30);
-    core.setBlendMode(Phaser.BlendModes.ADD);
-    this.tweens.add({ targets: flash, alpha: 0, duration: 420, onComplete: () => flash.destroy() });
-    this.tweens.add({ targets: beam, scaleX: 4.2 + chargeRatio, alpha: 0, duration: 520, ease: 'Cubic.easeOut', onComplete: () => beam.destroy() });
-    this.tweens.add({ targets: core, scale: 8.5 + chargeRatio * 1.6, alpha: 0, duration: 620, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
-
-    const rayCount = 18 + variant * 6;
-    for (let i = 0; i < rayCount; i++) {
-      const angle = (Math.PI * 2 * i) / rayCount;
-      const ray = this.add.rectangle(this.player.x, impactY, 5 + (i % 3), 190 + chargeRatio * 60, i % 2 === 0 ? palette.secondary : palette.aura, 0.54).setDepth(30);
-      ray.setBlendMode(Phaser.BlendModes.ADD);
-      ray.setRotation(angle);
-      this.tweens.add({
-        targets: ray,
-        x: this.player.x + Math.cos(angle) * (90 + chargeRatio * 65),
-        y: impactY + Math.sin(angle) * (70 + chargeRatio * 52),
-        alpha: 0,
-        scaleX: 2.8,
-        duration: 460 + (i % 4) * 40,
-        ease: 'Quad.easeOut',
-        onComplete: () => ray.destroy(),
-      });
-    }
+    this.spawnChargeBurstFinisher(theme, palette, impactY, chargeRatio, variant);
 
     this.enemies.getChildren().forEach((enemy) => {
       const enemyObject = enemy as Enemy;
@@ -2640,8 +2666,166 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.showFlash(palette.text, '#ffffff', this.player.x, this.player.y - 150);
-    this.cameras.main.shake(620, 0.009);
+    this.cameras.main.shake(720, 0.011);
     this.playTone(theme === 'thunder' ? 1280 : theme === 'grape' ? 720 : 900, 0.16, 0.05);
+  }
+
+  private spawnChargeBurstFinisher(
+    theme: ChargeBurstTheme,
+    palette: ReturnType<typeof this.getChargeBurstPalette>,
+    impactY: number,
+    chargeRatio: number,
+    variant: SpecialVariant,
+  ): void {
+    const { width, height } = this.scale;
+    const focusX = clamp(this.boss?.x ?? this.player.x, 78, 322);
+    const tunnel = this.add.circle(focusX, impactY, 42, palette.primary, 0).setStrokeStyle(12, palette.aura, 0.64).setDepth(29);
+    tunnel.setScale(1.15, 0.52).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: tunnel, scaleX: 8 + chargeRatio * 1.4, scaleY: 3.1 + chargeRatio * 0.55, alpha: 0, duration: 680, ease: 'Cubic.easeOut', onComplete: () => tunnel.destroy() });
+
+    const shock = this.add.circle(focusX, impactY, 16, palette.secondary, 0.18).setStrokeStyle(6, palette.primary, 0.86).setDepth(31);
+    shock.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: shock, scale: 12 + chargeRatio * 2.4, alpha: 0, duration: 620, ease: 'Cubic.easeOut', onComplete: () => shock.destroy() });
+
+    const label = this.add.text(focusX, Math.max(120, impactY - 88), this.getChargeBurstLabel(theme), {
+      fontSize: '31px',
+      color: '#ffffff',
+      fontFamily: 'Arial, sans-serif',
+      fontStyle: 'bold',
+      stroke: '#020617',
+      strokeThickness: 7,
+    }).setOrigin(0.5).setDepth(36);
+    this.tweens.add({ targets: label, y: label.y - 18, scale: 1.12, alpha: 0, duration: 900, delay: 170, ease: 'Cubic.easeOut', onComplete: () => label.destroy() });
+
+    const laneCount = 12 + variant * 4;
+    for (let i = 0; i < laneCount; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const lane = this.add.rectangle(focusX + side * (32 + i * 9), height + 40, 5 + (i % 3), height * 0.9, i % 2 === 0 ? palette.secondary : palette.aura, 0.34).setDepth(28);
+      lane.setAngle(side * (14 + (i % 4) * 4)).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: lane,
+        y: impactY - 140 - i * 6,
+        x: focusX + side * (210 + i * 12),
+        scaleX: 2 + chargeRatio * 0.4,
+        alpha: 0,
+        duration: 520 + (i % 5) * 36,
+        ease: 'Cubic.easeOut',
+        onComplete: () => lane.destroy(),
+      });
+    }
+
+    if (theme === 'thunder') {
+      this.spawnThunderFinisher(focusX, impactY, palette, chargeRatio, variant);
+    } else if (theme === 'strawberry') {
+      this.spawnStrawberryFinisher(focusX, impactY, palette, chargeRatio, variant);
+    } else {
+      this.spawnGrapeFinisher(focusX, impactY, palette, chargeRatio, variant);
+    }
+
+    const cut = this.add.rectangle(focusX, impactY + 8, width * 0.76, 9, 0xffffff, 0.52).setDepth(35);
+    cut.setAngle(-10 + variant * 10).setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: cut, scaleX: 1.35, scaleY: 3.2, alpha: 0, duration: 260, ease: 'Quad.easeOut', onComplete: () => cut.destroy() });
+  }
+
+  private spawnThunderFinisher(x: number, y: number, palette: ReturnType<typeof this.getChargeBurstPalette>, chargeRatio: number, variant: SpecialVariant): void {
+    const spear = this.add.triangle(x, -120, 0, -70, 26, 70, -26, 70, palette.primary, 0.94).setDepth(34);
+    const core = this.add.rectangle(x, -90, 18, 230, palette.aura, 0.78).setDepth(33);
+    spear.setBlendMode(Phaser.BlendModes.ADD);
+    core.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: [spear, core], y, scaleX: 4.2 + chargeRatio, scaleY: 3.4 + chargeRatio * 0.7, alpha: 0, duration: 520, ease: 'Expo.easeIn', onComplete: () => { spear.destroy(); core.destroy(); } });
+    for (let i = 0; i < 9 + variant * 3; i++) {
+      const bolt = this.add.line(0, 0, x + Phaser.Math.Between(-130, 130), y - Phaser.Math.Between(130, 260), x + Phaser.Math.Between(-80, 80), y + Phaser.Math.Between(-30, 90), i % 2 === 0 ? palette.primary : palette.secondary, 0.76).setDepth(35);
+      bolt.setLineWidth(4 + (i % 3)).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: bolt, alpha: 0, duration: 180 + i * 22, onComplete: () => bolt.destroy() });
+    }
+  }
+
+  private spawnStrawberryFinisher(x: number, y: number, palette: ReturnType<typeof this.getChargeBurstPalette>, chargeRatio: number, variant: SpecialVariant): void {
+    const berry = this.add.container(x, y - 260).setDepth(36);
+    const body = this.add.ellipse(0, 42, 88, 118, palette.primary, 0.94);
+    const tip = this.add.triangle(0, 126, -34, -12, 34, -12, 0, 44, palette.primary, 0.94);
+    const leftGlow = this.add.ellipse(-24, 18, 22, 54, 0xffffff, 0.24).setAngle(20);
+    const leafA = this.add.triangle(-28, -24, 0, 22, 48, 8, 12, -30, palette.secondary, 0.86).setAngle(-18);
+    const leafB = this.add.triangle(0, -34, -34, 24, 34, 24, 0, -38, palette.secondary, 0.9);
+    const leafC = this.add.triangle(28, -24, -48, 8, 0, 22, -12, -30, palette.secondary, 0.86).setAngle(18);
+    berry.add([body, tip, leftGlow, leafA, leafB, leafC]);
+    berry.setScale(0.28).setAngle(-8 + variant * 8);
+    berry.setBlendMode(Phaser.BlendModes.ADD);
+
+    const shadow = this.add.ellipse(x, y + 58, 74, 18, 0x020617, 0.28).setDepth(29);
+    this.tweens.add({ targets: shadow, scaleX: 4.2 + chargeRatio, scaleY: 2.4, alpha: 0, duration: 620, ease: 'Cubic.easeOut', onComplete: () => shadow.destroy() });
+    this.tweens.add({
+      targets: berry,
+      y: y - 8,
+      scale: 3.2 + chargeRatio * 0.78,
+      angle: berry.angle + 18,
+      duration: 460,
+      ease: 'Expo.easeIn',
+      onComplete: () => {
+        this.tweens.add({ targets: berry, y: y + 18, scale: 4.7 + chargeRatio, alpha: 0, duration: 260, ease: 'Back.easeOut', onComplete: () => berry.destroy() });
+      },
+    });
+
+    const impactRing = this.add.ellipse(x, y + 38, 48, 18, palette.primary, 0).setStrokeStyle(9, palette.aura, 0.84).setDepth(35);
+    impactRing.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: impactRing, scaleX: 7.8 + chargeRatio * 1.6, scaleY: 4.4 + chargeRatio, alpha: 0, duration: 560, delay: 330, ease: 'Cubic.easeOut', onComplete: () => impactRing.destroy() });
+
+    const seedCount = 24 + variant * 8;
+    for (let i = 0; i < seedCount; i++) {
+      const angle = (Math.PI * 2 * i) / seedCount;
+      const seed = this.add.ellipse(x, y + 12, 8, 14, i % 3 === 0 ? palette.aura : 0xfef3c7, 0.78).setDepth(37);
+      seed.setAngle(Phaser.Math.RadToDeg(angle) + 90).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: seed,
+        x: x + Math.cos(angle) * (190 + chargeRatio * 58 + (i % 4) * 12),
+        y: y + Math.sin(angle) * (128 + chargeRatio * 42 + (i % 5) * 10),
+        scale: 2.4 + (i % 3) * 0.4,
+        alpha: 0,
+        duration: 480 + (i % 6) * 42,
+        delay: 260,
+        ease: 'Cubic.easeOut',
+        onComplete: () => seed.destroy(),
+      });
+    }
+
+    for (let i = 0; i < 10 + variant * 3; i++) {
+      const side = i % 2 === 0 ? -1 : 1;
+      const crack = this.add.rectangle(x + side * (18 + i * 9), y + 44 + (i % 3) * 10, 6, 170 + chargeRatio * 40, i % 2 === 0 ? palette.primary : palette.secondary, 0.52).setDepth(34);
+      crack.setAngle(side * (72 - (i % 4) * 10)).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: crack,
+        x: x + side * (150 + i * 18),
+        scaleX: 3.4,
+        alpha: 0,
+        duration: 430 + i * 24,
+        delay: 270,
+        ease: 'Quad.easeOut',
+        onComplete: () => crack.destroy(),
+      });
+    }
+
+    for (let i = 0; i < 9 + variant * 3; i++) {
+      const leaf = this.add.triangle(x, y - 24, 0, -24, 18, 18, -18, 18, palette.secondary, 0.74).setDepth(36);
+      const angle = -Math.PI * 0.85 + (Math.PI * 1.7 * i) / Math.max(1, 8 + variant * 3);
+      leaf.setAngle(Phaser.Math.RadToDeg(angle) + 90).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: leaf, x: x + Math.cos(angle) * (160 + chargeRatio * 42), y: y + Math.sin(angle) * (96 + chargeRatio * 30), scale: 2.9, alpha: 0, duration: 600 + (i % 4) * 50, delay: 210, ease: 'Back.easeOut', onComplete: () => leaf.destroy() });
+    }
+  }
+
+  private spawnGrapeFinisher(x: number, y: number, palette: ReturnType<typeof this.getChargeBurstPalette>, chargeRatio: number, variant: SpecialVariant): void {
+    const orbCount = 7 + variant * 2;
+    for (let i = 0; i < orbCount; i++) {
+      const row = Math.floor(i / 3);
+      const col = i % 3;
+      const orb = this.add.circle(x + (col - 1) * 24, y - 86 + row * 28, 14 + (i % 2) * 3, i % 2 === 0 ? palette.primary : palette.aura, 0.82).setDepth(34);
+      orb.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: orb, x: x + (col - 1) * (86 + chargeRatio * 22), y: y + row * 14, scale: 5.8 + chargeRatio, alpha: 0, duration: 560 + i * 22, ease: 'Back.easeOut', onComplete: () => orb.destroy() });
+    }
+    for (let i = 0; i < 8 + variant * 3; i++) {
+      const vine = this.add.rectangle(x + Phaser.Math.Between(-90, 90), y + Phaser.Math.Between(-120, 80), 7, 190 + chargeRatio * 38, i % 2 === 0 ? palette.secondary : palette.primary, 0.48).setDepth(33);
+      vine.setAngle(Phaser.Math.Between(-54, 54)).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: vine, scaleX: 3.2, alpha: 0, angle: vine.angle + Phaser.Math.Between(-80, 80), duration: 460 + i * 28, ease: 'Sine.easeOut', onComplete: () => vine.destroy() });
+    }
   }
 
   private getSpecialDrainInterval(): number {
@@ -2671,7 +2855,7 @@ export default class GameScene extends Phaser.Scene {
       strokeThickness: 8,
     }).setOrigin(0.5).setDepth(37);
     const specialNames = ['BURST', 'RAMPAGE', 'CATASTROPHE'];
-    const subtitle = this.add.text(width / 2, height * 0.42, `${getWeaponName(this.stats)} / ${specialNames[variant]}`, {
+    const subtitle = this.add.text(width / 2, height * 0.42, `${this.lockedWeaponTitle} / ${specialNames[variant]}`, {
       fontSize: '13px',
       color: '#fef3c7',
       fontStyle: 'bold',
@@ -3225,7 +3409,7 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#020617',
         strokeThickness: 5,
       }).setOrigin(0.5);
-      const build = this.add.text(200, 360, `${getWeaponName(this.stats)}\nBUILD ${getBuildRank(this.stats)} / EVOLVE ${this.evolutionCount} / MEDAL ${this.medalCount}`, {
+      const build = this.add.text(200, 360, `${this.lockedWeaponTitle}\nBUILD ${getBuildRank(this.stats)} / MASTERY ${this.evolutionCount} / MEDAL ${this.medalCount}`, {
         fontSize: '12px',
         color: '#fef3c7',
         align: 'center',
@@ -3378,7 +3562,7 @@ export default class GameScene extends Phaser.Scene {
     this.physics.world.timeScale = 1;
     this.physics.pause();
     const bestDistance = saveBestDistance(this.distance);
-    const finalWeaponName = getWeaponName(this.stats);
+    const finalWeaponName = this.lockedWeaponTitle;
     const leaderboardResult = recordLeaderboard(this.distance, finalWeaponName);
     const meta = recordRun({
       distance: this.distance,
