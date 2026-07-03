@@ -18,6 +18,7 @@ import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
 type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'frost' | 'nova' | 'blade';
 type SpecialVariant = 0 | 1 | 2;
+type ChargeBurstTheme = 'thunder' | 'strawberry' | 'grape';
 
 interface PlayerStatusState {
   poisonMs: number;
@@ -51,6 +52,17 @@ const STAGE_THEMES: StageTheme[] = [
   { name: 'TOXIC GARDEN', sky: 0x17210b, ground: 0x0f1f0c, trackOuter: 0x365314, trackMid: 0x65a30d, trackInner: 0xecfccb, lane: 0xd9f99d, accent: 0x84cc16 },
   { name: 'FROST FORGE', sky: 0x082f49, ground: 0x0c1f2e, trackOuter: 0x075985, trackMid: 0x7dd3fc, trackInner: 0xf0f9ff, lane: 0xe0f2fe, accent: 0x38bdf8 },
   { name: 'VOID FIELD', sky: 0x09051a, ground: 0x120a24, trackOuter: 0x312e81, trackMid: 0x6d28d9, trackInner: 0xe9d5ff, lane: 0xf0abfc, accent: 0xa855f7 },
+  { name: 'VINEYARD STORM', sky: 0x16051e, ground: 0x1f1029, trackOuter: 0x4c1d95, trackMid: 0x6d28d9, trackInner: 0xd8b4fe, lane: 0x86efac, accent: 0xa855f7 },
+  { name: 'ARROW AURORA', sky: 0x06241f, ground: 0x0d1f22, trackOuter: 0x0f766e, trackMid: 0x38bdf8, trackInner: 0xfef3c7, lane: 0x99f6e4, accent: 0xfacc15 },
+  { name: 'SABER NIGHT', sky: 0x1f0712, ground: 0x170914, trackOuter: 0x7f1d1d, trackMid: 0xbe123c, trackInner: 0xffedd5, lane: 0xfca5a5, accent: 0xfb7185 },
+  { name: 'ROCKET FOUNDRY', sky: 0x1c0a05, ground: 0x23110a, trackOuter: 0x7c2d12, trackMid: 0xea580c, trackInner: 0xfef3c7, lane: 0xfacc15, accent: 0xfb923c },
+  { name: 'AEGIS SANCTUM', sky: 0x082f49, ground: 0x0f172a, trackOuter: 0x155e75, trackMid: 0x22d3ee, trackInner: 0xf0f9ff, lane: 0xbae6fd, accent: 0x7dd3fc },
+  { name: 'PIERCE CANYON', sky: 0x111827, ground: 0x1f2937, trackOuter: 0x334155, trackMid: 0x06b6d4, trackInner: 0xe0f2fe, lane: 0x67e8f9, accent: 0x99f6e4 },
+  { name: 'BOSS INFERNO', sky: 0x180812, ground: 0x21070d, trackOuter: 0x7f1d1d, trackMid: 0xef4444, trackInner: 0xffedd5, lane: 0xfef3c7, accent: 0xfb923c },
+  { name: 'BOSS ABYSS', sky: 0x020617, ground: 0x09051a, trackOuter: 0x312e81, trackMid: 0x7e22ce, trackInner: 0xe9d5ff, lane: 0xf0abfc, accent: 0x8b5cf6 },
+  { name: 'BOSS TIDE', sky: 0x082f49, ground: 0x061625, trackOuter: 0x075985, trackMid: 0x0ea5e9, trackInner: 0xe0f2fe, lane: 0xbae6fd, accent: 0x38bdf8 },
+  { name: 'BOSS CLOCK', sky: 0x111827, ground: 0x1c1917, trackOuter: 0x92400e, trackMid: 0xb45309, trackInner: 0xfef3c7, lane: 0xfde68a, accent: 0xfacc15 },
+  { name: 'BOSS VINEYARD', sky: 0x16051e, ground: 0x1f1029, trackOuter: 0x581c87, trackMid: 0x7e22ce, trackInner: 0xf0abfc, lane: 0x86efac, accent: 0xc084fc },
 ];
 
 export default class GameScene extends Phaser.Scene {
@@ -137,6 +149,9 @@ export default class GameScene extends Phaser.Scene {
   private specialVariant: SpecialVariant = 0;
   private specialCharge = 0;
   private specialCooldown = 0;
+  private chargeBurstTheme?: ChargeBurstTheme;
+  private chargeBurstPower = 0;
+  private chargeBurstPulseTimer = 0;
   private bossAttackTimer = 0;
   private bossSpecialTimer = 0;
   private bossPatternIndex = 0;
@@ -255,6 +270,9 @@ export default class GameScene extends Phaser.Scene {
     this.specialVariant = 0;
     this.specialCharge = 12;
     this.specialCooldown = 0;
+    this.chargeBurstTheme = undefined;
+    this.chargeBurstPower = 0;
+    this.chargeBurstPulseTimer = 0;
     this.bossAttackTimer = 0;
     this.bossSpecialTimer = 0;
     this.bossPatternIndex = 0;
@@ -1111,6 +1129,20 @@ export default class GameScene extends Phaser.Scene {
       this.bossPatternIndex += 1;
       return;
     }
+    if (key.includes('GrapeThunder')) {
+      this.spawnBossFanShot(theme);
+      this.time.delayedCall(160, () => this.spawnBossSpiral(theme, 10 + this.bossPhase * 4));
+      if (this.bossPhase >= 2) this.time.delayedCall(360, () => this.spawnBossAimedShot(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
+    if (key.includes('Vineyard') || key.includes('Queen')) {
+      this.spawnBossOrbitMines(theme);
+      this.time.delayedCall(180, () => this.spawnBossWaveWall(theme));
+      if (this.bossPhase >= 2) this.time.delayedCall(380, () => this.spawnBossSnipeWeb(theme));
+      this.bossPatternIndex += 1;
+      return;
+    }
     if (key.includes('Leviathan') || key.includes('Frost')) {
       this.spawnBossFanShot(theme);
       this.time.delayedCall(210, () => this.spawnBossWaveWall(theme));
@@ -1524,6 +1556,19 @@ export default class GameScene extends Phaser.Scene {
         this.time.delayedCall(360, () => this.spawnBossWaveWall(theme));
         return;
       }
+      if (key.includes('GrapeThunder')) {
+        this.spawnBossSpiral(theme, 26 + this.bossPhase * 5);
+        this.time.delayedCall(220, () => this.spawnBossHydraBarrage(theme));
+        this.time.delayedCall(420, () => this.spawnBossFanShot(theme));
+        return;
+      }
+      if (key.includes('Vineyard') || key.includes('Queen')) {
+        this.spawnBossOrbitMines(theme);
+        this.spawnBossWaveWall(theme);
+        this.time.delayedCall(260, () => this.spawnBossSnipeWeb(theme));
+        this.time.delayedCall(520, () => this.spawnBossBulletRain(theme, 16 + this.bossPhase * 5, 42));
+        return;
+      }
       if (key.includes('Frost') || key.includes('Titan')) {
         this.spawnBossWaveWall(theme);
         this.spawnBossLaneStrike(theme, true);
@@ -1722,7 +1767,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateStageBackground(): void {
-    const nextIndex = Math.floor(this.distance / 360) % STAGE_THEMES.length;
+    const nextIndex = this.resolveStageThemeIndex();
     const theme = STAGE_THEMES[nextIndex];
     if (nextIndex !== this.stageThemeIndex) {
       this.stageThemeIndex = nextIndex;
@@ -1743,6 +1788,63 @@ export default class GameScene extends Phaser.Scene {
         marker.y = -50;
       }
     });
+  }
+
+  private resolveStageThemeIndex(): number {
+    if (this.currentBossTheme) {
+      return this.getBossStageThemeIndex(this.currentBossTheme.key);
+    }
+    return this.getWeaponStageThemeIndex();
+  }
+
+  private getWeaponStageThemeIndex(): number {
+    const branch = getEvolutionBranch(this.evolutionPath.at(-1));
+    const skinKey = this.getCurrentWeaponSkinKey();
+    const signature = `${skinKey} ${branch?.id ?? ''} ${branch?.title ?? ''}`.toLowerCase();
+    if (signature.includes('grape')) return this.findStageThemeIndex('VINEYARD STORM');
+    if (signature.includes('ichigo')) return this.findStageThemeIndex('STRAWBERRY DAWN');
+    if (this.stats.element === 'thunder' || ['rail', 'tempest', 'levin', 'chrono'].includes(this.stats.archetype) || signature.includes('thunder') || signature.includes('storm')) {
+      return this.findStageThemeIndex('NEON CIRCUIT');
+    }
+    if (this.stats.element === 'shadow' || ['basilisk', 'needle', 'phantom', 'onyx', 'chimera'].includes(this.stats.archetype)) {
+      return this.findStageThemeIndex('VOID FIELD');
+    }
+    if (this.stats.element === 'ice') return this.findStageThemeIndex('FROST FORGE');
+    if (this.stats.element === 'crystal' || ['lotus', 'rune', 'seraph', 'oracle'].includes(this.stats.archetype)) {
+      return this.findStageThemeIndex('AEGIS SANCTUM');
+    }
+
+    switch (this.starterWeaponId) {
+      case 'balance-bow':
+        return this.findStageThemeIndex('ARROW AURORA');
+      case 'slash-speed':
+        return this.findStageThemeIndex('SABER NIGHT');
+      case 'cannon-barrage':
+        return this.findStageThemeIndex('ROCKET FOUNDRY');
+      case 'guard-aegis':
+        return this.findStageThemeIndex('AEGIS SANCTUM');
+      case 'venom-curse':
+        return this.findStageThemeIndex('TOXIC GARDEN');
+      case 'burst-pierce':
+        return this.findStageThemeIndex('PIERCE CANYON');
+      default:
+        return this.findStageThemeIndex('NEON CIRCUIT');
+    }
+  }
+
+  private getBossStageThemeIndex(key: string): number {
+    if (key.includes('Grape') || key.includes('Vineyard') || key.includes('Queen')) return this.findStageThemeIndex('BOSS VINEYARD');
+    if (key.includes('Leviathan') || key.includes('Hydra') || key.includes('Kraken') || key.includes('Aqua')) return this.findStageThemeIndex('BOSS TIDE');
+    if (key.includes('Clock') || key.includes('Chrono') || key.includes('Spider') || key.includes('Arachne')) return this.findStageThemeIndex('BOSS CLOCK');
+    if (key.includes('Void') || key.includes('Abyss') || key.includes('Demon') || key.includes('Lunar') || key.includes('Cathedral')) return this.findStageThemeIndex('BOSS ABYSS');
+    if (key.includes('Frost')) return this.findStageThemeIndex('FROST FORGE');
+    if (key.includes('Dragon') || key.includes('Phoenix') || key.includes('Cerberus') || key.includes('Tyrant')) return this.findStageThemeIndex('BOSS INFERNO');
+    return this.findStageThemeIndex('BOSS ABYSS');
+  }
+
+  private findStageThemeIndex(name: string): number {
+    const index = STAGE_THEMES.findIndex((theme) => theme.name === name);
+    return index >= 0 ? index : 0;
   }
 
   private updateBossBackdrop(delta: number): void {
@@ -2367,7 +2469,13 @@ export default class GameScene extends Phaser.Scene {
     this.specialTimer = 2600 + Math.min(1100, this.stats.synergy * 42 + this.stats.level * 18);
     this.specialDrainTimer = this.getSpecialDrainInterval() * 0.42;
     this.specialPulseTimer = 0;
+    this.chargeBurstTheme = this.getChargeBurstSpecialTheme();
+    this.chargeBurstPower = 0;
+    this.chargeBurstPulseTimer = 0;
     this.showSpecialOpening(colors.primary, colors.secondary, colors.aura, this.specialVariant);
+    if (this.chargeBurstTheme) {
+      this.showFlash('ためろ...', '#fef3c7', this.player.x, this.player.y - 132);
+    }
     this.playRareSound();
     this.cameras.main.shake(420, 0.006);
   }
@@ -2380,6 +2488,15 @@ export default class GameScene extends Phaser.Scene {
     this.specialTimer -= delta;
     this.specialDrainTimer += delta;
     this.specialPulseTimer += delta;
+    this.chargeBurstPulseTimer += delta;
+    if (this.chargeBurstTheme) {
+      const chargeRate = 0.018 + Math.min(0.03, this.stats.power * 0.0009 + this.stats.synergy * 0.0012 + this.stats.level * 0.00045);
+      this.chargeBurstPower += delta * chargeRate;
+      if (this.chargeBurstPulseTimer >= 150) {
+        this.chargeBurstPulseTimer = 0;
+        this.emitChargeBurstCharge(this.chargeBurstTheme);
+      }
+    }
 
     const drainInterval = this.getSpecialDrainInterval();
     if (this.specialDrainTimer >= drainInterval) {
@@ -2396,13 +2513,135 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.specialPulseTimer >= 125) {
       this.specialPulseTimer = 0;
-      this.emitSpecialPulse();
+      if (!this.chargeBurstTheme) {
+        this.emitSpecialPulse();
+      }
     }
 
     if (this.specialTimer <= 0) {
+      if (this.chargeBurstTheme) {
+        this.releaseChargeBurstSpecial(this.chargeBurstTheme);
+      }
       this.specialActive = false;
+      this.chargeBurstTheme = undefined;
+      this.chargeBurstPower = 0;
+      this.chargeBurstPulseTimer = 0;
       this.showFlash('必殺終了', '#e0f2fe', this.player.x, this.player.y - 104);
     }
+  }
+
+  private getChargeBurstSpecialTheme(): ChargeBurstTheme | undefined {
+    const branch = getEvolutionBranch(this.evolutionPath.at(-1));
+    const skinKey = this.getCurrentWeaponSkinKey();
+    const signature = `${skinKey} ${branch?.id ?? ''} ${branch?.title ?? ''} ${getWeaponName(this.stats)}`.toLowerCase();
+    if (signature.includes('grape') || signature.includes('vineyard')) return 'grape';
+    if (signature.includes('ichigo') || signature.includes('strawberry')) return 'strawberry';
+    if (this.stats.element === 'thunder' || ['rail', 'tempest', 'levin', 'chrono'].includes(this.stats.archetype) || signature.includes('thunder') || signature.includes('storm') || signature.includes('volt') || signature.includes('tesla')) {
+      return 'thunder';
+    }
+    return undefined;
+  }
+
+  private getChargeBurstPalette(theme: ChargeBurstTheme): { primary: number; secondary: number; aura: number; text: string; status: StatusEffect } {
+    if (theme === 'thunder') {
+      return { primary: 0xfef08a, secondary: 0x38bdf8, aura: 0xfacc15, text: 'THUNDER CRITICAL', status: 'paralyze' };
+    }
+    if (theme === 'strawberry') {
+      return { primary: 0xfb7185, secondary: 0x22c55e, aura: 0xfef3c7, text: 'STRAWBERRY CRITICAL', status: 'burn' };
+    }
+    return { primary: 0x8b5cf6, secondary: 0x86efac, aura: 0xf0abfc, text: 'GRAPE CRITICAL', status: 'poison' };
+  }
+
+  private emitChargeBurstCharge(theme: ChargeBurstTheme): void {
+    const palette = this.getChargeBurstPalette(theme);
+    const charge = clamp(this.chargeBurstPower / 125, 0.16, 1.4);
+    const ring = this.add.circle(this.player.x, this.player.y - 42, 22 + charge * 24, palette.primary, 0).setStrokeStyle(3 + charge * 2, palette.aura, 0.52).setDepth(16);
+    const core = this.add.circle(this.player.x, this.player.y - 42, 6 + charge * 5, palette.secondary, 0.32).setDepth(17).setBlendMode(Phaser.BlendModes.ADD);
+    ring.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: ring, scale: 1.8 + charge * 0.8, alpha: 0, duration: 260, ease: 'Sine.easeOut', onComplete: () => ring.destroy() });
+    this.tweens.add({ targets: core, scale: 2.2 + charge, alpha: 0, duration: 220, ease: 'Quad.easeOut', onComplete: () => core.destroy() });
+    if (theme === 'thunder') {
+      const bolt = this.add.line(0, 0, this.player.x + Phaser.Math.Between(-60, 60), this.player.y - 190, this.player.x + Phaser.Math.Between(-18, 18), this.player.y - 34, palette.primary, 0.62).setDepth(16);
+      bolt.setLineWidth(2 + charge * 2).setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: bolt, alpha: 0, duration: 150, onComplete: () => bolt.destroy() });
+    } else {
+      const petal = this.add.triangle(this.player.x + Phaser.Math.Between(-28, 28), this.player.y - 78, 0, -10, 8, 10, -8, 10, theme === 'grape' ? palette.aura : palette.primary, 0.58).setDepth(16);
+      petal.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({ targets: petal, y: petal.y - 66, angle: Phaser.Math.Between(-120, 120), alpha: 0, scale: 2, duration: 420, ease: 'Sine.easeOut', onComplete: () => petal.destroy() });
+    }
+    if (this.chargeBurstPower > 80 && Math.random() < 0.32) {
+      this.playTone(theme === 'thunder' ? 720 : theme === 'grape' ? 520 : 620, 0.025, 0.018);
+    }
+  }
+
+  private releaseChargeBurstSpecial(theme: ChargeBurstTheme): void {
+    const palette = this.getChargeBurstPalette(theme);
+    const variant = this.specialVariant;
+    const chargeRatio = clamp(this.chargeBurstPower / 120, 0.75, 2.4);
+    const baseDamage = Math.max(18, Math.round((this.stats.power + this.stats.level * 2.3 + this.stats.weaponCount * 0.5 + this.stats.synergy * 1.4) * getWeaponPowerMultiplier(this.stats)));
+    const enemyDamage = Math.round(baseDamage * (4.6 + chargeRatio * 2.1 + variant * 0.9));
+    const bossDamage = Math.round(baseDamage * (3.2 + chargeRatio * 1.35 + variant * 0.72));
+    const impactY = this.player.y - 260;
+    const { width, height } = this.scale;
+
+    const flash = this.add.rectangle(width / 2, height / 2, width, height, palette.aura, 0.34).setDepth(28).setBlendMode(Phaser.BlendModes.ADD);
+    const beamWidth = theme === 'strawberry' ? 72 : theme === 'grape' ? 92 : 58;
+    const beam = this.add.rectangle(this.player.x, impactY, beamWidth, height * 0.82, palette.primary, 0.7).setDepth(29).setBlendMode(Phaser.BlendModes.ADD);
+    const core = this.add.circle(this.player.x, impactY, 34 + variant * 8, palette.secondary, 0.32).setStrokeStyle(8, palette.aura, 0.9).setDepth(30);
+    core.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({ targets: flash, alpha: 0, duration: 420, onComplete: () => flash.destroy() });
+    this.tweens.add({ targets: beam, scaleX: 4.2 + chargeRatio, alpha: 0, duration: 520, ease: 'Cubic.easeOut', onComplete: () => beam.destroy() });
+    this.tweens.add({ targets: core, scale: 8.5 + chargeRatio * 1.6, alpha: 0, duration: 620, ease: 'Cubic.easeOut', onComplete: () => core.destroy() });
+
+    const rayCount = 18 + variant * 6;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (Math.PI * 2 * i) / rayCount;
+      const ray = this.add.rectangle(this.player.x, impactY, 5 + (i % 3), 190 + chargeRatio * 60, i % 2 === 0 ? palette.secondary : palette.aura, 0.54).setDepth(30);
+      ray.setBlendMode(Phaser.BlendModes.ADD);
+      ray.setRotation(angle);
+      this.tweens.add({
+        targets: ray,
+        x: this.player.x + Math.cos(angle) * (90 + chargeRatio * 65),
+        y: impactY + Math.sin(angle) * (70 + chargeRatio * 52),
+        alpha: 0,
+        scaleX: 2.8,
+        duration: 460 + (i % 4) * 40,
+        ease: 'Quad.easeOut',
+        onComplete: () => ray.destroy(),
+      });
+    }
+
+    this.enemies.getChildren().forEach((enemy) => {
+      const enemyObject = enemy as Enemy;
+      enemyObject.setData(`${palette.status}Ms`, 1800 + variant * 500);
+      if (enemyObject.damage(enemyDamage)) {
+        this.spawnBurst(enemyObject.x, enemyObject.y, palette.secondary, 30);
+        enemyObject.destroy();
+      } else {
+        this.spawnHitEffect(enemyObject.x, enemyObject.y, palette.aura);
+      }
+    });
+
+    this.bossProjectiles.getChildren().slice(0, 18 + variant * 8).forEach((projectile) => {
+      const obj = projectile as Phaser.GameObjects.GameObject & { x: number; y: number };
+      this.spawnBurst(obj.x, obj.y, palette.primary, 13);
+      projectile.destroy();
+    });
+
+    if (this.boss) {
+      const armoredBossDamage = Math.max(1, Math.round(bossDamage / this.getBossArmor(2.1 + this.bossPhase * 0.36)));
+      this.bossHp -= armoredBossDamage;
+      this.spawnBurst(this.boss.x, this.boss.y + 18, palette.aura, 48);
+      this.spawnHitEffect(this.boss.x, this.boss.y, palette.secondary);
+      if (theme === 'thunder') this.bossAttackTimer += 220;
+      if (this.bossHp <= 0) {
+        this.hitBoss(new Bullet(this, this.boss.x, this.boss.y, palette.aura, 'pierce'));
+      }
+    }
+
+    this.showFlash(palette.text, '#ffffff', this.player.x, this.player.y - 150);
+    this.cameras.main.shake(620, 0.009);
+    this.playTone(theme === 'thunder' ? 1280 : theme === 'grape' ? 720 : 900, 0.16, 0.05);
   }
 
   private getSpecialDrainInterval(): number {
