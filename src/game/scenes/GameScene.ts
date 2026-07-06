@@ -188,6 +188,9 @@ export default class GameScene extends Phaser.Scene {
   private rareEventSpawnTimer = 0;
   private shotSoundTimer = 0;
   private performanceMode = false;
+  private maxVisibleWeaponParts = 40;
+  private maxVisibleSquadUnits = 64;
+  private maxActivePlayerBullets = 122;
   private gameZoom = 1;
   private isPinching = false;
   private pinchStartDistance = 0;
@@ -238,7 +241,10 @@ export default class GameScene extends Phaser.Scene {
     const meta = loadPlayerMeta();
     const starter = getStarterWeapon(starterId);
     const userAgent = navigator.userAgent.toLowerCase();
-    this.performanceMode = /iphone|ipad|ipod|android|mobile/.test(userAgent);
+    this.performanceMode = /iphone|ipad|ipod|android|mobile/.test(userAgent) || navigator.maxTouchPoints >= 2;
+    this.maxVisibleWeaponParts = this.performanceMode ? 8 : 40;
+    this.maxVisibleSquadUnits = this.performanceMode ? 12 : 64;
+    this.maxActivePlayerBullets = this.performanceMode ? 44 : 122;
     this.permanentRank = meta.permanentRank;
     this.starterCategoryId = starter.categoryId;
     this.lockedWeaponSkinKey = starter.imageKey;
@@ -350,8 +356,8 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossBar();
     this.updateStatusPanel();
 
-    const weaponPressure = Math.min(this.stats.weaponCount, this.performanceMode ? 34 : 54);
-    const fireInterval = Math.max(this.performanceMode ? 82 : 58, 265 - this.stats.fireRate * 36 - weaponPressure * 2.35);
+    const weaponPressure = Math.min(this.stats.weaponCount, this.performanceMode ? 24 : 54);
+    const fireInterval = Math.max(this.performanceMode ? 118 : 58, 265 - this.stats.fireRate * 34 - weaponPressure * 2.1);
     if (this.fireTimer >= fireInterval) {
       this.fireTimer = 0;
       this.fireWeapons();
@@ -834,7 +840,7 @@ export default class GameScene extends Phaser.Scene {
 
   private fireWeapons(): void {
     const activeBullets = this.bullets.getLength();
-    const maxActiveBullets = this.performanceMode ? 78 : 122;
+    const maxActiveBullets = this.maxActivePlayerBullets;
     if (activeBullets > maxActiveBullets) {
       return;
     }
@@ -842,9 +848,9 @@ export default class GameScene extends Phaser.Scene {
     this.playWeaponShotSound();
     const branchBonus = Math.min(4, this.evolutionPath.length);
     const renderedWeaponCount = this.performanceMode
-      ? 1 + Math.floor(Math.sqrt(this.stats.weaponCount) * 1.45)
+      ? 1 + Math.floor(Math.sqrt(this.stats.weaponCount) * 0.82)
       : 1 + Math.floor(this.stats.weaponCount / 6);
-    const shotCount = Math.min(this.performanceMode ? 8 : 12, renderedWeaponCount + Math.floor(branchBonus / 2));
+    const shotCount = Math.min(this.performanceMode ? 5 : 12, renderedWeaponCount + Math.floor(branchBonus / 2));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
@@ -877,13 +883,13 @@ export default class GameScene extends Phaser.Scene {
       this.bullets.add(bullet);
 
       if (hasSolarBarrage && i % 2 === 0) {
-        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 8) {
+        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 6) {
           continue;
         }
         this.spawnBranchShard(this.player.x + offset * 12, this.player.y - 48, offset * 52, -520, colors.secondary, 'burn', 0.85, 0, 'rocket');
       }
       if (this.evolutionPath.includes('venom-gaze') && i % 3 === 0) {
-        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 8) {
+        if (this.performanceMode && this.bullets.getLength() > maxActiveBullets - 6) {
           continue;
         }
         this.spawnBranchShard(this.player.x + offset * 10, this.player.y - 42, offset * 20, -430, colors.primary, 'poison', 0.85, 0, 'skull');
@@ -904,7 +910,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnBranchShard(x: number, y: number, vx: number, vy: number, color: number, status?: StatusEffect, scale = 0.85, pierce = 0, shape = this.getStarterBulletShape()): void {
-    if (this.performanceMode && this.bullets.getLength() > 86) {
+    if (this.performanceMode && this.bullets.getLength() > this.maxActivePlayerBullets) {
       return;
     }
 
@@ -1995,7 +2001,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateWeaponParts(delta: number): void {
-    const maxShown = Math.min(40, Math.max(0, this.stats.weaponCount - 1));
+    const maxShown = Math.min(this.maxVisibleWeaponParts, Math.max(0, this.stats.weaponCount - 1));
     while (this.weaponParts.length < maxShown) {
       const index = this.weaponParts.length;
       const part = index % 3 === 0
@@ -2028,7 +2034,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private updateSquadUnits(primary: number, secondary: number): void {
-    const maxShown = Math.min(64, Math.max(8, this.stats.weaponCount));
+    const maxShown = Math.min(this.maxVisibleSquadUnits, Math.max(this.performanceMode ? 4 : 8, this.stats.weaponCount));
     while (this.squadUnits.length < maxShown) {
       const unit = this.add.container(this.player.x, this.player.y + 34);
       const shadow = this.add.ellipse(0, 11, 16, 8, 0x1f2937, 0.28);
@@ -3386,7 +3392,20 @@ export default class GameScene extends Phaser.Scene {
   }
 
   private spawnBurst(x: number, y: number, color: number, size: number): void {
-    const burst = this.add.circle(x, y, size, color, 0.24).setDepth(6);
+    const burstSize = this.performanceMode ? Math.max(6, size * 0.7) : size;
+    const burst = this.add.circle(x, y, burstSize, color, this.performanceMode ? 0.18 : 0.24).setDepth(6);
+    if (this.performanceMode) {
+      this.tweens.add({
+        targets: burst,
+        alpha: 0,
+        scale: 1.65,
+        duration: 230,
+        ease: 'Quad.easeOut',
+        onComplete: () => burst.destroy(),
+      });
+      return;
+    }
+
     const ring = this.add.circle(x, y, Math.max(7, size * 0.5), color, 0).setStrokeStyle(2, color, 0.9).setDepth(6);
     this.tweens.add({
       targets: [burst, ring],
