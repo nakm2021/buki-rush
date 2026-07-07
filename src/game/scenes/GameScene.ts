@@ -4,7 +4,7 @@ import { Bullet, type BulletShape } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, getBossTheme, getRandomBossAsset, type BossTheme } from '../systems/AssetCatalog';
+import { getBossAssetByLoop, getBossTheme, getDeferredImageAssets, getRandomBossAsset, type BossTheme, type ImageAsset } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
@@ -199,6 +199,8 @@ export default class GameScene extends Phaser.Scene {
   private maxActivePlayerBullets = 122;
   private maxRenderedShots = 12;
   private minFireInterval = 58;
+  private deferredAssetQueue: ImageAsset[] = [];
+  private deferredAssetLoading = false;
   private gameZoom = 1;
   private isPinching = false;
   private pinchStartDistance = 0;
@@ -233,6 +235,7 @@ export default class GameScene extends Phaser.Scene {
     this.createDebugHud();
     this.createPauseButton();
     this.createInput();
+    this.startDeferredAssetStreaming();
     this.bestDistance = loadBestDistance();
 
     this.physics.add.overlap(this.player, this.gates, (_player, gateObject) => this.handleGateCollision(gateObject as Phaser.GameObjects.Container), undefined, this);
@@ -325,7 +328,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossDefeatGraceMs = 0;
     this.bossWarningActive = false;
     this.bossSpawnStartedAt = 0;
-    this.nextBossStepTarget = Phaser.Math.Between(9, 12);
+    this.nextBossStepTarget = Phaser.Math.Between(12, 15);
     this.firstBossPrepGranted = false;
     this.defeatedBossKeys = [];
     this.evolutionCount = 0;
@@ -340,6 +343,8 @@ export default class GameScene extends Phaser.Scene {
     this.debugHudText = undefined;
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
+    this.deferredAssetQueue = [];
+    this.deferredAssetLoading = false;
     this.pauseOverlay = undefined;
     this.playerStatuses = {
       poisonMs: 0,
@@ -537,6 +542,38 @@ export default class GameScene extends Phaser.Scene {
       `PART ${this.weaponParts.filter((part) => part.visible).length}/${this.maxVisibleWeaponParts}  UNIT ${this.squadUnits.filter((unit) => unit.visible).length}/${this.maxVisibleSquadUnits}`,
       `SHOT ${this.maxRenderedShots}  OUT x${output.toFixed(2)}  W ${this.stats.weaponCount}`,
     ]);
+  }
+
+  private startDeferredAssetStreaming(): void {
+    this.deferredAssetQueue = getDeferredImageAssets().filter((asset) => !this.textures.exists(asset.key));
+    if (this.deferredAssetQueue.length === 0) {
+      return;
+    }
+
+    this.time.addEvent({
+      delay: this.renderQuality === 'lite' ? 1800 : 900,
+      repeat: Math.ceil(this.deferredAssetQueue.length / 4) + 2,
+      callback: () => this.loadNextDeferredAssetBatch(),
+    });
+  }
+
+  private loadNextDeferredAssetBatch(): void {
+    if (this.deferredAssetLoading || this.deferredAssetQueue.length === 0 || this.load.isLoading()) {
+      return;
+    }
+
+    const batchSize = this.renderQuality === 'lite' ? 2 : 4;
+    const batch = this.deferredAssetQueue.splice(0, batchSize).filter((asset) => !this.textures.exists(asset.key));
+    if (batch.length === 0) {
+      return;
+    }
+
+    this.deferredAssetLoading = true;
+    batch.forEach((asset) => this.load.image(asset.key, asset.path));
+    this.load.once(Phaser.Loader.Events.COMPLETE, () => {
+      this.deferredAssetLoading = false;
+    });
+    this.load.start();
   }
 
   private createPauseButton(): void {
@@ -1636,7 +1673,7 @@ export default class GameScene extends Phaser.Scene {
           if (!this.boss) {
             return;
           }
-          const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.34).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          const slash = this.add.rectangle(200, 384, 62, 800, index === 0 ? theme.accent : theme.secondary, 0.24).setAngle(angle).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           slash.setData('bossAttackEffect', true);
           this.tweens.add({ targets: slash, alpha: 0, scaleX: 1.8, duration: 300, ease: 'Quad.easeOut', onComplete: () => slash.destroy() });
           const radians = Phaser.Math.DegToRad(angle);
@@ -1678,7 +1715,7 @@ export default class GameScene extends Phaser.Scene {
           if (!this.boss) {
             return;
           }
-          const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.42 : 0.3).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
+          const beam = this.add.rectangle(x, 395, empowered ? 44 : 34, 700, theme.accent, empowered ? 0.28 : 0.2).setDepth(13).setBlendMode(Phaser.BlendModes.ADD);
           beam.setData('bossAttackEffect', true);
           this.tweens.add({ targets: beam, alpha: 0, scaleX: 1.7, duration: 310, ease: 'Quad.easeOut', onComplete: () => beam.destroy() });
           if (Math.abs(this.player.x - x) < (empowered ? 34 : 26)) {
@@ -1707,7 +1744,7 @@ export default class GameScene extends Phaser.Scene {
     this.playRareSound();
 
     const { width, height } = this.scale;
-    const veil = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.12).setDepth(24).setBlendMode(Phaser.BlendModes.ADD);
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, theme.primary, 0.07).setDepth(24).setBlendMode(Phaser.BlendModes.ADD);
     const sigil = this.add.circle(this.boss.x, this.boss.y + 44, 74, theme.secondary, 0).setStrokeStyle(6, theme.accent, 0.92).setDepth(25);
     veil.setData('bossAttackEffect', true);
     sigil.setData('bossAttackEffect', true);
@@ -1851,22 +1888,22 @@ export default class GameScene extends Phaser.Scene {
     this.spawnBurst(originX, originY, theme.accent, 36);
   }
 
-  private spawnBossProjectile(x: number, y: number, vx: number, vy: number, radius: number, color: number, damage: number, shape: 'orb' | 'diamond'): Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle | undefined {
+  private spawnBossProjectile(x: number, y: number, vx: number, vy: number, radius: number, _color: number, damage: number, shape: 'orb' | 'diamond'): Phaser.GameObjects.Arc | Phaser.GameObjects.Rectangle | undefined {
     if (!this.boss) {
       return undefined;
     }
 
+    const visualColor = shape === 'diamond' ? 0xff3b3b : 0xfff1f2;
     const projectile = shape === 'orb'
-      ? this.add.circle(x, y, radius, color, 0.74)
-      : this.add.rectangle(x, y, radius * 1.8, radius * 1.8, color, 0.72);
-    projectile.setDepth(12);
-    projectile.setBlendMode(Phaser.BlendModes.ADD);
+      ? this.add.circle(x, y, radius, visualColor, 0.92)
+      : this.add.rectangle(x, y, radius * 1.8, radius * 1.8, visualColor, 0.9);
+    projectile.setDepth(14);
     projectile.setData('vx', vx);
     projectile.setData('vy', vy);
     projectile.setData('damage', damage);
     projectile.setData('spin', shape === 'diamond' ? 4.6 : 0.8);
     projectile.setData('bossAttackEffect', true);
-    projectile.setStrokeStyle(2, 0xffffff, 0.34);
+    projectile.setStrokeStyle(2, shape === 'diamond' ? 0xffffff : 0xef4444, 0.88);
     if (shape === 'diamond') {
       projectile.setAngle(45);
     }
@@ -1911,7 +1948,7 @@ export default class GameScene extends Phaser.Scene {
     this.moduleText.setText(`MOD: ${modules}`);
     this.buildText.setText(`BUILD ${getBuildRank(this.stats)}  ${getRarityProfile(this.stats.rarity).label}`);
     this.bossPhaseText.setText(this.rareEvent ? `EVENT ${this.rareEventKills}/${this.rareEvent.targetKills}` : this.boss ? `BOSS P${this.bossPhase}` : `MEDAL ${this.medalCount}`);
-    const panelAlpha = this.boss ? 0.58 : 1;
+    const panelAlpha = this.boss ? 0.46 : 1;
     this.statusPanelObjects.forEach((object) => {
       (object as Phaser.GameObjects.GameObject & { setAlpha?: (value: number) => void }).setAlpha?.(panelAlpha);
     });
@@ -2035,25 +2072,25 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.bossBackdrop.setFillStyle(theme.darkness, 0.34);
-    this.bossBackdrop.setAlpha(Phaser.Math.Linear(this.bossBackdrop.alpha, 1, 0.06));
-    this.bossAurora.setFillStyle(theme.primary, 0.28);
-    this.bossAurora.setAlpha(Phaser.Math.Linear(this.bossAurora.alpha, 1, 0.06));
+    this.bossBackdrop.setFillStyle(theme.darkness, 0.24);
+    this.bossBackdrop.setAlpha(Phaser.Math.Linear(this.bossBackdrop.alpha, 0.82, 0.06));
+    this.bossAurora.setFillStyle(theme.primary, 0.16);
+    this.bossAurora.setAlpha(Phaser.Math.Linear(this.bossAurora.alpha, 0.52, 0.06));
     this.bossAurora.setAngle(Math.sin(this.stageTimer * 0.0014) * 7);
     this.bossAurora.setScale(1 + Math.sin(this.stageTimer * 0.002) * 0.08, 1);
 
     this.bossSigils.forEach((sigil, index) => {
       const pulse = 0.34 + Math.sin(this.stageTimer * 0.004 + index * 1.7) * 0.13;
-      sigil.setFillStyle(index % 2 === 0 ? theme.primary : theme.secondary, pulse * 0.22);
-      sigil.setStrokeStyle(2, index % 2 === 0 ? theme.accent : theme.secondary, pulse);
-      sigil.setAlpha(Phaser.Math.Linear(sigil.alpha, 1, 0.08));
+      sigil.setFillStyle(index % 2 === 0 ? theme.primary : theme.secondary, pulse * 0.12);
+      sigil.setStrokeStyle(2, index % 2 === 0 ? theme.accent : theme.secondary, pulse * 0.72);
+      sigil.setAlpha(Phaser.Math.Linear(sigil.alpha, 0.72, 0.08));
       sigil.setRotation(sigil.rotation + delta * 0.00045 * (index % 2 === 0 ? 1 : -1));
       sigil.y += Math.sin(this.stageTimer * 0.003 + index) * 0.18;
     });
 
     this.bossMotes.forEach((mote, index) => {
-      mote.setFillStyle(index % 2 === 0 ? theme.accent : theme.primary, 0.22 + (index % 4) * 0.04);
-      mote.setAlpha(Phaser.Math.Linear(mote.alpha, 1, 0.08));
+      mote.setFillStyle(index % 2 === 0 ? theme.accent : theme.primary, 0.12 + (index % 4) * 0.025);
+      mote.setAlpha(Phaser.Math.Linear(mote.alpha, 0.62, 0.08));
       mote.y += (72 + (index % 5) * 16) * (delta / 1000);
       mote.x += Math.sin(this.stageTimer * 0.004 + index) * 0.35;
       mote.setAngle(mote.angle + (index % 2 === 0 ? 0.4 : -0.35));

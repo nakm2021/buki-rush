@@ -33,7 +33,7 @@ export const OPENING_STEPS: StageStep[] = [
     ],
   },
   {
-    time: 4600,
+    time: 4400,
     gateLine: {
       y: -80,
       left: { label: 'ATK +8', kind: 'power', value: 8, color: 0xfb923c, good: true },
@@ -42,6 +42,18 @@ export const OPENING_STEPS: StageStep[] = [
     enemies: [
       { x: 120, y: -190, hp: 14, variantId: 'frost-wisp' },
       { x: 205, y: -260, hp: 22, variantId: 'iron-golem' },
+    ],
+  },
+  {
+    time: 7600,
+    gateLine: {
+      y: -80,
+      left: { label: '安定 +6', kind: 'power', value: 6, color: 0x7dd3fc, good: true },
+      right: { label: '盾 +2', kind: 'shield', value: 2, color: 0x93c5fd, good: true },
+    },
+    enemies: [
+      { x: 110, y: -180, hp: 16, variantId: 'ember-imp' },
+      { x: 290, y: -240, hp: 16, variantId: 'storm-bat' },
     ],
   },
 ];
@@ -98,13 +110,15 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
           : undefined;
   const lanes = [92, 148, 205, 258, 310];
   const lane = lanes[stepIndex % lanes.length];
-  const hp = Math.round((22 + stepIndex * 3.4 + difficulty * 14 + Math.max(0, difficulty - 3) ** 2 * 1.6) * variant.hpScale);
-  const enemyCount = stepIndex < 3 ? 2 : 3 + Math.min(2, Math.floor(difficulty / 2));
+  const earlyRelief = stepIndex < 8 ? 0.72 + stepIndex * 0.035 : 1;
+  const hp = Math.round((22 + stepIndex * 3.4 + difficulty * 14 + Math.max(0, difficulty - 3) ** 2 * 1.6) * variant.hpScale * earlyRelief);
+  const enemyCount = stepIndex < 4 ? 2 : stepIndex < 8 ? 3 : 3 + Math.min(2, Math.floor(difficulty / 2));
   const enemies = Array.from({ length: enemyCount }, (_, index) => {
     const selectedVariant = index === 0 && dangerVariant ? dangerVariant : index === 0 ? variant.id : secondVariant.id;
     const x = lanes[(stepIndex + index * 2) % lanes.length];
     const y = -170 - index * 72 - (stepIndex % 2) * 28;
-    const scale = index === 0 && dangerVariant ? 2.2 : 1 + index * 0.28;
+    const dangerScale = stepIndex < 8 ? 1.55 : 2.2;
+    const scale = index === 0 && dangerVariant ? dangerScale : 1 + index * (stepIndex < 8 ? 0.18 : 0.28);
     return {
       x,
       y,

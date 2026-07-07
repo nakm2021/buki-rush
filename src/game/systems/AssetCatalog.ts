@@ -1,6 +1,6 @@
 import type { PlayerStats, WeaponArchetype, WeaponElement, WeaponRarity } from '../types/GameTypes';
 
-interface ImageAsset {
+export interface ImageAsset {
   key: string;
   path: string;
 }
@@ -198,11 +198,39 @@ export const MISC_IMAGE_ASSETS: ImageAsset[] = [
 ];
 
 export function getPreloadImageAssets(): ImageAsset[] {
-  return [TITLE_BACKGROUND_ASSET, ...WEAPON_IMAGE_ASSETS, ...BOSS_IMAGE_ASSETS, ...ITEM_IMAGE_ASSETS, ...MISC_IMAGE_ASSETS];
+  const openingBosses = BOSS_IMAGE_ASSETS.filter((asset) => (asset.minLoop ?? 0) <= 1).slice(0, 10);
+  const openingEnemies = ENEMY_IMAGE_ASSETS.slice(0, 24);
+  return uniqueImageAssets([
+    TITLE_BACKGROUND_ASSET,
+    ...WEAPON_IMAGE_ASSETS,
+    ...openingBosses,
+    ...ITEM_IMAGE_ASSETS,
+    ...openingEnemies,
+    { key: 'eliteReaper', path: 'assets/generated/elite-reaper.png' },
+  ]);
+}
+
+export function getDeferredImageAssets(): ImageAsset[] {
+  return uniqueImageAssets([
+    ...BOSS_IMAGE_ASSETS,
+    ...ENEMY_IMAGE_ASSETS,
+    ...MISC_IMAGE_ASSETS,
+  ]);
 }
 
 export function getTitleImageAssets(): ImageAsset[] {
   return [TITLE_BACKGROUND_ASSET];
+}
+
+function uniqueImageAssets(assets: ImageAsset[]): ImageAsset[] {
+  const seen = new Set<string>();
+  return assets.filter((asset) => {
+    if (seen.has(asset.key)) {
+      return false;
+    }
+    seen.add(asset.key);
+    return true;
+  });
 }
 
 export function getWeaponAssetKeys(): string[] {
