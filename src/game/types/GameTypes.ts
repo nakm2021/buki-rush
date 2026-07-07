@@ -62,9 +62,19 @@ export interface GateLine {
   right: GateOption;
 }
 
+export interface RushItemLine {
+  y: number;
+  rows: number;
+  lanes: number[];
+  rowSpacing: number;
+  options: GateOption[];
+  jitter?: number;
+}
+
 export interface StageStep {
   time: number;
   gateLine?: GateLine;
+  rushLine?: RushItemLine;
   enemy?: { x: number; y: number; hp?: number; variantId?: string };
   enemies?: Array<{ x: number; y: number; hp?: number; variantId?: string }>;
   obstacle?: { x: number; y: number; width: number; height: number };

@@ -13,7 +13,7 @@ import { BOSS_WARNING_PROFILE, EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgr
 import { createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
 import { getBuildRank, getEvolutionBranch, getModuleProfile, getShotSpread, getStarterWeapon, getWeaponColors, getWeaponName, getWeaponPowerMultiplier, getRarityProfile } from '../systems/WeaponEvolution';
-import type { GateOption, PlayerStats, StageStep, StatusEffect } from '../types/GameTypes';
+import type { GateOption, PlayerStats, RushItemLine, StageStep, StatusEffect } from '../types/GameTypes';
 
 type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGHT', Phaser.Input.Keyboard.Key>;
 type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'frost' | 'nova' | 'blade';
@@ -188,6 +188,10 @@ export default class GameScene extends Phaser.Scene {
   private rareEventSpawned = 0;
   private rareEventSpawnTimer = 0;
   private shotSoundTimer = 0;
+  private rushPickupSoundTimer = 0;
+  private rushPickupCounter = 0;
+  private rushComboText?: Phaser.GameObjects.Text;
+  private rushComboHideEvent?: Phaser.Time.TimerEvent;
   private performanceMode = false;
   private renderQuality: RenderQuality = 'standard';
   private debugHudEnabled = false;
@@ -268,8 +272,8 @@ export default class GameScene extends Phaser.Scene {
     this.debugHudEnabled = settings.debugHud;
     this.maxVisibleWeaponParts = this.renderQuality === 'lite' ? 8 : this.renderQuality === 'standard' ? 28 : 52;
     this.maxVisibleSquadUnits = this.renderQuality === 'lite' ? 12 : this.renderQuality === 'standard' ? 42 : 76;
-    this.maxActivePlayerBullets = this.renderQuality === 'lite' ? 44 : this.renderQuality === 'standard' ? 92 : 140;
-    this.maxRenderedShots = this.renderQuality === 'lite' ? 5 : this.renderQuality === 'standard' ? 10 : 14;
+    this.maxActivePlayerBullets = this.renderQuality === 'lite' ? 58 : this.renderQuality === 'standard' ? 92 : 140;
+    this.maxRenderedShots = this.renderQuality === 'lite' ? 6 : this.renderQuality === 'standard' ? 10 : 14;
     this.minFireInterval = this.renderQuality === 'lite' ? 118 : this.renderQuality === 'standard' ? 70 : 48;
     this.permanentRank = meta.permanentRank;
     this.starterCategoryId = starter.categoryId;
@@ -340,6 +344,10 @@ export default class GameScene extends Phaser.Scene {
     this.rareEventSpawned = 0;
     this.rareEventSpawnTimer = 0;
     this.shotSoundTimer = 0;
+    this.rushPickupSoundTimer = 0;
+    this.rushPickupCounter = 0;
+    this.rushComboText = undefined;
+    this.rushComboHideEvent = undefined;
     this.debugHudText = undefined;
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
@@ -367,6 +375,7 @@ export default class GameScene extends Phaser.Scene {
     this.stageTimer += smoothDelta;
     this.fireTimer += delta;
     this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
+    this.rushPickupSoundTimer = Math.max(0, this.rushPickupSoundTimer - smoothDelta);
     this.distance += (smoothDelta / 1000) * 22;
     this.bossDefeatGraceMs = Math.max(0, this.bossDefeatGraceMs - smoothDelta);
 
@@ -390,7 +399,8 @@ export default class GameScene extends Phaser.Scene {
     this.updateDebugHud(smoothDelta);
 
     const weaponPressure = Math.min(this.stats.weaponCount, this.renderQuality === 'lite' ? 24 : this.renderQuality === 'standard' ? 46 : 68);
-    const fireInterval = Math.max(this.minFireInterval, 265 - this.stats.fireRate * 34 - weaponPressure * 2.1);
+    const bossDefenseRelief = this.boss && this.renderQuality === 'lite' ? 24 : 0;
+    const fireInterval = Math.max(Math.max(82, this.minFireInterval - bossDefenseRelief), 265 - this.stats.fireRate * 34 - weaponPressure * 2.1);
     if (this.fireTimer >= fireInterval) {
       this.fireTimer = 0;
       this.fireWeapons();
@@ -736,6 +746,10 @@ export default class GameScene extends Phaser.Scene {
       }
     }
 
+    if (step.rushLine) {
+      this.spawnRushLine(step.rushLine);
+    }
+
     if (step.enemies) {
       step.enemies.forEach((enemyData) => this.spawnEnemy(enemyData));
     } else if (step.enemy) {
@@ -749,6 +763,75 @@ export default class GameScene extends Phaser.Scene {
       const body = obstacle.body as Phaser.Physics.Arcade.Body;
       body.setImmovable(true);
     }
+  }
+
+  private spawnRushLine(line: RushItemLine): void {
+    const laneCount = line.lanes.length;
+    const optionCount = line.options.length;
+    const maxItems = this.performanceMode ? 34 : 52;
+    let created = 0;
+
+    for (let row = 0; row < line.rows; row += 1) {
+      for (let laneIndex = 0; laneIndex < laneCount; laneIndex += 1) {
+        if (created >= maxItems) {
+          return;
+        }
+        const option = line.options[(row * 2 + laneIndex) % optionCount];
+        const wave = Math.sin(row * 0.9 + laneIndex * 1.7) * (line.jitter ?? 0);
+        const item = this.createRushItem(line.lanes[laneIndex] + wave, line.y - row * line.rowSpacing, option);
+        this.gates.add(item);
+        created += 1;
+      }
+    }
+  }
+
+  private createRushItem(x: number, y: number, option: GateOption): Phaser.GameObjects.Container {
+    const container = this.add.container(x, y);
+    const color = option.good ? option.color : 0xef4444;
+    const assetKey = this.getRushItemAssetKey(option);
+    const shadow = this.add.ellipse(0, 24, 42, 10, 0x020617, 0.24);
+    const glow = this.add.circle(0, 0, 23, color, this.performanceMode ? 0.14 : 0.2);
+    glow.setBlendMode(Phaser.BlendModes.ADD);
+    const item = this.textures.exists(assetKey)
+      ? this.add.image(0, -2, assetKey).setDisplaySize(38, 38)
+      : this.add.circle(0, -2, 16, color, 0.92);
+    const label = this.add.text(0, 14, option.label, {
+      fontSize: option.label.length > 2 ? '12px' : '14px',
+      color: '#ffffff',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#020617',
+      strokeThickness: 3,
+    }).setOrigin(0.5);
+
+    container.add([shadow, glow, item, label]);
+    container.setDepth(2.15);
+    container.setData('rushItem', true);
+    container.setData('kind', option.kind);
+    container.setData('value', option.value);
+    container.setData('label', option.label);
+    container.setData('good', option.good);
+    container.setData('color', option.color);
+    container.setData('element', option.element);
+    container.setData('archetype', option.archetype);
+    container.setData('module', option.module);
+    container.setData('rarity', option.rarity);
+    this.physics.add.existing(container);
+    const body = container.body as Phaser.Physics.Arcade.Body;
+    body.setSize(42, 42);
+    body.setOffset(-21, -21);
+    return container;
+  }
+
+  private getRushItemAssetKey(option: GateOption): string {
+    if (!option.good) return 'itemCursedBox';
+    if (option.kind === 'add' || option.kind === 'level') return 'itemRushCore';
+    if (option.kind === 'power' || option.kind === 'rapid') return 'itemWeaponCache';
+    if (option.kind === 'crit') return 'itemPrismCrown';
+    if (option.kind === 'pierce') return 'itemVoidDrill';
+    if (option.kind === 'special') return 'itemOverdriveOrb';
+    if (option.kind === 'shield' || option.kind === 'heal') return 'itemBukiCapsule';
+    return 'itemRareChest';
   }
 
   private spawnEnemy(enemyData: { x: number; y: number; hp?: number; variantId?: string }): void {
@@ -962,22 +1045,27 @@ export default class GameScene extends Phaser.Scene {
     const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor') || this.evolutionPath.includes('titan-orbit-hammer');
     const usesSlashShot = this.usesSlashShots();
     const bulletShape = usesSlashShot ? 'slash' : this.getStarterBulletShape();
-    const clashPower = Math.max(1, Math.round(this.getInternalAttackScore(0.45) * getWeaponPowerMultiplier(this.stats) * 0.34));
+    const bossDefenseMode = Boolean(this.boss && this.renderQuality === 'lite');
+    const clashPower = Math.max(1, Math.round(this.getInternalAttackScore(0.45) * getWeaponPowerMultiplier(this.stats) * (bossDefenseMode ? 0.56 : 0.34)));
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
       const color = i % 3 === 0 ? colors.bullet : i % 3 === 1 ? colors.primary : colors.secondary;
       const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color, bulletShape);
       bullet.setDepth(2);
-      bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0));
-      bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0));
+      bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0) + (bossDefenseMode ? 70 : 0));
+      bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0) + (bossDefenseMode ? 0.16 : 0));
       bullet.setData('damage', clashPower + (hasKrakenAnchor ? 1 : 0) + (usesSlashShot ? 1 : 0));
-      bullet.setData('pierceLeft', pierceLeft + (hasZeroLance ? 1 : 0) + (hasKrakenAnchor && i % 3 === 0 ? 1 : 0));
+      bullet.setData('pierceLeft', pierceLeft + (bossDefenseMode ? 1 : 0) + (hasZeroLance ? 1 : 0) + (hasKrakenAnchor && i % 3 === 0 ? 1 : 0));
       const shotStatus = this.getPlayerShotStatus();
       if (shotStatus && Math.random() < shotStatus.chance) {
         bullet.setData('statusEffect', shotStatus.effect);
       }
       const body = bullet.body as Phaser.Physics.Arcade.Body;
+      if (bossDefenseMode) {
+        body.setSize(30, 52);
+        body.setOffset(-15, -28);
+      }
       body.setVelocityX(offset * 24 * spread + (hasSolarBarrage ? Math.sin(i + this.stageTimer * 0.01) * 28 : 0));
       body.setVelocityY(-440 - this.stats.power * 22);
       this.bullets.add(bullet);
@@ -1284,8 +1372,9 @@ export default class GameScene extends Phaser.Scene {
     if (this.bossAttackTimer <= 0) {
       this.fireBossPattern(this.currentBossTheme);
       const loopPressure = this.bossLoopIndex * 44;
-      const firstBossRelief = this.bossLoopIndex === 0 ? 260 : 0;
-      this.bossAttackTimer = Math.max(220, 820 + firstBossRelief - loopPressure - this.bossPhase * 95 - Phaser.Math.Between(0, 160));
+      const firstBossRelief = this.bossLoopIndex === 0 ? 420 : 0;
+      const liteRelief = this.renderQuality === 'lite' ? 180 : 0;
+      this.bossAttackTimer = Math.max(this.renderQuality === 'lite' ? 360 : 220, 820 + firstBossRelief + liteRelief - loopPressure - this.bossPhase * 85 - Phaser.Math.Between(0, 140));
     }
 
     if (this.bossSpecialTimer <= 0) {
@@ -1893,6 +1982,11 @@ export default class GameScene extends Phaser.Scene {
       return undefined;
     }
 
+    const maxBossProjectiles = this.renderQuality === 'lite' ? 46 : this.renderQuality === 'standard' ? 76 : 112;
+    if (this.bossProjectiles.getLength() >= maxBossProjectiles) {
+      return undefined;
+    }
+
     const visualColor = shape === 'diamond' ? 0xff3b3b : 0xfff1f2;
     const projectile = shape === 'orb'
       ? this.add.circle(x, y, radius, visualColor, 0.92)
@@ -2174,6 +2268,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const pair = gateObject.getData('pair') as GatePair | undefined;
+    const rushItem = Boolean(gateObject.getData('rushItem'));
     const previousRarity = this.stats.rarity;
     const previousStats = { ...this.stats, modules: [...this.stats.modules] };
     const previousHp = this.playerHp;
@@ -2196,11 +2291,25 @@ export default class GameScene extends Phaser.Scene {
     if (option.kind === 'special' && option.good) {
       this.specialCharge = clamp(this.specialCharge + option.value, 0, 100);
     }
-    this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
-    this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
-    this.showStatGainFeedback(previousStats, previousHp, option);
-    if (option.good) {
+
+    if (rushItem) {
+      this.rushPickupCounter += 1;
+      this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 8 : 10);
+      this.showRushPickupFeedback(gateObject.x, gateObject.y, option, previousStats, previousHp);
+      if (option.good && this.rushPickupSoundTimer <= 0) {
+        this.playUpgradeSound(option.kind);
+        this.rushPickupSoundTimer = 96;
+      }
+    } else {
+      this.spawnBurst(gateObject.x, gateObject.y, option.good ? option.color : 0xff4d6d, option.good ? 18 : 14);
+      this.showFlash(option.good ? `${option.label} UPGRADE` : `${option.label} DOWN`, option.good ? '#dcfce7' : '#fecaca', gateObject.x, gateObject.y - 42);
+      this.showStatGainFeedback(previousStats, previousHp, option);
+    }
+
+    if (option.good && !rushItem) {
       this.playUpgradeSound(option.kind);
+      this.animateWeaponUpgrade(option.color);
+    } else if (option.good && rushItem && this.rushPickupCounter % 4 === 0) {
       this.animateWeaponUpgrade(option.color);
     }
     if (option.kind === 'rarity' || option.kind === 'fusion' || previousRarity !== this.stats.rarity) {
@@ -2217,6 +2326,74 @@ export default class GameScene extends Phaser.Scene {
     } else {
       gateObject.destroy();
     }
+  }
+
+  private showRushPickupFeedback(x: number, y: number, option: GateOption, previousStats: PlayerStats, previousHp: number): void {
+    const weaponDelta = this.stats.weaponCount - previousStats.weaponCount;
+    const powerDelta = this.stats.power - previousStats.power;
+    const levelDelta = this.stats.level - previousStats.level;
+    const hpDelta = this.playerHp - previousHp;
+    const shouldFloat = !this.performanceMode || this.rushPickupCounter % 3 === 0;
+
+    if (weaponDelta !== 0) this.pulseStatusText(this.weaponText, option.color);
+    if (powerDelta > 0) this.pulseStatusText(this.powerText, option.color);
+    if (levelDelta > 0) this.pulseStatusText(this.levelText, option.color);
+    if (hpDelta > 0) this.pulseStatusText(this.hpText, option.color);
+
+    if (shouldFloat) {
+      const text = this.add.text(x, y - 24, option.label, {
+        fontSize: '18px',
+        color: `#${option.color.toString(16).padStart(6, '0')}`,
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#020617',
+        strokeThickness: 4,
+      }).setOrigin(0.5).setDepth(16);
+      this.tweens.add({
+        targets: text,
+        y: text.y - 26,
+        alpha: 0,
+        scale: 1.18,
+        duration: 420,
+        ease: 'Quad.easeOut',
+        onComplete: () => text.destroy(),
+      });
+    }
+
+    if (!this.rushComboText || !this.rushComboText.active) {
+      this.rushComboText = this.add.text(200, 118, '', {
+        fontSize: '26px',
+        color: '#fef3c7',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#7f1d1d',
+        strokeThickness: 6,
+      }).setOrigin(0.5).setDepth(30);
+    }
+    this.rushComboText.setText(`RUSH x${Math.min(999, this.rushPickupCounter)}`);
+    this.rushComboText.setAlpha(1);
+    this.rushComboText.setScale(1.08);
+    this.tweens.add({
+      targets: this.rushComboText,
+      scale: 1,
+      duration: 120,
+      ease: 'Sine.easeOut',
+    });
+    this.rushComboHideEvent?.remove(false);
+    this.rushComboHideEvent = this.time.delayedCall(620, () => {
+      if (!this.rushComboText?.active) {
+        return;
+      }
+      this.tweens.add({
+        targets: this.rushComboText,
+        alpha: 0,
+        duration: 260,
+        ease: 'Sine.easeOut',
+        onComplete: () => {
+          this.rushPickupCounter = 0;
+        },
+      });
+    });
   }
 
   private handleEnemyCollision(enemyObject: Enemy): void {
