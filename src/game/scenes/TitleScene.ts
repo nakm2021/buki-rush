@@ -195,10 +195,17 @@ export default class TitleScene extends Phaser.Scene {
     const { width, height } = this.scale;
     let current = loadSettings();
     const leaderboard = loadLeaderboard();
+    const renderLabels: Record<typeof current.renderMode, string> = {
+      auto: '自動',
+      lite: '軽量',
+      standard: '標準',
+      flashy: '派手',
+    };
+    const renderModes: typeof current.renderMode[] = ['auto', 'lite', 'standard', 'flashy'];
     const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0.78);
-    const panel = this.add.rectangle(width / 2, height / 2, 336, 496, 0x111827, 0.97);
+    const panel = this.add.rectangle(width / 2, height / 2, 336, 548, 0x111827, 0.97);
     panel.setStrokeStyle(2, 0xfff176, 0.74);
-    const title = this.add.text(width / 2, 172, 'RANKING / SETTINGS', {
+    const title = this.add.text(width / 2, 144, 'RANKING / SETTINGS', {
       fontSize: '21px',
       color: '#fef3c7',
       fontStyle: 'bold',
@@ -206,20 +213,20 @@ export default class TitleScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 5,
     }).setOrigin(0.5);
-    const mode = this.add.text(width / 2, 210, `PLAYER: ${current.playerName}  MODE: LOCAL`, {
+    const mode = this.add.text(width / 2, 180, `PLAYER: ${current.playerName}  MODE: LOCAL`, {
       fontSize: '12px',
       color: '#bfdbfe',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
     const rows = (leaderboard.length > 0 ? leaderboard : [{ playerName: '-', distance: 0, weaponName: 'NO RECORD', recordedAt: '' }]).slice(0, 5).map((entry, index) => {
-      return this.add.text(width / 2, 254 + index * 34, `${index + 1}. ${entry.playerName}  ${entry.distance}m  ${entry.weaponName}`, {
+      return this.add.text(width / 2, 220 + index * 30, `${index + 1}. ${entry.playerName}  ${entry.distance}m  ${entry.weaponName}`, {
         fontSize: '12px',
         color: index === 0 ? '#fef08a' : '#f8fafc',
         fontStyle: 'bold',
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
     });
-    const controls = this.add.text(width / 2, 422, '操作: PC 矢印/WASD\nスマホ ドラッグ移動 / ダブルタップ 必殺', {
+    const controls = this.add.text(width / 2, 392, '操作: PC 矢印/WASD\nスマホ ドラッグ移動 / ダブルタップ 必殺', {
       fontSize: '12px',
       color: '#dcfce7',
       align: 'center',
@@ -229,7 +236,7 @@ export default class TitleScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 3,
     }).setOrigin(0.5);
-    const currentName = this.add.text(width / 2, 470, `現在の名前: ${current.playerName}`, {
+    const currentName = this.add.text(width / 2, 438, `現在の名前: ${current.playerName}`, {
       fontSize: '13px',
       color: '#ffffff',
       fontStyle: 'bold',
@@ -237,21 +244,48 @@ export default class TitleScene extends Phaser.Scene {
       stroke: '#020617',
       strokeThickness: 3,
     }).setOrigin(0.5);
-    const nameButton = this.add.rectangle(width / 2, 510, 226, 42, 0x172554, 0.96);
+    const renderButton = this.add.rectangle(width / 2, 476, 226, 36, 0x1e1b4b, 0.96);
+    renderButton.setStrokeStyle(2, 0xa78bfa, 0.76);
+    const renderText = this.add.text(width / 2, 476, `描画: ${renderLabels[current.renderMode]}`, {
+      fontSize: '13px',
+      color: '#ede9fe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    const debugButton = this.add.rectangle(width / 2, 518, 226, 36, 0x083344, 0.96);
+    debugButton.setStrokeStyle(2, 0x22d3ee, 0.76);
+    const debugText = this.add.text(width / 2, 518, `デバッグ表示: ${current.debugHud ? 'ON' : 'OFF'}`, {
+      fontSize: '13px',
+      color: '#cffafe',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+    }).setOrigin(0.5);
+    const nameButton = this.add.rectangle(width / 2, 560, 226, 36, 0x172554, 0.96);
     nameButton.setStrokeStyle(2, 0x38bdf8, 0.76);
-    const nameText = this.add.text(width / 2, 510, 'PLAYER名を変更', {
+    const nameText = this.add.text(width / 2, 560, 'PLAYER名を変更', {
       fontSize: '13px',
       color: '#e0f2fe',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const close = this.add.text(width / 2, 568, 'CLOSE', {
+    const close = this.add.text(width / 2, 620, 'CLOSE', {
       fontSize: '15px',
       color: '#fef3c7',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
     }).setOrigin(0.5);
-    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, controls, currentName, nameButton, nameText, close]).setDepth(50);
+    const overlay = this.add.container(0, 0, [veil, panel, title, mode, ...rows, controls, currentName, renderButton, renderText, debugButton, debugText, nameButton, nameText, close]).setDepth(50);
+    renderButton.setInteractive({ useHandCursor: true });
+    renderButton.on('pointerdown', () => {
+      const nextIndex = (renderModes.indexOf(current.renderMode) + 1) % renderModes.length;
+      current = saveSettings({ renderMode: renderModes[nextIndex] });
+      renderText.setText(`描画: ${renderLabels[current.renderMode]}`);
+    });
+    debugButton.setInteractive({ useHandCursor: true });
+    debugButton.on('pointerdown', () => {
+      current = saveSettings({ debugHud: !current.debugHud });
+      debugText.setText(`デバッグ表示: ${current.debugHud ? 'ON' : 'OFF'}`);
+    });
     nameButton.setInteractive({ useHandCursor: true });
     nameButton.on('pointerdown', () => {
       this.openPlayerNameEditor(current.playerName, (nextName) => {

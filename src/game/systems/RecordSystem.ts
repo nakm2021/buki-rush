@@ -23,6 +23,8 @@ export interface PlayerMeta {
 export interface PlayerSettings {
   playerName: string;
   rankingMode: 'local' | 'global-ready';
+  renderMode: 'auto' | 'lite' | 'standard' | 'flashy';
+  debugHud: boolean;
 }
 
 const defaultMeta: PlayerMeta = {
@@ -36,6 +38,8 @@ const defaultMeta: PlayerMeta = {
 const defaultSettings: PlayerSettings = {
   playerName: 'PLAYER',
   rankingMode: 'local',
+  renderMode: 'auto',
+  debugHud: false,
 };
 
 export function loadBestDistance(): number {
@@ -107,6 +111,8 @@ export function loadSettings(): PlayerSettings {
     return {
       playerName: typeof parsed.playerName === 'string' && parsed.playerName.trim() ? parsed.playerName.trim().slice(0, 12) : defaultSettings.playerName,
       rankingMode: parsed.rankingMode === 'global-ready' ? 'global-ready' : 'local',
+      renderMode: parsed.renderMode === 'lite' || parsed.renderMode === 'standard' || parsed.renderMode === 'flashy' ? parsed.renderMode : defaultSettings.renderMode,
+      debugHud: parsed.debugHud === true,
     };
   } catch {
     return { ...defaultSettings };
@@ -121,6 +127,8 @@ export function saveSettings(settings: Partial<PlayerSettings>): PlayerSettings 
   const clean: PlayerSettings = {
     playerName: next.playerName.trim().slice(0, 12) || defaultSettings.playerName,
     rankingMode: next.rankingMode === 'global-ready' ? 'global-ready' : 'local',
+    renderMode: next.renderMode === 'lite' || next.renderMode === 'standard' || next.renderMode === 'flashy' ? next.renderMode : defaultSettings.renderMode,
+    debugHud: next.debugHud === true,
   };
   window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(clean));
   return clean;

@@ -8,7 +8,7 @@ import { getBossAssetByLoop, getBossTheme, getRandomBossAsset, type BossTheme } 
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
-import { loadBestDistance, loadPlayerMeta, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
+import { loadBestDistance, loadPlayerMeta, loadSettings, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
 import { BOSS_WARNING_PROFILE, EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
 import { createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
@@ -19,6 +19,7 @@ type ControlKeys = Record<'W' | 'S' | 'A' | 'D' | 'UP' | 'DOWN' | 'LEFT' | 'RIGH
 type SpecialStyle = 'anchor' | 'basilisk' | 'rune' | 'phoenix' | 'storm' | 'frost' | 'nova' | 'blade';
 type SpecialVariant = 0 | 1 | 2;
 type ChargeBurstTheme = 'thunder' | 'strawberry' | 'grape';
+type RenderQuality = 'lite' | 'standard' | 'flashy';
 
 interface PlayerStatusState {
   poisonMs: number;
@@ -188,9 +189,16 @@ export default class GameScene extends Phaser.Scene {
   private rareEventSpawnTimer = 0;
   private shotSoundTimer = 0;
   private performanceMode = false;
+  private renderQuality: RenderQuality = 'standard';
+  private debugHudEnabled = false;
+  private debugHudText?: Phaser.GameObjects.Text;
+  private debugHudTimer = 0;
+  private lastFrameDelta = 16.7;
   private maxVisibleWeaponParts = 40;
   private maxVisibleSquadUnits = 64;
   private maxActivePlayerBullets = 122;
+  private maxRenderedShots = 12;
+  private minFireInterval = 58;
   private gameZoom = 1;
   private isPinching = false;
   private pinchStartDistance = 0;
@@ -222,6 +230,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossProjectiles = this.add.group();
 
     this.createStatusPanel();
+    this.createDebugHud();
     this.createPauseButton();
     this.createInput();
     this.bestDistance = loadBestDistance();
@@ -239,12 +248,26 @@ export default class GameScene extends Phaser.Scene {
     this.cameras.main.setZoom(1);
     this.cameras.main.centerOn(200, 360);
     const meta = loadPlayerMeta();
+    const settings = loadSettings();
     const starter = getStarterWeapon(starterId);
     const userAgent = navigator.userAgent.toLowerCase();
-    this.performanceMode = /iphone|ipad|ipod|android|mobile/.test(userAgent) || navigator.maxTouchPoints >= 2;
-    this.maxVisibleWeaponParts = this.performanceMode ? 8 : 40;
-    this.maxVisibleSquadUnits = this.performanceMode ? 12 : 64;
-    this.maxActivePlayerBullets = this.performanceMode ? 44 : 122;
+    const deviceLite = /iphone|ipad|ipod|android|mobile/.test(userAgent) || navigator.maxTouchPoints >= 2;
+    this.renderQuality = settings.renderMode === 'lite'
+      ? 'lite'
+      : settings.renderMode === 'standard'
+        ? 'standard'
+        : settings.renderMode === 'flashy'
+          ? 'flashy'
+          : deviceLite
+            ? 'lite'
+            : 'standard';
+    this.performanceMode = this.renderQuality === 'lite';
+    this.debugHudEnabled = settings.debugHud;
+    this.maxVisibleWeaponParts = this.renderQuality === 'lite' ? 8 : this.renderQuality === 'standard' ? 28 : 52;
+    this.maxVisibleSquadUnits = this.renderQuality === 'lite' ? 12 : this.renderQuality === 'standard' ? 42 : 76;
+    this.maxActivePlayerBullets = this.renderQuality === 'lite' ? 44 : this.renderQuality === 'standard' ? 92 : 140;
+    this.maxRenderedShots = this.renderQuality === 'lite' ? 5 : this.renderQuality === 'standard' ? 10 : 14;
+    this.minFireInterval = this.renderQuality === 'lite' ? 118 : this.renderQuality === 'standard' ? 70 : 48;
     this.permanentRank = meta.permanentRank;
     this.starterCategoryId = starter.categoryId;
     this.lockedWeaponSkinKey = starter.imageKey;
@@ -314,6 +337,9 @@ export default class GameScene extends Phaser.Scene {
     this.rareEventSpawned = 0;
     this.rareEventSpawnTimer = 0;
     this.shotSoundTimer = 0;
+    this.debugHudText = undefined;
+    this.debugHudTimer = 0;
+    this.lastFrameDelta = 16.7;
     this.pauseOverlay = undefined;
     this.playerStatuses = {
       poisonMs: 0,
@@ -332,6 +358,7 @@ export default class GameScene extends Phaser.Scene {
     }
 
     const smoothDelta = Math.min(delta, 33);
+    this.lastFrameDelta = delta;
     this.stageTimer += smoothDelta;
     this.fireTimer += delta;
     this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
@@ -355,9 +382,10 @@ export default class GameScene extends Phaser.Scene {
     this.updateStageBackground();
     this.updateBossBar();
     this.updateStatusPanel();
+    this.updateDebugHud(smoothDelta);
 
-    const weaponPressure = Math.min(this.stats.weaponCount, this.performanceMode ? 24 : 54);
-    const fireInterval = Math.max(this.performanceMode ? 118 : 58, 265 - this.stats.fireRate * 34 - weaponPressure * 2.1);
+    const weaponPressure = Math.min(this.stats.weaponCount, this.renderQuality === 'lite' ? 24 : this.renderQuality === 'standard' ? 46 : 68);
+    const fireInterval = Math.max(this.minFireInterval, 265 - this.stats.fireRate * 34 - weaponPressure * 2.1);
     if (this.fireTimer >= fireInterval) {
       this.fireTimer = 0;
       this.fireWeapons();
@@ -474,6 +502,41 @@ export default class GameScene extends Phaser.Scene {
     this.bossPhaseText = this.add.text(378, 96, 'MEDAL 0', { fontSize: '10px', color: '#fca5a5', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(1, 0.5).setDepth(9);
     this.specialText = this.add.text(200, 116, '必殺 12%', { fontSize: '11px', color: '#fef08a', fontFamily: 'Arial, sans-serif', fontStyle: 'bold' }).setOrigin(0.5).setDepth(9);
     this.statusPanelObjects.push(this.weaponText, this.powerText, this.levelText, this.hpText, ...this.hpPips, this.weaponNameText, this.moduleText, this.buildText, this.distanceText, this.bestText, this.bossPhaseText, this.specialText);
+  }
+
+  private createDebugHud(): void {
+    if (!this.debugHudEnabled) {
+      return;
+    }
+
+    this.debugHudText = this.add.text(16, 650, '', {
+      fontSize: '10px',
+      color: '#d9f99d',
+      fontFamily: 'monospace',
+      backgroundColor: 'rgba(2,6,23,0.72)',
+      padding: { x: 6, y: 5 },
+    }).setDepth(60).setScrollFactor(0);
+  }
+
+  private updateDebugHud(delta: number): void {
+    if (!this.debugHudText) {
+      return;
+    }
+
+    this.debugHudTimer += delta;
+    if (this.debugHudTimer < 220) {
+      return;
+    }
+    this.debugHudTimer = 0;
+
+    const fps = this.lastFrameDelta > 0 ? Math.round(1000 / this.lastFrameDelta) : 60;
+    const output = this.getWeaponOutputMultiplier();
+    this.debugHudText.setText([
+      `FPS ${fps}  MODE ${this.renderQuality}`,
+      `B ${this.bullets.getLength()}/${this.maxActivePlayerBullets}  BP ${this.bossProjectiles.getLength()}  E ${this.enemies.getLength()}`,
+      `PART ${this.weaponParts.filter((part) => part.visible).length}/${this.maxVisibleWeaponParts}  UNIT ${this.squadUnits.filter((unit) => unit.visible).length}/${this.maxVisibleSquadUnits}`,
+      `SHOT ${this.maxRenderedShots}  OUT x${output.toFixed(2)}  W ${this.stats.weaponCount}`,
+    ]);
   }
 
   private createPauseButton(): void {
@@ -847,22 +910,22 @@ export default class GameScene extends Phaser.Scene {
 
     this.playWeaponShotSound();
     const branchBonus = Math.min(4, this.evolutionPath.length);
-    const renderedWeaponCount = this.performanceMode
+    const renderedWeaponCount = this.renderQuality === 'lite'
       ? 1 + Math.floor(Math.sqrt(this.stats.weaponCount) * 0.82)
       : 1 + Math.floor(this.stats.weaponCount / 6);
-    const shotCount = Math.min(this.performanceMode ? 5 : 12, renderedWeaponCount + Math.floor(branchBonus / 2));
+    const shotCount = Math.min(this.maxRenderedShots, renderedWeaponCount + Math.floor(branchBonus / 2));
     const center = (shotCount - 1) / 2;
     const colors = getWeaponColors(this.stats);
     const spread = getShotSpread(this.stats);
-    const pierceLeft = this.stats.pierce + (this.stats.modules.includes('chain') ? 1 : 0);
+    const mobilePierceBonus = this.renderQuality === 'lite' ? Math.min(2, Math.floor(Math.sqrt(this.stats.weaponCount) / 4)) : 0;
+    const pierceLeft = this.stats.pierce + mobilePierceBonus + (this.stats.modules.includes('chain') ? 1 : 0);
     const hasStormArray = this.evolutionPath.includes('storm-array') || this.evolutionPath.includes('solar-dragon-rail');
     const hasSolarBarrage = this.evolutionPath.includes('solar-barrage') || this.evolutionPath.includes('solar-dragon-rail');
     const hasZeroLance = this.evolutionPath.includes('zero-lance') || this.evolutionPath.includes('abyss-needle-launcher');
     const hasKrakenAnchor = this.evolutionPath.includes('kraken-anchor') || this.evolutionPath.includes('titan-orbit-hammer');
     const usesSlashShot = this.usesSlashShots();
     const bulletShape = usesSlashShot ? 'slash' : this.getStarterBulletShape();
-    const virtualWeaponPower = Math.max(0, this.stats.weaponCount - shotCount * 4) * (this.performanceMode ? 0.2 : 0.16);
-    const clashPower = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.45 + virtualWeaponPower) * getWeaponPowerMultiplier(this.stats) * 0.34));
+    const clashPower = Math.max(1, Math.round(this.getInternalAttackScore(0.45) * getWeaponPowerMultiplier(this.stats) * 0.34));
 
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
@@ -2240,9 +2303,19 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  private getWeaponOutputMultiplier(): number {
+    const countBoost = Math.min(1.55, Math.sqrt(Math.max(0, this.stats.weaponCount - 1)) * 0.11);
+    const modeBoost = this.renderQuality === 'lite' ? 0.42 : this.renderQuality === 'standard' ? 0.18 : 0;
+    return 1 + countBoost + modeBoost;
+  }
+
+  private getInternalAttackScore(synergyScale: number): number {
+    return (this.stats.power + this.stats.level + this.stats.synergy * synergyScale) * this.getWeaponOutputMultiplier();
+  }
+
   private hitEnemy(bulletObject: Bullet, enemyObject: Enemy): void {
     const critical = Math.random() < this.stats.critRate;
-    const damage = Math.max(1, Math.round((this.stats.power + this.stats.level + this.stats.synergy * 0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
+    const damage = Math.max(1, Math.round(this.getInternalAttackScore(0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
     this.spawnHitEffect(bulletObject.x, bulletObject.y, critical ? 0xffffff : 0xfef08a);
     this.applyEnemyStatus(enemyObject, bulletObject.getData('statusEffect') as StatusEffect | undefined);
     if (enemyObject.damage(damage)) {
@@ -2294,7 +2367,7 @@ export default class GameScene extends Phaser.Scene {
 
     const shot = bullet as Bullet;
     const critical = Math.random() < this.stats.critRate;
-    const rawDamage = (this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1);
+    const rawDamage = (this.stats.power + this.stats.level * 1.5 + this.stats.synergy * 0.55) * this.getWeaponOutputMultiplier() * getWeaponPowerMultiplier(this.stats) * 0.62 * (critical ? 1.55 : 1);
     const bossArmor = this.getBossArmor(2.35 + this.bossPhase * 0.5);
     const damage = Math.max(1, Math.round(rawDamage / bossArmor));
     this.bossHp -= damage;
