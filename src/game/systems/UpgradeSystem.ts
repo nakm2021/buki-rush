@@ -92,6 +92,10 @@ export function applyGateEffect(stats: PlayerStats, gate: GateOption): PlayerSta
       next.fireRate += 0.08;
       next.synergy += 2;
       break;
+    case 'magnet':
+      next.synergy += 1;
+      next.fireRate += 0.04;
+      break;
     default:
       break;
   }

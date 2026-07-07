@@ -86,6 +86,7 @@ export class GatePair extends Phaser.GameObjects.Container {
     if (option.kind === 'crit') return 'itemPrismCrown';
     if (option.kind === 'pierce') return 'itemVoidDrill';
     if (option.kind === 'special') return 'itemOverdriveOrb';
+    if (option.kind === 'magnet') return 'itemPrismCrown';
     if (this.isLegendary(option)) return option.kind === 'fusion' ? 'itemMythicRelicChest' : 'itemSolarLegendChest';
     if (this.isRare(option)) return 'itemRareChest';
     return 'itemBukiCapsule';
@@ -139,6 +140,8 @@ export class GatePair extends Phaser.GameObjects.Container {
         return 'SH';
       case 'special':
         return 'SP';
+      case 'magnet':
+        return 'MAG';
       default:
         return '^';
     }

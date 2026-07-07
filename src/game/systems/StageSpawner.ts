@@ -1,6 +1,6 @@
 import { getEnemyVariant } from './EnemyCatalog';
 import { getModuleByIndex, getModuleProfile } from './WeaponEvolution';
-import type { GateOption, RushItemLine, StageStep } from '../types/GameTypes';
+import type { GateOption, StageStep } from '../types/GameTypes';
 
 export const INITIAL_STEP_INTERVAL = 650;
 export const LOOP_STEP_INTERVAL = 820;
@@ -58,13 +58,16 @@ export const OPENING_STEPS: StageStep[] = [
   },
   {
     time: 9300,
-    rushLine: createOpeningRushLine(),
+    enemies: [
+      { x: 96, y: -170, hp: 18, variantId: 'ember-imp' },
+      { x: 200, y: -238, hp: 24, variantId: 'storm-bat' },
+      { x: 304, y: -306, hp: 18, variantId: 'frost-wisp' },
+    ],
   },
 ];
 
 export function createLoopStep(stepIndex: number, difficulty: number): StageStep {
   const gateLine = stepIndex % 5 === 0 ? createGateLine(stepIndex) : undefined;
-  const rushLine = stepIndex % 3 === 1 ? createRushLine(stepIndex, difficulty) : undefined;
   const variant = getEnemyVariant(stepIndex);
   const secondVariant = getEnemyVariant(stepIndex + 7);
   const troubleVariants = [
@@ -135,7 +138,6 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
   return {
     time: 0,
     gateLine,
-    rushLine,
     enemy: {
       x: lane,
       y: -190 - (stepIndex % 3) * 36,
@@ -143,56 +145,6 @@ export function createLoopStep(stepIndex: number, difficulty: number): StageStep
       variantId: variant.id,
     },
     enemies,
-  };
-}
-
-function createOpeningRushLine(): RushItemLine {
-  return {
-    y: -72,
-    rows: 7,
-    lanes: [78, 122, 166, 210, 254, 298, 342],
-    rowSpacing: 43,
-    jitter: 0,
-    options: [
-      { label: '+1', kind: 'add', value: 1, color: 0x22c55e, good: true },
-      { label: '+1', kind: 'add', value: 1, color: 0x38bdf8, good: true },
-      { label: 'ATK', kind: 'power', value: 1, color: 0xfb923c, good: true },
-      { label: 'Lv', kind: 'level', value: 1, color: 0xd8b4fe, good: true },
-      { label: 'SP', kind: 'special', value: 8, color: 0xfef08a, good: true },
-      { label: '盾', kind: 'shield', value: 1, color: 0x93c5fd, good: true },
-      { label: 'CR', kind: 'crit', value: 2, color: 0xfb7185, good: true },
-    ],
-  };
-}
-
-function createRushLine(stepIndex: number, difficulty: number): RushItemLine {
-  const lanes = stepIndex % 2 === 0
-    ? [82, 128, 174, 220, 266, 312]
-    : [68, 112, 156, 200, 244, 288, 332];
-  const rows = Math.min(8, 5 + Math.floor(difficulty / 2));
-  const premiumEvery = Math.max(5, 8 - Math.min(3, difficulty));
-  const options: GateOption[] = [
-    { label: '+1', kind: 'add', value: 1, color: goodColors[stepIndex % goodColors.length], good: true },
-    { label: '+1', kind: 'add', value: 1, color: goodColors[(stepIndex + 2) % goodColors.length], good: true },
-    { label: 'ATK', kind: 'power', value: 1, color: 0xfb923c, good: true },
-    { label: 'Lv', kind: 'level', value: 1, color: 0xd8b4fe, good: true },
-    { label: 'SP', kind: 'special', value: 6 + Math.min(8, difficulty), color: 0xfef08a, good: true },
-    { label: '盾', kind: 'shield', value: 1, color: 0x93c5fd, good: true },
-    { label: 'CR', kind: 'crit', value: 1 + Math.min(3, Math.floor(difficulty / 2)), color: 0xfb7185, good: true },
-    { label: '貫', kind: 'pierce', value: 1, color: 0x60a5fa, good: true },
-  ];
-
-  if (stepIndex % premiumEvery === 0) {
-    options.push({ label: '連', kind: 'rapid', value: 1, color: premiumColors[stepIndex % premiumColors.length], good: true });
-  }
-
-  return {
-    y: -72,
-    rows,
-    lanes,
-    rowSpacing: 41,
-    jitter: 0,
-    options,
   };
 }
 

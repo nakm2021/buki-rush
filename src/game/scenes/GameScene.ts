@@ -194,6 +194,11 @@ export default class GameScene extends Phaser.Scene {
   private rushPickupCounter = 0;
   private rushComboText?: Phaser.GameObjects.Text;
   private rushComboHideEvent?: Phaser.Time.TimerEvent;
+  private rushComboRewardLevel = 0;
+  private magnetTimer = 0;
+  private bonusRushUntil = 0;
+  private nextBonusRushTime = 0;
+  private nextBonusRushStep = 0;
   private performanceMode = false;
   private renderQuality: RenderQuality = 'standard';
   private debugHudEnabled = false;
@@ -351,6 +356,11 @@ export default class GameScene extends Phaser.Scene {
     this.rushPickupCounter = 0;
     this.rushComboText = undefined;
     this.rushComboHideEvent = undefined;
+    this.rushComboRewardLevel = 0;
+    this.magnetTimer = 0;
+    this.bonusRushUntil = 0;
+    this.nextBonusRushTime = 0;
+    this.nextBonusRushStep = 0;
     this.debugHudText = undefined;
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
@@ -379,6 +389,7 @@ export default class GameScene extends Phaser.Scene {
     this.fireTimer += delta;
     this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
     this.rushPickupSoundTimer = Math.max(0, this.rushPickupSoundTimer - smoothDelta);
+    this.magnetTimer = Math.max(0, this.magnetTimer - smoothDelta);
     this.distance += (smoothDelta / 1000) * 22;
     this.bossDefeatGraceMs = Math.max(0, this.bossDefeatGraceMs - smoothDelta);
 
@@ -395,6 +406,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossAttacks(smoothDelta);
     this.updateBossProjectiles(smoothDelta);
     this.moveFlowingObjects(smoothDelta);
+    this.updateMagnetPull(smoothDelta);
     this.updateBossBackdrop(smoothDelta);
     this.updateStageBackground();
     this.updateBossBar();
@@ -708,6 +720,11 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
+    if (this.bonusRushUntil > this.stageTimer) {
+      this.updateBonusRushStage();
+      return;
+    }
+
     while (this.nextStageIndex < OPENING_STEPS.length && this.stageTimer >= OPENING_STEPS[this.nextStageIndex].time) {
       this.spawnStageStep(OPENING_STEPS[this.nextStageIndex]);
       this.nextStageIndex += 1;
@@ -735,10 +752,49 @@ export default class GameScene extends Phaser.Scene {
       this.loopStepIndex += 1;
       this.nextLoopSpawnTime += Math.max(1050, LOOP_STEP_INTERVAL - difficulty * 35);
 
-      if (this.loopStepIndex >= this.nextBossStepTarget && !this.boss && !this.bossWarningActive) {
+      if (this.loopStepIndex >= this.nextBossStepTarget && !this.boss && !this.bossWarningActive && this.bonusRushUntil <= this.stageTimer) {
         this.triggerBossWarning();
       }
     }
+  }
+
+  private startBonusRushStage(): void {
+    this.bonusRushUntil = this.stageTimer + 3600;
+    this.nextBonusRushTime = this.stageTimer;
+    this.nextBonusRushStep = 0;
+    this.enemies.clear(true, true);
+    this.obstacles.clear(true, true);
+    this.showFlash('BOSS REWARD RUSH', '#fef3c7', 200, 178);
+    this.spawnBurst(200, 230, 0xfef08a, 30);
+    this.cameras.main.shake(420, 0.003);
+  }
+
+  private updateBonusRushStage(): void {
+    while (this.stageTimer >= this.nextBonusRushTime && this.stageTimer < this.bonusRushUntil) {
+      this.spawnRushLine(this.createBonusRushLine(this.nextBonusRushStep));
+      this.nextBonusRushStep += 1;
+      this.nextBonusRushTime += 680;
+    }
+  }
+
+  private createBonusRushLine(step: number): RushItemLine {
+    const laneOptions: GateOption[] = [
+      { label: '+1', kind: 'add', value: 1, color: 0x22c55e, good: true },
+      { label: 'ATK', kind: 'power', value: 1 + (step % 2), color: 0xfb923c, good: true },
+      { label: '磁', kind: 'magnet', value: 2600, color: 0x5eead4, good: true },
+      { label: 'SP', kind: 'special', value: 8, color: 0xfef08a, good: true },
+      { label: 'CR', kind: 'crit', value: 2, color: 0xfb7185, good: true },
+    ];
+    return {
+      label: 'ITEM RUSH',
+      y: -70,
+      rows: this.performanceMode ? 4 : 6,
+      lanes: [74, 116, 158, 200, 242, 284, 326],
+      rowSpacing: 38,
+      jitter: 0,
+      options: laneOptions,
+      laneOptions: step % 2 === 0 ? undefined : laneOptions,
+    };
   }
 
   private spawnStageStep(step: StageStep): void {
@@ -783,7 +839,7 @@ export default class GameScene extends Phaser.Scene {
         if (created >= maxItems) {
           return;
         }
-        const option = line.options[(row * 2 + laneIndex) % optionCount];
+        const option = line.laneOptions?.[laneIndex % line.laneOptions.length] ?? line.options[(row * 2 + laneIndex) % optionCount];
         const wave = Math.sin(row * 0.9 + laneIndex * 1.7) * (line.jitter ?? 0);
         const item = this.createRushItem(line.lanes[laneIndex] + wave, line.y - row * line.rowSpacing, option);
         this.gates.add(item);
@@ -839,6 +895,7 @@ export default class GameScene extends Phaser.Scene {
     if (option.kind === 'crit') return 'itemPrismCrown';
     if (option.kind === 'pierce') return 'itemVoidDrill';
     if (option.kind === 'special') return 'itemOverdriveOrb';
+    if (option.kind === 'magnet') return 'itemPrismCrown';
     if (option.kind === 'shield' || option.kind === 'heal') return 'itemBukiCapsule';
     return 'itemRareChest';
   }
@@ -1028,6 +1085,30 @@ export default class GameScene extends Phaser.Scene {
       this.bossHpBar.setPosition(this.boss.x, hpY);
       this.bossHpFill.setPosition(this.boss.x - 90, hpY);
     }
+  }
+
+  private updateMagnetPull(delta: number): void {
+    if (this.magnetTimer <= 0) {
+      return;
+    }
+
+    const dt = delta / 1000;
+    const range = this.magnetTimer > 1200 ? 190 : 145;
+    const pull = this.performanceMode ? 7.2 : 9.5;
+    this.gates.getChildren().forEach((child) => {
+      const gate = child as Phaser.GameObjects.Container;
+      if (!gate.active || !gate.getData('rushItem')) {
+        return;
+      }
+      const distance = Phaser.Math.Distance.Between(gate.x, gate.y, this.player.x, this.player.y);
+      if (distance > range) {
+        return;
+      }
+      const t = clamp((range - distance) / range, 0.08, 0.9);
+      gate.x = Phaser.Math.Linear(gate.x, this.player.x, pull * t * dt);
+      gate.y = Phaser.Math.Linear(gate.y, this.player.y - 20, pull * t * dt);
+      (gate.body as Phaser.Physics.Arcade.Body | undefined)?.updateFromGameObject();
+    });
   }
 
   private fireWeapons(): void {
@@ -2322,6 +2403,10 @@ export default class GameScene extends Phaser.Scene {
     if (option.kind === 'special' && option.good) {
       this.specialCharge = clamp(this.specialCharge + option.value, 0, 100);
     }
+    if (option.kind === 'magnet' && option.good) {
+      this.magnetTimer = Math.max(this.magnetTimer, option.value);
+      this.showFlash('MAGNET', '#ccfbf1', this.player.x, this.player.y - 96);
+    }
 
     if (rushItem) {
       this.rushPickupCounter += 1;
@@ -2402,6 +2487,7 @@ export default class GameScene extends Phaser.Scene {
       }).setOrigin(0.5).setDepth(30);
     }
     this.rushComboText.setText(`RUSH x${Math.min(999, this.rushPickupCounter)}`);
+    this.applyRushComboReward(option.color);
     this.rushComboText.setAlpha(1);
     this.rushComboText.setScale(1.08);
     this.tweens.add({
@@ -2422,9 +2508,42 @@ export default class GameScene extends Phaser.Scene {
         ease: 'Sine.easeOut',
         onComplete: () => {
           this.rushPickupCounter = 0;
+          this.rushComboRewardLevel = 0;
         },
       });
     });
+  }
+
+  private applyRushComboReward(color: number): void {
+    const thresholds = [30, 60, 100, 160, 240];
+    const nextThreshold = thresholds[this.rushComboRewardLevel];
+    if (!nextThreshold || this.rushPickupCounter < nextThreshold) {
+      return;
+    }
+
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
+    this.rushComboRewardLevel += 1;
+
+    if (this.rushComboRewardLevel === 1) {
+      this.specialCharge = clamp(this.specialCharge + 18, 0, 100);
+    } else if (this.rushComboRewardLevel === 2) {
+      this.stats = { ...this.stats, power: this.stats.power + 2, synergy: this.stats.synergy + 1 };
+    } else if (this.rushComboRewardLevel === 3) {
+      this.playerHp += 1;
+      this.stats = { ...this.stats, shield: this.stats.shield + 1 };
+    } else if (this.rushComboRewardLevel === 4) {
+      this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 4, fireRate: this.stats.fireRate + 0.08, synergy: this.stats.synergy + 2 };
+    } else {
+      this.stats = { ...this.stats, level: this.stats.level + 2, power: this.stats.power + 3, critRate: Math.min(0.7, this.stats.critRate + 0.025), synergy: this.stats.synergy + 3 };
+      this.specialCharge = clamp(this.specialCharge + 28, 0, 100);
+    }
+
+    const label = `RUSH BONUS ${nextThreshold}`;
+    this.showFlash(label, '#fef3c7', 200, 154);
+    this.spawnBurst(this.player.x, this.player.y - 36, color, 22 + this.rushComboRewardLevel * 3);
+    this.showStatGainFeedback(previousStats, previousHp, { label, kind: 'fusion', value: 1, color, good: true });
+    this.playRareSound();
   }
 
   private handleEnemyCollision(enemyObject: Enemy): void {
@@ -2694,6 +2813,11 @@ export default class GameScene extends Phaser.Scene {
     this.showFlash('STAGE BRANCH', '#bae6fd', 200, 254);
     this.showFlash(`MEDAL +${medals}`, '#fef3c7', 200, 214);
     this.time.delayedCall(420, () => this.grantBossEvolutionBonus());
+    this.time.delayedCall(760, () => {
+      if (!this.isGameOver && !this.boss && !this.rareEvent) {
+        this.startBonusRushStage();
+      }
+    });
   }
 
   private grantBossEvolutionBonus(): void {
@@ -2795,10 +2919,10 @@ export default class GameScene extends Phaser.Scene {
     [veil, top, label, sub, scan].forEach((object) => object.setData('bossWarningEffect', true));
     this.tweens.add({ targets: [top, label, sub], alpha: 0.28, duration: 120, yoyo: true, repeat: 7 });
     this.tweens.add({ targets: scan, y: height + 40, duration: 1280, ease: 'Cubic.easeIn', onComplete: () => scan.destroy() });
-    this.tweens.add({ targets: veil, alpha: 0, delay: 1450, duration: 360, onComplete: () => veil.destroy() });
-    this.tweens.add({ targets: [top, label, sub], alpha: 0, delay: 1450, duration: 300, onComplete: () => { top.destroy(); label.destroy(); sub.destroy(); } });
+    this.tweens.add({ targets: veil, alpha: 0, delay: 2450, duration: 360, onComplete: () => veil.destroy() });
+    this.tweens.add({ targets: [top, label, sub], alpha: 0, delay: 2450, duration: 300, onComplete: () => { top.destroy(); label.destroy(); sub.destroy(); } });
 
-    this.time.delayedCall(1700, () => {
+    this.time.delayedCall(2750, () => {
       this.bossWarningActive = false;
       if (!this.isGameOver && !this.boss) {
         this.spawnBoss();

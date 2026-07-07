@@ -8,7 +8,7 @@ export type WeaponRarity = 'common' | 'rare' | 'epic' | 'legend' | 'mythic';
 
 export type StatusEffect = 'poison' | 'paralyze' | 'freeze' | 'curse' | 'burn';
 
-export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion' | 'crit' | 'pierce' | 'shield' | 'special';
+export type GateKind = 'add' | 'multiply' | 'subtract' | 'level' | 'power' | 'heal' | 'element' | 'tier' | 'rapid' | 'archetype' | 'module' | 'rarity' | 'fusion' | 'crit' | 'pierce' | 'shield' | 'special' | 'magnet';
 
 export interface PlayerStats {
   weaponCount: number;
@@ -68,7 +68,9 @@ export interface RushItemLine {
   lanes: number[];
   rowSpacing: number;
   options: GateOption[];
+  laneOptions?: GateOption[];
   jitter?: number;
+  label?: string;
 }
 
 export interface StageStep {
