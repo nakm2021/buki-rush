@@ -94,6 +94,9 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponAphroditeRoseBow', path: 'assets/optimized/weapon-aphrodite-rose-bow.png', match: { elements: ['light'], archetypes: ['seraph', 'centaur', 'lotus'] } },
   { key: 'weaponMoistCalicoCatCannon', path: 'assets/optimized/weapon-moist-calico-cat-cannon.png', match: { elements: ['crystal', 'light'], archetypes: ['lotus', 'rune', 'blaster'] } },
   { key: 'weaponFlameMonkeyStaff', path: 'assets/optimized/weapon-flame-monkey-staff.png', match: { elements: ['fire'], archetypes: ['samurai', 'saber', 'vortex'] } },
+  { key: 'weaponOrbitalRocketLance', path: 'assets/optimized/weapon-orbital-rocket-lance.png', match: { elements: ['thunder', 'fire'], archetypes: ['rail', 'magnum', 'lance'] } },
+  { key: 'weaponSunflowerSolarBow', path: 'assets/optimized/weapon-sunflower-solar-bow.png', match: { elements: ['light', 'wind'], archetypes: ['centaur', 'seraph', 'lotus'] } },
+  { key: 'weaponRoosterCoilGlaive', path: 'assets/optimized/weapon-rooster-coil-glaive.png', match: { elements: ['fire', 'wind'], archetypes: ['saber', 'samurai', 'vortex'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -128,6 +131,13 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
+
+export const STAGE_BACKGROUND_IMAGE_ASSETS: ImageAsset[] = [
+  { key: 'bgRealOcean', path: 'assets/generated/bg-real-ocean.png' },
+  { key: 'bgRealMountain', path: 'assets/generated/bg-real-mountain.png' },
+  { key: 'bgRealNeonCity', path: 'assets/generated/bg-real-neon-city.png' },
+  { key: 'bgRealVolcano', path: 'assets/generated/bg-real-volcano.png' },
+];
 
 export const ITEM_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'itemBukiCapsule', path: 'assets/optimized/item-buki-capsule.png' },
@@ -204,6 +214,7 @@ export function getPreloadImageAssets(): ImageAsset[] {
     TITLE_BACKGROUND_ASSET,
     ...WEAPON_IMAGE_ASSETS,
     ...openingBosses,
+    ...STAGE_BACKGROUND_IMAGE_ASSETS,
     ...ITEM_IMAGE_ASSETS,
     ...openingEnemies,
     { key: 'eliteReaper', path: 'assets/generated/elite-reaper.png' },

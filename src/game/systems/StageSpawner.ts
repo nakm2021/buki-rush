@@ -152,7 +152,7 @@ function createOpeningRushLine(): RushItemLine {
     rows: 7,
     lanes: [78, 122, 166, 210, 254, 298, 342],
     rowSpacing: 43,
-    jitter: 7,
+    jitter: 0,
     options: [
       { label: '+1', kind: 'add', value: 1, color: 0x22c55e, good: true },
       { label: '+1', kind: 'add', value: 1, color: 0x38bdf8, good: true },
@@ -191,7 +191,7 @@ function createRushLine(stepIndex: number, difficulty: number): RushItemLine {
     rows,
     lanes,
     rowSpacing: 41,
-    jitter: 9,
+    jitter: 0,
     options,
   };
 }

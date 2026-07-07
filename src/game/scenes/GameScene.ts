@@ -130,6 +130,8 @@ export default class GameScene extends Phaser.Scene {
   private auraRings: Phaser.GameObjects.Arc[] = [];
   private stageThemeIndex = 0;
   private stageGround!: Phaser.GameObjects.Rectangle;
+  private stageBackgroundImage!: Phaser.GameObjects.Image;
+  private currentStageBackgroundKey = '';
   private backgroundTint!: Phaser.GameObjects.Rectangle;
   private trackOuter!: Phaser.GameObjects.Polygon;
   private trackMid!: Phaser.GameObjects.Polygon;
@@ -314,6 +316,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossMotes = [];
     this.stageMarkers = [];
     this.stageThemeIndex = 0;
+    this.currentStageBackgroundKey = '';
     this.currentBossTheme = undefined;
     this.specialActive = false;
     this.specialTimer = 0;
@@ -412,25 +415,27 @@ export default class GameScene extends Phaser.Scene {
   private drawTrack(width: number, height: number): void {
     const theme = STAGE_THEMES[0];
     this.stageGround = this.add.rectangle(width / 2, height / 2, width, height, theme.ground, 1);
+    this.stageBackgroundImage = this.add.image(width / 2, height / 2, this.getStageBackgroundKey(theme));
+    this.stageBackgroundImage.setDisplaySize(width, height).setDepth(0.01).setAlpha(0.86);
     this.backgroundTint = this.add.rectangle(width / 2, height / 2, width, height, 0x38bdf8, 0.08).setBlendMode(Phaser.BlendModes.ADD);
     this.backgroundTint.setDepth(0.05);
     this.bossBackdrop = this.add.rectangle(width / 2, height / 2, width, height, 0x020617, 0).setDepth(0.055);
     this.bossAurora = this.add.rectangle(width / 2, height / 2, width * 0.72, height, 0x38bdf8, 0).setBlendMode(Phaser.BlendModes.ADD);
     this.bossAurora.setDepth(0.07);
-    this.trackOuter = this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], theme.trackOuter, 1);
-    this.trackMid = this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], theme.trackMid, 1);
-    this.trackInner = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], theme.trackInner, 0.92);
+    this.trackOuter = this.add.polygon(width / 2, height / 2, [58, 720, 342, 720, 308, 0, 92, 0], theme.trackOuter, 0.68);
+    this.trackMid = this.add.polygon(width / 2, height / 2, [82, 720, 318, 720, 288, 0, 112, 0], theme.trackMid, 0.64);
+    this.trackInner = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], theme.trackInner, 0.56);
     this.trackGlow = this.add.polygon(width / 2, height / 2, [112, 720, 288, 720, 268, 0, 132, 0], 0x38bdf8, 0.08);
     this.trackGlow.setBlendMode(Phaser.BlendModes.ADD);
 
     for (let y = -40; y < height + 80; y += 86) {
-      this.add.rectangle(width / 2, y, 250, 4, 0xffffff, 0.2).setAngle(-1);
-      this.add.rectangle(width / 2, y + 38, 210, 2, 0x8b8f98, 0.18).setAngle(1);
+      this.add.rectangle(width / 2, y, 250, 4, 0xffffff, 0.16).setAngle(-1);
+      this.add.rectangle(width / 2, y + 38, 210, 2, 0x8b8f98, 0.14).setAngle(1);
     }
 
     [90, 310].forEach((x) => {
-      this.add.rectangle(x, height / 2, 18, height, 0x8a8f99, 0.95);
-      this.add.rectangle(x, height / 2, 5, height, 0x6b7280, 0.9);
+      this.add.rectangle(x, height / 2, 18, height, 0x8a8f99, 0.66);
+      this.add.rectangle(x, height / 2, 5, height, 0x6b7280, 0.7);
       this.add.rectangle(x + (x < 200 ? -16 : 16), height / 2, 3, height, 0xf8fafc, 0.38);
     });
 
@@ -740,6 +745,8 @@ export default class GameScene extends Phaser.Scene {
     if (step.gateLine) {
       const pair = new GatePair(this, 200, step.gateLine.y, step.gateLine.single ?? step.gateLine.left, step.gateLine.right, Boolean(step.gateLine.single));
       pair.setDepth(2);
+      pair.left.setDepth(2.15);
+      pair.right.setDepth(2.15);
       this.gates.add(pair.left);
       if (pair.right !== pair.left) {
         this.gates.add(pair.right);
@@ -790,7 +797,9 @@ export default class GameScene extends Phaser.Scene {
     const color = option.good ? option.color : 0xef4444;
     const assetKey = this.getRushItemAssetKey(option);
     const shadow = this.add.ellipse(0, 24, 42, 10, 0x020617, 0.24);
-    const glow = this.add.circle(0, 0, 23, color, this.performanceMode ? 0.14 : 0.2);
+    const plate = this.add.rectangle(0, 0, 44, 50, option.good ? 0x0f172a : 0x450a0a, 0.74);
+    plate.setStrokeStyle(2, color, option.good ? 0.72 : 0.86);
+    const glow = this.add.circle(0, -2, 23, color, this.performanceMode ? 0.12 : 0.18);
     glow.setBlendMode(Phaser.BlendModes.ADD);
     const item = this.textures.exists(assetKey)
       ? this.add.image(0, -2, assetKey).setDisplaySize(38, 38)
@@ -804,7 +813,7 @@ export default class GameScene extends Phaser.Scene {
       strokeThickness: 3,
     }).setOrigin(0.5);
 
-    container.add([shadow, glow, item, label]);
+    container.add([shadow, plate, glow, item, label]);
     container.setDepth(2.15);
     container.setData('rushItem', true);
     container.setData('kind', option.kind);
@@ -2085,9 +2094,15 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.stageGround.setFillStyle(theme.ground, 1);
-    this.trackOuter.setFillStyle(theme.trackOuter, 1);
-    this.trackMid.setFillStyle(theme.trackMid, 1);
-    this.trackInner.setFillStyle(theme.trackInner, 0.92);
+    const backgroundKey = this.getStageBackgroundKey(theme);
+    if (backgroundKey !== this.currentStageBackgroundKey && this.textures.exists(backgroundKey)) {
+      this.currentStageBackgroundKey = backgroundKey;
+      this.stageBackgroundImage.setTexture(backgroundKey);
+      this.stageBackgroundImage.setDisplaySize(this.scale.width, this.scale.height);
+    }
+    this.trackOuter.setFillStyle(theme.trackOuter, 0.68);
+    this.trackMid.setFillStyle(theme.trackMid, 0.64);
+    this.trackInner.setFillStyle(theme.trackInner, 0.56);
     this.stageThemeText.setText(theme.name);
     this.stageThemeText.setColor(`#${theme.accent.toString(16).padStart(6, '0')}`);
     this.stageMarkers.forEach((marker, index) => {
@@ -2097,6 +2112,22 @@ export default class GameScene extends Phaser.Scene {
         marker.y = -50;
       }
     });
+  }
+
+  private getStageBackgroundKey(theme: StageTheme): string {
+    if (theme.name.includes('BOSS') || theme.name.includes('INFERNO') || theme.name.includes('ROCKET') || theme.name.includes('SABER')) {
+      return 'bgRealVolcano';
+    }
+    if (theme.name.includes('FROST') || theme.name.includes('AURORA') || theme.name.includes('AEGIS') || theme.name.includes('PIERCE')) {
+      return 'bgRealMountain';
+    }
+    if (theme.name.includes('NEON') || theme.name.includes('VOID') || theme.name.includes('CLOCK')) {
+      return 'bgRealNeonCity';
+    }
+    if (theme.name.includes('TIDE') || theme.name.includes('VINEYARD') || theme.name.includes('TOXIC')) {
+      return 'bgRealOcean';
+    }
+    return 'bgRealOcean';
   }
 
   private resolveStageThemeIndex(): number {
