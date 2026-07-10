@@ -413,8 +413,8 @@ export default class TitleScene extends Phaser.Scene {
     let current = loadSettings();
     const leaderboard = loadLeaderboard();
     const renderLabels: Record<typeof current.renderMode, string> = {
-      auto: '自動',
-      lite: '軽量',
+      auto: '自動サクサク',
+      lite: '軽量固定',
       standard: '標準',
       flashy: '派手',
     };
@@ -443,7 +443,7 @@ export default class TitleScene extends Phaser.Scene {
         fontFamily: 'Arial, sans-serif',
       }).setOrigin(0.5);
     });
-    const controls = this.add.text(width / 2, 392, '操作: PC 矢印/WASD\nスマホ ドラッグ移動 / ダブルタップ 必殺', {
+    const controls = this.add.text(width / 2, 392, '操作: PC 矢印/WASD\nスマホ ドラッグ移動 / ダブルタップ 必殺\n自動サクサクはiPhoneとFPS低下時に演出を調整', {
       fontSize: '12px',
       color: '#dcfce7',
       align: 'center',

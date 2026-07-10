@@ -8,7 +8,7 @@ import { getBossAssetByLoop, getBossTheme, getDeferredImageAssets, getRandomBoss
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
-import { loadBestDistance, loadPlayerMeta, loadSettings, recordLeaderboard, recordRun, saveBestDistance } from '../systems/RecordSystem';
+import { loadBestDistance, loadPlayerMeta, loadSettings, recordLeaderboard, recordRun, saveBestDistance, type PlayerSettings } from '../systems/RecordSystem';
 import { BOSS_WARNING_PROFILE, EVENT_REWARD_PROFILE, RARE_SOUND_PROFILE, getUpgradeProfile, getWeaponShotProfile, type SoundProfile } from '../systems/SoundCatalog';
 import { createBossHp, createLoopStep, INITIAL_STEP_INTERVAL, LOOP_STEP_INTERVAL, OPENING_STEPS } from '../systems/StageSpawner';
 import { applyEnemyImpact, applyGateEffect, clamp } from '../systems/UpgradeSystem';
@@ -217,6 +217,13 @@ export default class GameScene extends Phaser.Scene {
   private strawberryFeverTimer = 0;
   private performanceMode = false;
   private renderQuality: RenderQuality = 'standard';
+  private requestedRenderMode: PlayerSettings['renderMode'] = 'auto';
+  private isMobileDevice = false;
+  private isIosDevice = false;
+  private adaptivePerformanceLevel = 0;
+  private adaptiveLowFpsMs = 0;
+  private adaptiveStableFpsMs = 0;
+  private adaptiveNoticeCooldown = 0;
   private debugHudEnabled = false;
   private debugHudText?: Phaser.GameObjects.Text;
   private debugHudTimer = 0;
@@ -281,23 +288,24 @@ export default class GameScene extends Phaser.Scene {
     const settings = loadSettings();
     const starter = getStarterWeapon(starterId);
     const userAgent = navigator.userAgent.toLowerCase();
-    const deviceLite = /iphone|ipad|ipod|android|mobile/.test(userAgent) || navigator.maxTouchPoints >= 2;
+    this.requestedRenderMode = settings.renderMode;
+    this.isIosDevice = /iphone|ipad|ipod/.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    this.isMobileDevice = this.isIosDevice || /android|mobile/.test(userAgent) || navigator.maxTouchPoints >= 2;
+    this.adaptivePerformanceLevel = 0;
+    this.adaptiveLowFpsMs = 0;
+    this.adaptiveStableFpsMs = 0;
+    this.adaptiveNoticeCooldown = 0;
     this.renderQuality = settings.renderMode === 'lite'
       ? 'lite'
       : settings.renderMode === 'standard'
         ? 'standard'
         : settings.renderMode === 'flashy'
           ? 'flashy'
-          : deviceLite
+          : this.isMobileDevice
             ? 'lite'
             : 'standard';
-    this.performanceMode = this.renderQuality === 'lite';
     this.debugHudEnabled = settings.debugHud;
-    this.maxVisibleWeaponParts = this.renderQuality === 'lite' ? 8 : this.renderQuality === 'standard' ? 28 : 52;
-    this.maxVisibleSquadUnits = this.renderQuality === 'lite' ? 12 : this.renderQuality === 'standard' ? 42 : 76;
-    this.maxActivePlayerBullets = this.renderQuality === 'lite' ? 58 : this.renderQuality === 'standard' ? 92 : 140;
-    this.maxRenderedShots = this.renderQuality === 'lite' ? 6 : this.renderQuality === 'standard' ? 10 : 14;
-    this.minFireInterval = this.renderQuality === 'lite' ? 118 : this.renderQuality === 'standard' ? 70 : 48;
+    this.applyRenderBudget();
     this.permanentRank = meta.permanentRank;
     this.starterCategoryId = starter.categoryId;
     this.lockedWeaponSkinKey = starter.imageKey;
@@ -406,6 +414,77 @@ export default class GameScene extends Phaser.Scene {
     };
   }
 
+  private applyRenderBudget(): void {
+    const base = this.renderQuality === 'lite'
+      ? { parts: 8, units: 12, bullets: 58, shots: 6, fire: 118 }
+      : this.renderQuality === 'standard'
+        ? { parts: 28, units: 42, bullets: 92, shots: 10, fire: 70 }
+        : { parts: 52, units: 76, bullets: 140, shots: 14, fire: 48 };
+    const iosGuard = this.isIosDevice && this.requestedRenderMode === 'auto' ? 1 : 0;
+    const pressure = this.adaptivePerformanceLevel + iosGuard;
+    this.performanceMode = this.renderQuality === 'lite' || pressure > 0;
+    this.maxVisibleWeaponParts = Math.max(6, base.parts - pressure * 5);
+    this.maxVisibleSquadUnits = Math.max(8, base.units - pressure * 8);
+    this.maxActivePlayerBullets = Math.max(40, base.bullets - pressure * 12);
+    this.maxRenderedShots = Math.max(3, base.shots - pressure);
+    this.minFireInterval = base.fire + pressure * 18;
+  }
+
+  private updateAdaptivePerformance(delta: number): void {
+    const sampleDelta = Math.min(delta, 250);
+    this.adaptiveNoticeCooldown = Math.max(0, this.adaptiveNoticeCooldown - sampleDelta);
+    if (this.requestedRenderMode !== 'auto') {
+      return;
+    }
+
+    const fps = sampleDelta > 0 ? 1000 / sampleDelta : 60;
+    const objectPressure = this.bullets.getLength() + this.bossProjectiles.getLength() * 1.4 + this.enemies.getLength() * 0.65;
+    const stressed = fps < 42 || sampleDelta > 24 || objectPressure > (this.isIosDevice ? 112 : 150);
+    if (stressed) {
+      this.adaptiveLowFpsMs += sampleDelta;
+      this.adaptiveStableFpsMs = 0;
+    } else if (fps > 54 && objectPressure < (this.isIosDevice ? 76 : 108)) {
+      this.adaptiveStableFpsMs += sampleDelta;
+      this.adaptiveLowFpsMs = Math.max(0, this.adaptiveLowFpsMs - sampleDelta * 0.65);
+    } else {
+      this.adaptiveLowFpsMs = Math.max(0, this.adaptiveLowFpsMs - sampleDelta * 0.35);
+      this.adaptiveStableFpsMs = Math.max(0, this.adaptiveStableFpsMs - sampleDelta * 0.5);
+    }
+
+    if (this.adaptiveLowFpsMs > 1400 && this.adaptivePerformanceLevel < 3) {
+      this.adaptivePerformanceLevel += 1;
+      this.adaptiveLowFpsMs = 0;
+      this.adaptiveStableFpsMs = 0;
+      this.applyRenderBudget();
+      this.trimVisualLoad();
+      if (this.adaptiveNoticeCooldown <= 0) {
+        this.adaptiveNoticeCooldown = 8000;
+        this.showFlash('サクサク調整', '#dcfce7', this.player.x, this.player.y - 122);
+      }
+      return;
+    }
+
+    if (this.adaptiveStableFpsMs > 9000 && this.adaptivePerformanceLevel > 0) {
+      this.adaptivePerformanceLevel -= 1;
+      this.adaptiveStableFpsMs = 0;
+      this.applyRenderBudget();
+    }
+  }
+
+  private trimVisualLoad(): void {
+    this.weaponParts.slice(this.maxVisibleWeaponParts).forEach((part) => part.setVisible(false));
+    this.squadUnits.slice(this.maxVisibleSquadUnits).forEach((unit) => unit.setVisible(false));
+    const excessBullets = this.bullets.getLength() - this.maxActivePlayerBullets;
+    if (excessBullets > 0) {
+      this.bullets.getChildren().slice(0, excessBullets).forEach((bullet) => this.destroyBullet(bullet as Bullet));
+    }
+    const maxBossProjectiles = this.getMaxBossProjectiles();
+    const excessBossShots = this.bossProjectiles.getLength() - maxBossProjectiles;
+    if (excessBossShots > 0) {
+      this.bossProjectiles.getChildren().slice(0, excessBossShots).forEach((projectile) => projectile.destroy());
+    }
+  }
+
   update(_time: number, delta: number): void {
     if (this.isGameOver || this.isPaused) {
       return;
@@ -413,6 +492,7 @@ export default class GameScene extends Phaser.Scene {
 
     const smoothDelta = Math.min(delta, 33);
     this.lastFrameDelta = delta;
+    this.updateAdaptivePerformance(delta);
     this.stageTimer += smoothDelta;
     this.fireTimer += delta;
     this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
@@ -597,7 +677,7 @@ export default class GameScene extends Phaser.Scene {
     const fps = this.lastFrameDelta > 0 ? Math.round(1000 / this.lastFrameDelta) : 60;
     const output = this.getWeaponOutputMultiplier();
     this.debugHudText.setText([
-      `FPS ${fps}  MODE ${this.renderQuality}`,
+      `FPS ${fps}  MODE ${this.renderQuality}  AUTO ${this.adaptivePerformanceLevel}`,
       `B ${this.bullets.getLength()}/${this.maxActivePlayerBullets}  BP ${this.bossProjectiles.getLength()}  E ${this.enemies.getLength()}`,
       `PART ${this.weaponParts.filter((part) => part.visible).length}/${this.maxVisibleWeaponParts}  UNIT ${this.squadUnits.filter((unit) => unit.visible).length}/${this.maxVisibleSquadUnits}`,
       `SHOT ${this.maxRenderedShots}  OUT x${output.toFixed(2)}  W ${this.stats.weaponCount}`,
@@ -2419,7 +2499,7 @@ export default class GameScene extends Phaser.Scene {
       return undefined;
     }
 
-    const maxBossProjectiles = this.renderQuality === 'lite' ? 46 : this.renderQuality === 'standard' ? 76 : 112;
+    const maxBossProjectiles = this.getMaxBossProjectiles();
     if (this.bossProjectiles.getLength() >= maxBossProjectiles) {
       return undefined;
     }
@@ -2450,6 +2530,12 @@ export default class GameScene extends Phaser.Scene {
       body.setOffset(-radius * 0.75, -radius * 0.75);
     }
     return projectile;
+  }
+
+  private getMaxBossProjectiles(): number {
+    const base = this.renderQuality === 'lite' ? 46 : this.renderQuality === 'standard' ? 76 : 112;
+    const iosGuard = this.isIosDevice && this.requestedRenderMode === 'auto' ? 1 : 0;
+    return Math.max(28, base - (this.adaptivePerformanceLevel + iosGuard) * 12);
   }
 
   private getBossDamage(baseDamage: number): number {
