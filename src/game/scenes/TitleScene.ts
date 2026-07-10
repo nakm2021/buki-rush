@@ -3,6 +3,8 @@ import { TITLE_BACKGROUND_ASSET } from '../systems/AssetCatalog';
 import { loadLeaderboard, loadSettings, saveSettings } from '../systems/RecordSystem';
 
 export default class TitleScene extends Phaser.Scene {
+  private startRequested = false;
+
   constructor() {
     super('TitleScene');
   }
@@ -90,9 +92,9 @@ export default class TitleScene extends Phaser.Scene {
       ease: 'Cubic.easeInOut',
     });
 
-    const button = this.createStrawberryStartButton(width / 2, height - 132);
-    button.on('pointerdown', () => this.scene.start('LoadingScene'));
-    this.input.keyboard?.once('keydown-ENTER', () => this.scene.start('LoadingScene'));
+    this.startRequested = false;
+    this.createStrawberryStartButton(width / 2, height - 132);
+    this.input.keyboard?.once('keydown-ENTER', () => this.requestStart());
 
     const settings = this.add.text(width / 2, height - 72, 'RANKING / SETTINGS', {
       fontSize: '13px',
@@ -108,6 +110,7 @@ export default class TitleScene extends Phaser.Scene {
 
   private createStrawberryStartButton(x: number, y: number): Phaser.GameObjects.Container {
     const container = this.add.container(x, y);
+    container.setDepth(20);
     const glow = this.add.ellipse(0, 4, 292, 96, 0xff4770, 0.24);
     glow.setBlendMode(Phaser.BlendModes.ADD);
     const body = this.add.ellipse(0, 6, 248, 72, 0xe11d48, 0.98);
@@ -147,8 +150,8 @@ export default class TitleScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     container.add([glow, lower, body, shade, shine, ...leaves, ...seeds, textShadow, text]);
-    container.setSize(270, 96);
-    container.setInteractive(new Phaser.Geom.Rectangle(-135, -48, 270, 104), Phaser.Geom.Rectangle.Contains);
+    container.setSize(320, 132);
+    container.setInteractive(new Phaser.Geom.Rectangle(-160, -66, 320, 132), Phaser.Geom.Rectangle.Contains);
 
     this.tweens.add({
       targets: container,
@@ -180,7 +183,41 @@ export default class TitleScene extends Phaser.Scene {
         ease: 'Sine.easeInOut',
       });
     });
+
+    const hitTarget = this.add.rectangle(x, y, 336, 144, 0xffffff, 0.001).setDepth(21);
+    hitTarget.setInteractive({ useHandCursor: true });
+    const press = () => {
+      this.tweens.killTweensOf(container);
+      container.setScale(0.96, 0.94);
+      glow.setAlpha(0.48);
+      text.setColor('#ffffff');
+      this.requestStart();
+    };
+    const release = () => {
+      container.setScale(1.04, 1);
+    };
+    const cancel = () => {
+      if (!this.startRequested) {
+        container.setScale(1);
+        glow.setAlpha(1);
+        text.setColor('#fff7d6');
+      }
+    };
+    [container, hitTarget].forEach((target) => {
+      target.on('pointerdown', press);
+      target.on('pointerup', release);
+      target.on('pointerout', cancel);
+      target.on('pointerupoutside', cancel);
+    });
     return container;
+  }
+
+  private requestStart(): void {
+    if (this.startRequested) {
+      return;
+    }
+    this.startRequested = true;
+    this.scene.start('LoadingScene');
   }
 
   private createCuteTitle(x: number, y: number): void {

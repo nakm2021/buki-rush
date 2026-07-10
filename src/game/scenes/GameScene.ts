@@ -894,6 +894,9 @@ export default class GameScene extends Phaser.Scene {
     this.specialCharge = clamp(this.specialCharge + delta * 0.012, 0, 100);
 
     this.superIchigoObjects.forEach((object, index) => {
+      if (object.getData?.('fixedSuperIchigo')) {
+        return;
+      }
       const sprite = object as Phaser.GameObjects.GameObject & {
         y?: number;
         x?: number;
@@ -968,11 +971,17 @@ export default class GameScene extends Phaser.Scene {
     this.superIchigoObjects.forEach((object) => object.destroy());
     this.superIchigoObjects = [];
     const { width, height } = this.scale;
+    if (this.textures.exists('superIchigoBackground')) {
+      const background = this.add.image(width / 2, height / 2, 'superIchigoBackground').setDisplaySize(width, height).setDepth(0.071).setAlpha(0.72);
+      background.setData('fixedSuperIchigo', true);
+      this.superIchigoObjects.push(background);
+    }
     const wash = this.add.rectangle(width / 2, height / 2, width, height, 0xff174d, 0.3).setDepth(0.08);
     wash.setBlendMode(Phaser.BlendModes.ADD);
     const syrup = this.add.rectangle(width / 2, height / 2, width, height, 0x7f0d1b, 0.18).setDepth(0.081);
     const giantBerry = this.add.ellipse(width / 2, height / 2 + 70, 360, 560, 0xe11d48, 0.2).setDepth(0.082);
     giantBerry.setBlendMode(Phaser.BlendModes.ADD);
+    [wash, syrup, giantBerry].forEach((object) => object.setData('fixedSuperIchigo', true));
     this.superIchigoObjects.push(wash, syrup, giantBerry);
 
     for (let i = 0; i < (this.performanceMode ? 22 : 44); i++) {
@@ -995,30 +1004,42 @@ export default class GameScene extends Phaser.Scene {
   private showSuperIchigoCutIn(): void {
     const { width, height } = this.scale;
     const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x9f1239, 0.58).setDepth(42);
+    const cutBg = this.textures.exists('superIchigoBackground')
+      ? this.add.image(width / 2, height / 2, 'superIchigoBackground').setDisplaySize(width, height).setDepth(42.5).setAlpha(0.34)
+      : undefined;
     const berry = this.add.ellipse(width / 2, height * 0.38, 310, 182, 0xe11d48, 0.88).setDepth(43);
     berry.setStrokeStyle(6, 0xfff0b3, 0.94);
+    const cream = this.add.ellipse(width / 2, height * 0.39, 250, 120, 0xfff0b3, 0.2).setDepth(43.2);
+    cream.setBlendMode(Phaser.BlendModes.ADD);
     const leaf = this.add.triangle(width / 2, height * 0.22, 0, -28, 92, 0, 0, 32, 0x51cf66, 0.92).setDepth(44).setAngle(92);
+    const seeds = Array.from({ length: 18 }, (_, index) => {
+      const angle = (Math.PI * 2 * index) / 18;
+      const seed = this.add.ellipse(width / 2 + Math.cos(angle) * 142, height * 0.39 + Math.sin(angle) * 78, 5, 12, index % 2 === 0 ? 0xfff4b8 : 0xf7c85b, 0.82).setDepth(44);
+      seed.setAngle(Phaser.Math.RadToDeg(angle) + 90);
+      seed.setBlendMode(Phaser.BlendModes.ADD);
+      return seed;
+    });
     const title = this.add.text(width / 2, height * 0.38, 'スーパー\n苺ちゃん\nモード', {
-      fontSize: '44px',
+      fontSize: '48px',
       color: '#fff7d6',
       align: 'center',
       fontStyle: 'bold',
       fontFamily: '"Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", "Yu Gothic", Arial, sans-serif',
       stroke: '#9f1239',
-      strokeThickness: 9,
+      strokeThickness: 10,
       lineSpacing: -4,
     }).setOrigin(0.5).setDepth(45).setScale(0.52);
-    const sub = this.add.text(width / 2, height * 0.58, 'LUCKY STRAWBERRY TIME', {
-      fontSize: '18px',
+    const sub = this.add.text(width / 2, height * 0.6, 'ICHIGO FEVER MAX', {
+      fontSize: '20px',
       color: '#fff1bd',
       fontStyle: 'bold',
       fontFamily: 'Arial, sans-serif',
       stroke: '#5b0b12',
       strokeThickness: 5,
     }).setOrigin(0.5).setDepth(45).setAlpha(0);
-    const objects = [veil, berry, leaf, title, sub];
+    const objects = [veil, ...(cutBg ? [cutBg] : []), berry, cream, leaf, ...seeds, title, sub];
     this.tweens.add({ targets: title, scale: 1.08, duration: 430, ease: 'Back.easeOut' });
-    this.tweens.add({ targets: [berry, leaf], scale: 1.08, angle: '+=8', duration: 520, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: [berry, cream, leaf, ...seeds], scale: 1.08, angle: '+=8', duration: 520, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' });
     this.tweens.add({ targets: sub, alpha: 1, y: sub.y + 12, delay: 260, duration: 360, ease: 'Sine.easeOut' });
     this.tweens.add({
       targets: objects,
@@ -3041,10 +3062,11 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
     this.berrySlotLocked = true;
-    this.berrySlotChain += 1;
     const rewards = this.getBerrySlotRewards();
+    const winChance = this.superIchigoActive ? 0.35 : 0.1;
+    const isWin = Math.random() < winChance;
     const superChance = this.superIchigoActive ? 0.34 : 0.16;
-    const rewardIndex = Math.random() < superChance ? Phaser.Math.Between(3, rewards.length - 1) : Phaser.Math.Between(0, 2);
+    const rewardIndex = isWin && Math.random() < superChance ? Phaser.Math.Between(3, rewards.length - 1) : Phaser.Math.Between(0, 2);
     const reward = rewards[rewardIndex];
     const resultSymbolKey = this.getBerrySlotSymbolKey(rewardIndex);
     const symbolKeys = [
@@ -3057,6 +3079,7 @@ export default class GameScene extends Phaser.Scene {
       'slotSymbolCrown',
       'slotSymbolSeven',
     ];
+    const missSymbolKey = symbolKeys.find((key) => key !== resultSymbolKey) ?? 'slotSymbolSeed';
 
     const { width, height } = this.scale;
     const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x5b0b12, 0.16).setDepth(34);
@@ -3165,17 +3188,27 @@ export default class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(1420, () => {
       spinEvents[2]?.remove(false);
-      const detail = this.applyBerrySlotReward(rewardIndex, reward.color);
-      title.setText(`${reward.super ? '超大当たり ' : ''}${reward.title}!`);
-      slots.forEach((slot) => {
+      if (isWin) {
+        this.berrySlotChain += 1;
+      } else {
+        this.berrySlotChain = 0;
+      }
+      const detail = isWin ? this.applyBerrySlotReward(rewardIndex, reward.color) : '当選率10% また挑戦';
+      title.setText(isWin ? `${reward.super ? '超大当たり ' : ''}${reward.title}!` : '苺スロット はずれ');
+      reachText.setText(isWin ? this.getBerrySlotWinMessage(Boolean(reward.super)) : this.getBerrySlotMissMessage());
+      reachText.setAlpha(1);
+      reachText.setScale(isWin && reward.super ? 1.24 : 1.08);
+      reachText.setColor(isWin ? reward.super ? '#ffffff' : '#fff1bd' : '#d1d5db');
+      slots.forEach((slot, index) => {
         const symbol = slot.getData('symbol') as Phaser.GameObjects.Image | undefined;
-        if (symbol && this.textures.exists(resultSymbolKey)) {
-          symbol.setTexture(resultSymbolKey);
+        const finalSymbolKey = isWin || index < 2 ? resultSymbolKey : missSymbolKey;
+        if (symbol && this.textures.exists(finalSymbolKey)) {
+          symbol.setTexture(finalSymbolKey);
           symbol.setDisplaySize(48, 48);
-          symbol.setTint(reward.color);
+          symbol.setTint(isWin ? reward.color : 0xffffff);
         }
       });
-      const sub = this.add.text(width / 2, height * 0.365, `${detail}  x${this.berrySlotChain}`, {
+      const sub = this.add.text(width / 2, height * 0.365, isWin ? `${detail}  x${this.berrySlotChain}` : detail, {
         fontSize: '12px',
         color: '#fff7d6',
         fontStyle: 'bold',
@@ -3183,12 +3216,18 @@ export default class GameScene extends Phaser.Scene {
         stroke: '#5b0b12',
         strokeThickness: 3,
       }).setOrigin(0.5).setDepth(36);
-      this.spawnBurst(this.player.x, this.player.y - 40, reward.color, reward.super ? 56 : 38);
-      this.spawnBurst(width / 2, slotY, reward.super ? 0xffffff : 0xfff0b3, reward.super ? 56 : 32);
-      this.playRareSound();
-      this.cameras.main.shake(reward.super ? 620 : 360, reward.super ? 0.009 : 0.0055);
-      this.tweens.add({ targets: slots, scale: 1.22, duration: 150, yoyo: true, repeat: 3, ease: 'Back.easeInOut' });
-      this.tweens.add({ targets: lamps, alpha: 0.95, scale: 1.55, duration: 110, yoyo: true, repeat: 6, ease: 'Sine.easeInOut' });
+      if (isWin) {
+        this.spawnBurst(this.player.x, this.player.y - 40, reward.color, reward.super ? 56 : 38);
+        this.spawnBurst(width / 2, slotY, reward.super ? 0xffffff : 0xfff0b3, reward.super ? 56 : 32);
+        this.playRareSound();
+        this.cameras.main.shake(reward.super ? 620 : 360, reward.super ? 0.009 : 0.0055);
+        this.tweens.add({ targets: slots, scale: 1.22, duration: 150, yoyo: true, repeat: 3, ease: 'Back.easeInOut' });
+        this.tweens.add({ targets: lamps, alpha: 0.95, scale: 1.55, duration: 110, yoyo: true, repeat: 6, ease: 'Sine.easeInOut' });
+      } else {
+        this.playTone(180, 0.08, 0.02);
+        this.cameras.main.shake(130, 0.0022);
+        this.tweens.add({ targets: slots[2], x: slots[2].x + 5, duration: 55, yoyo: true, repeat: 5, ease: 'Sine.easeInOut' });
+      }
       this.tweens.add({
         targets: [veil, flash, panel, title, reachText, sub, ...slots, ...lamps],
         alpha: 0,
@@ -3236,6 +3275,51 @@ export default class GameScene extends Phaser.Scene {
 
   private getBerrySlotSymbolKey(rewardIndex: number): string {
     return this.getBerrySlotRewards()[rewardIndex]?.symbolKey ?? 'slotSymbolStrawberry';
+  }
+
+  private getBerrySlotWinMessage(isSuper: boolean): string {
+    const messages = isSuper
+      ? [
+          '苺超当選!',
+          '苺大爆発!',
+          '苺ジャックポット!',
+          '苺王降臨!',
+          '苺フェス開幕!',
+          '苺ミラクル!',
+          '苺ラッシュ確定!',
+          '苺ちゃん祝福!',
+          '苺七光り!',
+          '苺夢当たり!',
+        ]
+      : [
+          '苺当選!',
+          '苺ラッキー!',
+          '苺ヒット!',
+          '苺チャンス成功!',
+          '苺ボーナス!',
+          '甘苺ゲット!',
+          '苺フィーバー!',
+          '苺きた!',
+          '苺スマッシュ!',
+          '苺ごほうび!',
+        ];
+    return messages[Phaser.Math.Between(0, messages.length - 1)];
+  }
+
+  private getBerrySlotMissMessage(): string {
+    const messages = [
+      '苺おあずけ...',
+      '苺すべり!',
+      'あと一粒!',
+      '練乳待ち!',
+      '苺しょんぼり',
+      '次こそ苺!',
+      '種だけ残念!',
+      '甘さ不足!',
+      '苺ニアミス!',
+      'まだ熟してない!',
+    ];
+    return messages[Phaser.Math.Between(0, messages.length - 1)];
   }
 
   private applyBerrySlotReward(rewardIndex: number, color: number): string {

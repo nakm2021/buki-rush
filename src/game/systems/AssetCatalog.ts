@@ -130,9 +130,11 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossGrapeThunderLeviathan', path: 'assets/optimized/boss-grape-thunder-leviathan.png', width: 380, height: 640, minLoop: 2 },
   { key: 'bossVineyardDoomQueen', path: 'assets/optimized/boss-vineyard-doom-queen.png', width: 380, height: 640, minLoop: 4 },
   { key: 'bossMachiavelliStrategist', path: 'assets/generated/boss-machiavelli-strategist.png', width: 420, height: 620, minLoop: 2 },
+  { key: 'bossStrawberryCentaur', path: 'assets/generated/boss-strawberry-centaur.png', width: 420, height: 620, minLoop: 2 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
+export const SUPER_ICHIGO_BACKGROUND_ASSET: ImageAsset = { key: 'superIchigoBackground', path: 'assets/generated/super-ichigo-background.png' };
 
 export const STAGE_BACKGROUND_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'bgRealOcean', path: 'assets/generated/bg-real-ocean.png' },
@@ -226,6 +228,7 @@ export function getPreloadImageAssets(): ImageAsset[] {
   const openingEnemies = ENEMY_IMAGE_ASSETS.slice(0, 24);
   return uniqueImageAssets([
     TITLE_BACKGROUND_ASSET,
+    SUPER_ICHIGO_BACKGROUND_ASSET,
     ...WEAPON_IMAGE_ASSETS,
     ...openingBosses,
     ...STAGE_BACKGROUND_IMAGE_ASSETS,
@@ -346,6 +349,7 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossGrapeThunderLeviathan', primary: 0x8b5cf6, secondary: 0xfacc15, accent: 0x86efac, darkness: 0x12071f },
   { key: 'bossVineyardDoomQueen', primary: 0x7e22ce, secondary: 0x22c55e, accent: 0xf0abfc, darkness: 0x16051e },
   { key: 'bossMachiavelliStrategist', primary: 0x7f1d1d, secondary: 0xc084fc, accent: 0xfacc15, darkness: 0x120711 },
+  { key: 'bossStrawberryCentaur', primary: 0xf43f5e, secondary: 0x22c55e, accent: 0xfff0b3, darkness: 0x2a070d },
 ];
 
 export function getBossTheme(key: string): BossTheme {
