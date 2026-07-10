@@ -97,6 +97,7 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
   { key: 'weaponOrbitalRocketLance', path: 'assets/optimized/weapon-orbital-rocket-lance.png', match: { elements: ['thunder', 'fire'], archetypes: ['rail', 'magnum', 'lance'] } },
   { key: 'weaponSunflowerSolarBow', path: 'assets/optimized/weapon-sunflower-solar-bow.png', match: { elements: ['light', 'wind'], archetypes: ['centaur', 'seraph', 'lotus'] } },
   { key: 'weaponRoosterCoilGlaive', path: 'assets/optimized/weapon-rooster-coil-glaive.png', match: { elements: ['fire', 'wind'], archetypes: ['saber', 'samurai', 'vortex'] } },
+  { key: 'weaponYukataFestivalFans', path: 'assets/generated/weapon-yukata-festival-fans.png', match: { elements: ['fire', 'light'], archetypes: ['sakura', 'samurai', 'vortex'] } },
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
@@ -128,6 +129,7 @@ export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
   { key: 'bossAbyssalBerryCathedral', path: 'assets/optimized/boss-abyssal-berry-cathedral.png', width: 360, height: 640, minLoop: 3 },
   { key: 'bossGrapeThunderLeviathan', path: 'assets/optimized/boss-grape-thunder-leviathan.png', width: 380, height: 640, minLoop: 2 },
   { key: 'bossVineyardDoomQueen', path: 'assets/optimized/boss-vineyard-doom-queen.png', width: 380, height: 640, minLoop: 4 },
+  { key: 'bossMachiavelliStrategist', path: 'assets/generated/boss-machiavelli-strategist.png', width: 420, height: 620, minLoop: 2 },
 ];
 
 export const TITLE_BACKGROUND_ASSET: ImageAsset = { key: 'titleIchigo', path: 'assets/generated/title-ichigo.png' };
@@ -154,6 +156,18 @@ export const ITEM_IMAGE_ASSETS: ImageAsset[] = [
   { key: 'itemVoidDrill', path: 'assets/optimized/item-void-drill.png' },
   { key: 'itemPrismCrown', path: 'assets/optimized/item-prism-crown.png' },
   { key: 'itemSolarLegendChest', path: 'assets/optimized/item-solar-legend-chest.png' },
+];
+
+export const SLOT_IMAGE_ASSETS: ImageAsset[] = [
+  { key: 'slotStrawberryPanel', path: 'assets/generated/slot/strawberry-slot-panel.png' },
+  { key: 'slotSymbolStrawberry', path: 'assets/generated/slot/strawberry-slot-symbol.png' },
+  { key: 'slotSymbolCream', path: 'assets/generated/slot/cream-slot-symbol.png' },
+  { key: 'slotSymbolSeed', path: 'assets/generated/slot/seed-slot-symbol.png' },
+  { key: 'slotSymbolBell', path: 'assets/generated/slot/bell-slot-symbol.png' },
+  { key: 'slotSymbolFireworks', path: 'assets/generated/slot/fireworks-slot-symbol.png' },
+  { key: 'slotSymbolFan', path: 'assets/generated/slot/fan-slot-symbol.png' },
+  { key: 'slotSymbolCrown', path: 'assets/generated/slot/crown-slot-symbol.png' },
+  { key: 'slotSymbolSeven', path: 'assets/generated/slot/seven-slot-symbol.png' },
 ];
 
 export const ENEMY_IMAGE_ASSETS: ImageAsset[] = [
@@ -216,6 +230,7 @@ export function getPreloadImageAssets(): ImageAsset[] {
     ...openingBosses,
     ...STAGE_BACKGROUND_IMAGE_ASSETS,
     ...ITEM_IMAGE_ASSETS,
+    ...SLOT_IMAGE_ASSETS,
     ...openingEnemies,
     { key: 'eliteReaper', path: 'assets/generated/elite-reaper.png' },
   ]);
@@ -330,6 +345,7 @@ const BOSS_THEMES: BossTheme[] = [
   { key: 'bossAbyssalBerryCathedral', primary: 0x8b5cf6, secondary: 0xef4444, accent: 0xf0abfc, darkness: 0x09051a },
   { key: 'bossGrapeThunderLeviathan', primary: 0x8b5cf6, secondary: 0xfacc15, accent: 0x86efac, darkness: 0x12071f },
   { key: 'bossVineyardDoomQueen', primary: 0x7e22ce, secondary: 0x22c55e, accent: 0xf0abfc, darkness: 0x16051e },
+  { key: 'bossMachiavelliStrategist', primary: 0x7f1d1d, secondary: 0xc084fc, accent: 0xfacc15, darkness: 0x120711 },
 ];
 
 export function getBossTheme(key: string): BossTheme {

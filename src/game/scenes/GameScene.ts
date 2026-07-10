@@ -46,6 +46,10 @@ const PLAYER_MIN_X = 28;
 const PLAYER_MAX_X = 372;
 const PLAYER_MIN_Y = 48;
 const PLAYER_MAX_Y = 684;
+const SUPER_ICHIGO_DURATION = 18_000;
+const SUPER_ICHIGO_COOLDOWN = 300_000;
+const SUPER_ICHIGO_TAP_WINDOW = 520;
+const BERRY_SLOT_THRESHOLD = 28;
 
 const STAGE_THEMES: StageTheme[] = [
   { name: 'STRAWBERRY DAWN', sky: 0x2a0d08, ground: 0x1c140f, trackOuter: 0xd6d8dd, trackMid: 0xbfc3ca, trackInner: 0xe5e7eb, lane: 0xffffff, accent: 0xfb7185 },
@@ -199,6 +203,18 @@ export default class GameScene extends Phaser.Scene {
   private bonusRushUntil = 0;
   private nextBonusRushTime = 0;
   private nextBonusRushStep = 0;
+  private superIchigoActive = false;
+  private superIchigoTimer = 0;
+  private superIchigoCooldown = 0;
+  private superIchigoPulseTimer = 0;
+  private superIchigoTapTimes: number[] = [];
+  private superIchigoObjects: Phaser.GameObjects.GameObject[] = [];
+  private berrySlotCombo = 0;
+  private berrySlotChain = 0;
+  private berrySlotLocked = false;
+  private sideAttackTimer = 0;
+  private sideAttackPulseTimer = 0;
+  private strawberryFeverTimer = 0;
   private performanceMode = false;
   private renderQuality: RenderQuality = 'standard';
   private debugHudEnabled = false;
@@ -361,6 +377,18 @@ export default class GameScene extends Phaser.Scene {
     this.bonusRushUntil = 0;
     this.nextBonusRushTime = 0;
     this.nextBonusRushStep = 0;
+    this.superIchigoActive = false;
+    this.superIchigoTimer = 0;
+    this.superIchigoCooldown = 0;
+    this.superIchigoPulseTimer = 0;
+    this.superIchigoTapTimes = [];
+    this.superIchigoObjects = [];
+    this.berrySlotCombo = 0;
+    this.berrySlotChain = 0;
+    this.berrySlotLocked = false;
+    this.sideAttackTimer = 0;
+    this.sideAttackPulseTimer = 0;
+    this.strawberryFeverTimer = 0;
     this.debugHudText = undefined;
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
@@ -390,6 +418,9 @@ export default class GameScene extends Phaser.Scene {
     this.shotSoundTimer = Math.max(0, this.shotSoundTimer - smoothDelta);
     this.rushPickupSoundTimer = Math.max(0, this.rushPickupSoundTimer - smoothDelta);
     this.magnetTimer = Math.max(0, this.magnetTimer - smoothDelta);
+    this.superIchigoCooldown = Math.max(0, this.superIchigoCooldown - smoothDelta);
+    this.sideAttackTimer = Math.max(0, this.sideAttackTimer - smoothDelta);
+    this.strawberryFeverTimer = Math.max(0, this.strawberryFeverTimer - smoothDelta);
     this.distance += (smoothDelta / 1000) * 22;
     this.bossDefeatGraceMs = Math.max(0, this.bossDefeatGraceMs - smoothDelta);
 
@@ -402,6 +433,8 @@ export default class GameScene extends Phaser.Scene {
     this.updateSpeedLines(smoothDelta);
     this.updateBullets(smoothDelta);
     this.updateSpecialCharge(smoothDelta);
+    this.updateSuperIchigoMode(smoothDelta);
+    this.updateBerrySlotBonusAttacks(smoothDelta);
     this.updateSpecial(smoothDelta);
     this.updateBossAttacks(smoothDelta);
     this.updateBossProjectiles(smoothDelta);
@@ -661,10 +694,31 @@ export default class GameScene extends Phaser.Scene {
       this.activateSpecial();
     });
 
-    this.input.on('pointerdown', () => this.beginPinchIfReady());
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.handleSuperIchigoTripleTap(pointer);
+      this.beginPinchIfReady();
+    });
     this.input.on('pointermove', () => this.updatePinchZoom());
     this.input.on('pointerup', () => this.endPinchIfNeeded());
     this.input.on('pointercancel', () => this.endPinchIfNeeded());
+  }
+
+  private handleSuperIchigoTripleTap(pointer: Phaser.Input.Pointer): void {
+    if (this.isGameOver || this.isPaused || this.isPinching) {
+      return;
+    }
+    if (pointer.y < 164 && pointer.x > 292) {
+      return;
+    }
+
+    const now = this.time.now;
+    this.superIchigoTapTimes = [...this.superIchigoTapTimes, now].filter((time) => now - time <= SUPER_ICHIGO_TAP_WINDOW).slice(-3);
+    if (this.superIchigoTapTimes.length < 3) {
+      return;
+    }
+
+    this.superIchigoTapTimes = [];
+    this.activateSuperIchigoMode();
   }
 
   private getActivePointers(): Phaser.Input.Pointer[] {
@@ -795,6 +849,205 @@ export default class GameScene extends Phaser.Scene {
       options: laneOptions,
       laneOptions: step % 2 === 0 ? undefined : laneOptions,
     };
+  }
+
+  private activateSuperIchigoMode(): void {
+    if (this.superIchigoActive) {
+      this.showFlash('苺ちゃん発動中', '#fff1bd', this.player.x, this.player.y - 118);
+      return;
+    }
+
+    if (this.superIchigoCooldown > 0) {
+      this.showFlash(`苺ちゃんCT ${Math.ceil(this.superIchigoCooldown / 1000)}s`, '#fecaca', this.player.x, this.player.y - 118);
+      return;
+    }
+
+    this.superIchigoActive = true;
+    this.superIchigoTimer = SUPER_ICHIGO_DURATION;
+    this.superIchigoCooldown = SUPER_ICHIGO_COOLDOWN;
+    this.superIchigoPulseTimer = 0;
+    this.magnetTimer = Math.max(this.magnetTimer, SUPER_ICHIGO_DURATION);
+    this.specialCharge = clamp(this.specialCharge + 45, 0, 100);
+    this.stats = {
+      ...this.stats,
+      power: this.stats.power + 3,
+      fireRate: this.stats.fireRate + 0.16,
+      critRate: Math.min(0.72, this.stats.critRate + 0.025),
+      synergy: this.stats.synergy + 2,
+    };
+    this.createSuperIchigoBackdrop();
+    this.showSuperIchigoCutIn();
+    this.spawnSuperIchigoRewardLine();
+    this.spawnBurst(this.player.x, this.player.y - 36, 0xff4770, 46);
+    this.playRareSound();
+    this.cameras.main.shake(720, 0.008);
+  }
+
+  private updateSuperIchigoMode(delta: number): void {
+    if (!this.superIchigoActive) {
+      return;
+    }
+
+    this.superIchigoTimer -= delta;
+    this.superIchigoPulseTimer += delta;
+    this.magnetTimer = Math.max(this.magnetTimer, 420);
+    this.specialCharge = clamp(this.specialCharge + delta * 0.012, 0, 100);
+
+    this.superIchigoObjects.forEach((object, index) => {
+      const sprite = object as Phaser.GameObjects.GameObject & {
+        y?: number;
+        x?: number;
+        angle?: number;
+        alpha?: number;
+        setAlpha?: (value: number) => void;
+      };
+      if (typeof sprite.y === 'number') {
+        sprite.y += (18 + (index % 5) * 8) * (delta / 1000);
+        if (sprite.y > 760) sprite.y = -60;
+      }
+      if (typeof sprite.x === 'number') {
+        sprite.x += Math.sin(this.stageTimer * 0.004 + index) * 0.28;
+      }
+      if (typeof sprite.angle === 'number') {
+        sprite.angle += index % 2 === 0 ? 0.25 : -0.18;
+      }
+      if (sprite.setAlpha && sprite.alpha !== undefined) {
+        sprite.setAlpha(Math.max(sprite.alpha, 0.28 + Math.sin(this.stageTimer * 0.006 + index) * 0.08));
+      }
+    });
+
+    if (this.superIchigoPulseTimer >= 820) {
+      this.superIchigoPulseTimer = 0;
+      this.grantSuperIchigoPulse();
+    }
+
+    if (this.superIchigoTimer <= 0) {
+      this.endSuperIchigoMode();
+    }
+  }
+
+  private grantSuperIchigoPulse(): void {
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
+    const pulse = Math.floor((SUPER_ICHIGO_DURATION - this.superIchigoTimer) / 820);
+    if (pulse % 4 === 0) {
+      this.playerHp += 1;
+      this.stats = { ...this.stats, shield: this.stats.shield + 1 };
+    } else if (pulse % 3 === 0) {
+      this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 2, synergy: this.stats.synergy + 1 };
+    } else if (pulse % 2 === 0) {
+      this.stats = { ...this.stats, level: this.stats.level + 1, critRate: Math.min(0.72, this.stats.critRate + 0.006) };
+    } else {
+      this.stats = { ...this.stats, power: this.stats.power + 1, fireRate: this.stats.fireRate + 0.025 };
+    }
+    this.specialCharge = clamp(this.specialCharge + 7, 0, 100);
+    this.spawnBurst(this.player.x, this.player.y - 28, 0xfff0b3, this.performanceMode ? 14 : 24);
+    if (pulse % 2 === 1) {
+      this.showFlash('苺POWER+', '#fff1bd', this.player.x, this.player.y - 104);
+    }
+    this.showStatGainFeedback(previousStats, previousHp, { label: '苺ちゃん', kind: 'fusion', value: 1, color: 0xff4770, good: true });
+  }
+
+  private endSuperIchigoMode(): void {
+    this.superIchigoActive = false;
+    this.superIchigoTimer = 0;
+    this.showFlash('苺ちゃん終了', '#fff1bd', this.player.x, this.player.y - 112);
+    this.superIchigoObjects.forEach((object) => {
+      this.tweens.add({
+        targets: object,
+        alpha: 0,
+        duration: 520,
+        ease: 'Sine.easeOut',
+        onComplete: () => object.destroy(),
+      });
+    });
+    this.superIchigoObjects = [];
+  }
+
+  private createSuperIchigoBackdrop(): void {
+    this.superIchigoObjects.forEach((object) => object.destroy());
+    this.superIchigoObjects = [];
+    const { width, height } = this.scale;
+    const wash = this.add.rectangle(width / 2, height / 2, width, height, 0xff174d, 0.3).setDepth(0.08);
+    wash.setBlendMode(Phaser.BlendModes.ADD);
+    const syrup = this.add.rectangle(width / 2, height / 2, width, height, 0x7f0d1b, 0.18).setDepth(0.081);
+    const giantBerry = this.add.ellipse(width / 2, height / 2 + 70, 360, 560, 0xe11d48, 0.2).setDepth(0.082);
+    giantBerry.setBlendMode(Phaser.BlendModes.ADD);
+    this.superIchigoObjects.push(wash, syrup, giantBerry);
+
+    for (let i = 0; i < (this.performanceMode ? 22 : 44); i++) {
+      const row = Math.floor(i / 7);
+      const col = i % 7;
+      const seed = this.add.ellipse(42 + col * 54 + (row % 2) * 22, -40 + row * 74, 5, 12, i % 2 === 0 ? 0xfff4b8 : 0xf7c85b, 0.48).setDepth(0.13);
+      seed.setAngle(-22 + col * 8);
+      seed.setBlendMode(Phaser.BlendModes.ADD);
+      this.superIchigoObjects.push(seed);
+    }
+
+    for (let i = 0; i < (this.performanceMode ? 8 : 14); i++) {
+      const leaf = this.add.triangle(Phaser.Math.Between(18, width - 18), Phaser.Math.Between(-40, height), 0, -12, 42, 0, 0, 16, i % 2 === 0 ? 0x51cf66 : 0xb2f2bb, 0.4).setDepth(0.14);
+      leaf.setAngle(Phaser.Math.Between(-55, 55));
+      leaf.setBlendMode(Phaser.BlendModes.ADD);
+      this.superIchigoObjects.push(leaf);
+    }
+  }
+
+  private showSuperIchigoCutIn(): void {
+    const { width, height } = this.scale;
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x9f1239, 0.58).setDepth(42);
+    const berry = this.add.ellipse(width / 2, height * 0.38, 310, 182, 0xe11d48, 0.88).setDepth(43);
+    berry.setStrokeStyle(6, 0xfff0b3, 0.94);
+    const leaf = this.add.triangle(width / 2, height * 0.22, 0, -28, 92, 0, 0, 32, 0x51cf66, 0.92).setDepth(44).setAngle(92);
+    const title = this.add.text(width / 2, height * 0.38, 'スーパー\n苺ちゃん\nモード', {
+      fontSize: '44px',
+      color: '#fff7d6',
+      align: 'center',
+      fontStyle: 'bold',
+      fontFamily: '"Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", "Yu Gothic", Arial, sans-serif',
+      stroke: '#9f1239',
+      strokeThickness: 9,
+      lineSpacing: -4,
+    }).setOrigin(0.5).setDepth(45).setScale(0.52);
+    const sub = this.add.text(width / 2, height * 0.58, 'LUCKY STRAWBERRY TIME', {
+      fontSize: '18px',
+      color: '#fff1bd',
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif',
+      stroke: '#5b0b12',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(45).setAlpha(0);
+    const objects = [veil, berry, leaf, title, sub];
+    this.tweens.add({ targets: title, scale: 1.08, duration: 430, ease: 'Back.easeOut' });
+    this.tweens.add({ targets: [berry, leaf], scale: 1.08, angle: '+=8', duration: 520, yoyo: true, repeat: 1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: sub, alpha: 1, y: sub.y + 12, delay: 260, duration: 360, ease: 'Sine.easeOut' });
+    this.tweens.add({
+      targets: objects,
+      alpha: 0,
+      y: '-=36',
+      delay: 1180,
+      duration: 760,
+      ease: 'Cubic.easeIn',
+      onComplete: () => objects.forEach((object) => object.destroy()),
+    });
+  }
+
+  private spawnSuperIchigoRewardLine(): void {
+    const line: RushItemLine = {
+      label: 'SUPER ICHIGO',
+      y: -64,
+      rows: this.performanceMode ? 5 : 8,
+      lanes: [74, 116, 158, 200, 242, 284, 326],
+      rowSpacing: 38,
+      jitter: 0,
+      options: [
+        { label: '苺', kind: 'power', value: 2, color: 0xff4770, good: true },
+        { label: '甘', kind: 'level', value: 1, color: 0xfff0b3, good: true },
+        { label: 'SP', kind: 'special', value: 12, color: 0xfef08a, good: true },
+        { label: '磁', kind: 'magnet', value: 3200, color: 0x8ce99a, good: true },
+        { label: 'CR', kind: 'crit', value: 3, color: 0xff8fa3, good: true },
+      ],
+    };
+    this.spawnRushLine(line);
   }
 
   private spawnStageStep(step: StageStep): void {
@@ -1151,6 +1404,8 @@ export default class GameScene extends Phaser.Scene {
       if (shotStatus && Math.random() < shotStatus.chance) {
         bullet.setData('statusEffect', shotStatus.effect);
       }
+      bullet.setData('lastX', bullet.x);
+      bullet.setData('lastY', bullet.y);
       const body = bullet.body as Phaser.Physics.Arcade.Body;
       if (bossDefenseMode) {
         body.setSize(30, 52);
@@ -1201,6 +1456,8 @@ export default class GameScene extends Phaser.Scene {
     if (status) {
       shard.setData('statusEffect', status);
     }
+    shard.setData('lastX', shard.x);
+    shard.setData('lastY', shard.y);
     const body = shard.body as Phaser.Physics.Arcade.Body;
     body.setVelocity(vx, vy);
     this.bullets.add(shard);
@@ -1250,12 +1507,81 @@ export default class GameScene extends Phaser.Scene {
   private updateBullets(delta: number): void {
     this.bullets.getChildren().forEach((child) => {
       const bullet = child as Bullet;
+      const previousX = Number(bullet.getData('lastX') ?? bullet.x);
+      const previousY = Number(bullet.getData('lastY') ?? bullet.y);
       bullet.update(0, delta);
       this.syncBulletVisual(bullet);
+      this.resolveSweptBulletHit(bullet, previousX, previousY);
+      if (bullet.active) {
+        bullet.setData('lastX', bullet.x);
+        bullet.setData('lastY', bullet.y);
+      }
       if (bullet.y < -30) {
         this.destroyBullet(bullet);
       }
     });
+  }
+
+  private resolveSweptBulletHit(bullet: Bullet, previousX: number, previousY: number): void {
+    if (!bullet.active) {
+      return;
+    }
+
+    const body = bullet.body as Phaser.Physics.Arcade.Body | undefined;
+    const bulletRadius = Math.max(body?.width ?? 12, body?.height ?? 12) * 0.5;
+    const enemy = this.findSweptEnemyHit(bullet, previousX, previousY, bullet.x, bullet.y, bulletRadius);
+    if (enemy) {
+      this.hitEnemy(bullet, enemy);
+      return;
+    }
+
+    if (bullet.active && this.boss && this.findSweptBossHit(previousX, previousY, bullet.x, bullet.y, bulletRadius)) {
+      this.hitBoss(bullet);
+    }
+  }
+
+  private findSweptEnemyHit(bullet: Bullet, startX: number, startY: number, endX: number, endY: number, bulletRadius: number): Enemy | undefined {
+    let closestEnemy: Enemy | undefined;
+    let closestDistance = Number.POSITIVE_INFINITY;
+    this.enemies.getChildren().forEach((child) => {
+      const enemy = child as Enemy;
+      if (!enemy.active) {
+        return;
+      }
+      if (bullet.getData('lastHitEnemy') === enemy) {
+        return;
+      }
+      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body | undefined;
+      const radius = Math.max(enemyBody?.width ?? 24, enemyBody?.height ?? 24) * 0.5 + bulletRadius + 8;
+      const distance = this.getDistanceToSegment(enemy.x, enemy.y, startX, startY, endX, endY);
+      if (distance <= radius && distance < closestDistance) {
+        closestDistance = distance;
+        closestEnemy = enemy;
+      }
+    });
+    return closestEnemy;
+  }
+
+  private findSweptBossHit(startX: number, startY: number, endX: number, endY: number, bulletRadius: number): boolean {
+    if (!this.boss) {
+      return false;
+    }
+    const bossBody = this.boss.body as Phaser.Physics.Arcade.Body | undefined;
+    const centerX = bossBody ? bossBody.center.x : this.boss.x;
+    const centerY = bossBody ? bossBody.center.y : this.boss.y + 40;
+    const radius = Math.max(bossBody?.width ?? 190, bossBody?.height ?? 190) * 0.5 + bulletRadius + 12;
+    return this.getDistanceToSegment(centerX, centerY, startX, startY, endX, endY) <= radius;
+  }
+
+  private getDistanceToSegment(pointX: number, pointY: number, startX: number, startY: number, endX: number, endY: number): number {
+    const segmentX = endX - startX;
+    const segmentY = endY - startY;
+    const segmentLengthSq = segmentX * segmentX + segmentY * segmentY;
+    if (segmentLengthSq <= 0.0001) {
+      return Phaser.Math.Distance.Between(pointX, pointY, startX, startY);
+    }
+    const t = clamp(((pointX - startX) * segmentX + (pointY - startY) * segmentY) / segmentLengthSq, 0, 1);
+    return Phaser.Math.Distance.Between(pointX, pointY, startX + segmentX * t, startY + segmentY * t);
   }
 
   private updateSpecialCharge(delta: number): void {
@@ -2124,8 +2450,8 @@ export default class GameScene extends Phaser.Scene {
       pip.setScale(index < this.playerHp ? 1.05 + Math.sin(this.stageTimer * 0.008 + index) * 0.04 : 0.86);
     });
     const specialReady = this.specialCharge >= 100 && this.specialCooldown <= 0 && !this.specialActive;
-    this.specialText.setText(this.specialActive ? '必殺発動中' : this.specialCooldown > 0 ? `必殺CT ${Math.ceil(this.specialCooldown / 1000)}s` : `必殺 ${Math.floor(this.specialCharge)}%`);
-    this.specialText.setColor(specialReady ? '#fef08a' : this.specialActive ? '#ffffff' : '#bae6fd');
+    this.specialText.setText(this.superIchigoActive ? `苺ちゃん ${Math.ceil(this.superIchigoTimer / 1000)}s` : this.specialActive ? '必殺発動中' : this.specialCooldown > 0 ? `必殺CT ${Math.ceil(this.specialCooldown / 1000)}s` : `必殺 ${Math.floor(this.specialCharge)}%`);
+    this.specialText.setColor(this.superIchigoActive ? '#fff1bd' : specialReady ? '#fef08a' : this.specialActive ? '#ffffff' : '#bae6fd');
     this.bestText.setText(`BEST ${Math.max(this.bestDistance, Math.floor(this.distance))}m`);
     this.weaponNameText.setText(this.lockedWeaponTitle);
     const modules = this.stats.modules.length > 0 ? this.stats.modules.map((module) => getModuleProfile(module).label).join(' / ') : 'none';
@@ -2154,6 +2480,11 @@ export default class GameScene extends Phaser.Scene {
       primary = this.currentBossTheme.primary;
       secondary = this.currentBossTheme.secondary;
       aura = this.currentBossTheme.accent;
+    }
+    if (this.superIchigoActive) {
+      primary = 0xff174d;
+      secondary = 0xfff0b3;
+      aura = 0xff4770;
     }
     this.backgroundTint.setFillStyle(aura, 0.06 + Math.min(0.08, this.stats.tier * 0.006));
     this.trackGlow.setFillStyle(primary, 0.05 + Math.min(0.1, this.stats.level * 0.003));
@@ -2184,10 +2515,22 @@ export default class GameScene extends Phaser.Scene {
     this.trackOuter.setFillStyle(theme.trackOuter, 0.68);
     this.trackMid.setFillStyle(theme.trackMid, 0.64);
     this.trackInner.setFillStyle(theme.trackInner, 0.56);
-    this.stageThemeText.setText(theme.name);
-    this.stageThemeText.setColor(`#${theme.accent.toString(16).padStart(6, '0')}`);
+    if (this.superIchigoActive) {
+      this.stageGround.setFillStyle(0x3a0710, 1);
+      this.trackOuter.setFillStyle(0x7f0d1b, 0.78);
+      this.trackMid.setFillStyle(0xe11d48, 0.7);
+      this.trackInner.setFillStyle(0xfff0b3, 0.56);
+      this.stageThemeText.setText('SUPER ICHIGO CHAN');
+      this.stageThemeText.setColor('#fff1bd');
+    } else {
+      this.stageThemeText.setText(theme.name);
+      this.stageThemeText.setColor(`#${theme.accent.toString(16).padStart(6, '0')}`);
+    }
     this.stageMarkers.forEach((marker, index) => {
-      marker.setFillStyle(index % 2 === 0 ? theme.accent : theme.lane, 0.1 + Math.sin(this.stageTimer * 0.003 + index) * 0.04);
+      const markerColor = this.superIchigoActive
+        ? index % 2 === 0 ? 0xfff0b3 : 0xff4770
+        : index % 2 === 0 ? theme.accent : theme.lane;
+      marker.setFillStyle(markerColor, 0.1 + Math.sin(this.stageTimer * 0.003 + index) * 0.04);
       marker.y += (26 + (index % 4) * 5) * (1 / 60);
       if (marker.y > 750) {
         marker.y = -50;
@@ -2651,6 +2994,7 @@ export default class GameScene extends Phaser.Scene {
 
     if (this.stats.shield > 0) {
       this.stats = { ...this.stats, shield: Math.max(0, this.stats.shield - amount) };
+      this.berrySlotCombo = Math.max(0, this.berrySlotCombo - 4);
       this.showFlash('SHIELD BLOCK', '#bae6fd', this.player.x, this.player.y - 72);
       this.pulseStatusText(this.hpText, 0x38bdf8);
       this.spawnBurst(this.player.x, this.player.y, 0x38bdf8, 18);
@@ -2659,6 +3003,7 @@ export default class GameScene extends Phaser.Scene {
 
     this.stats = applyEnemyImpact(this.stats);
     this.playerHp -= amount;
+    this.berrySlotCombo = Math.max(0, Math.floor(this.berrySlotCombo * 0.45));
     this.showFlash(label, '#fecaca', this.player.x, this.player.y - 74);
     this.pulseStatusText(this.hpText, color);
     this.cameras.main.shake(170 + amount * 80, 0.003 + amount * 0.001);
@@ -2677,7 +3022,418 @@ export default class GameScene extends Phaser.Scene {
     return (this.stats.power + this.stats.level + this.stats.synergy * synergyScale) * this.getWeaponOutputMultiplier();
   }
 
+  private addBerrySlotCombo(enemyObject: Enemy): void {
+    if (this.berrySlotLocked) {
+      return;
+    }
+    this.berrySlotCombo += this.superIchigoActive ? 2 : 1;
+    if (this.berrySlotCombo % 7 === 0) {
+      this.showFlash(`苺COMBO ${this.berrySlotCombo}/${BERRY_SLOT_THRESHOLD}`, '#fff1bd', enemyObject.x, enemyObject.y - 48);
+    }
+    if (this.berrySlotCombo >= BERRY_SLOT_THRESHOLD) {
+      this.berrySlotCombo = 0;
+      this.triggerBerrySlot();
+    }
+  }
+
+  private triggerBerrySlot(): void {
+    if (this.berrySlotLocked || this.isGameOver) {
+      return;
+    }
+    this.berrySlotLocked = true;
+    this.berrySlotChain += 1;
+    const rewards = this.getBerrySlotRewards();
+    const superChance = this.superIchigoActive ? 0.34 : 0.16;
+    const rewardIndex = Math.random() < superChance ? Phaser.Math.Between(3, rewards.length - 1) : Phaser.Math.Between(0, 2);
+    const reward = rewards[rewardIndex];
+    const resultSymbolKey = this.getBerrySlotSymbolKey(rewardIndex);
+    const symbolKeys = [
+      'slotSymbolStrawberry',
+      'slotSymbolCream',
+      'slotSymbolSeed',
+      'slotSymbolBell',
+      'slotSymbolFireworks',
+      'slotSymbolFan',
+      'slotSymbolCrown',
+      'slotSymbolSeven',
+    ];
+
+    const { width, height } = this.scale;
+    const veil = this.add.rectangle(width / 2, height / 2, width, height, 0x5b0b12, 0.16).setDepth(34);
+    const flash = this.add.rectangle(width / 2, height * 0.24, width, 96, 0xfff0b3, 0.05).setDepth(34).setBlendMode(Phaser.BlendModes.ADD);
+    const panel = this.textures.exists('slotStrawberryPanel')
+      ? this.add.image(width / 2, height * 0.24, 'slotStrawberryPanel').setDisplaySize(248, 148).setDepth(35).setAlpha(0.78)
+      : this.add.rectangle(width / 2, height * 0.24, 236, 104, 0xe11d48, 0.78).setDepth(35);
+    const title = this.add.text(width / 2, height * 0.148, '苺スロット', {
+      fontSize: '19px',
+      color: '#fff7d6',
+      fontStyle: 'bold',
+      fontFamily: '"Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", "Yu Gothic", Arial, sans-serif',
+      stroke: '#9f1239',
+      strokeThickness: 5,
+    }).setOrigin(0.5).setDepth(36);
+    const slotY = height * 0.25;
+    const slotX = [width / 2 - 63, width / 2, width / 2 + 63];
+    const slots = slotX.map((x, index) => {
+      const key = symbolKeys[(rewardIndex + index + 1) % symbolKeys.length];
+      const slot = this.add.container(x, slotY).setDepth(37);
+      const symbol = this.textures.exists(key)
+        ? this.add.image(0, 0, key).setDisplaySize(48, 48).setAlpha(0.94)
+        : this.add.star(0, 0, 7, 14, 30, reward.color, 0.88);
+      slot.add(symbol);
+      slot.setData('symbol', symbol);
+      this.tweens.add({
+        targets: slot,
+        y: slot.y - 6,
+        scale: { from: 0.9, to: 1.12 },
+        angle: '+=8',
+        duration: 110 + index * 45,
+        yoyo: true,
+        repeat: 7 + index * 2,
+        ease: 'Back.easeInOut',
+      });
+      return slot;
+    });
+    const lamps = Array.from({ length: 16 }, (_, index) => {
+      const x = width / 2 - 116 + (index % 8) * 33;
+      const y = height * 0.19 + Math.floor(index / 8) * 90;
+      const lamp = this.add.circle(x, y, 3.5, index % 2 === 0 ? 0xfff0b3 : 0xff4770, 0.58).setDepth(38);
+      lamp.setBlendMode(Phaser.BlendModes.ADD);
+      this.tweens.add({
+        targets: lamp,
+        alpha: { from: 0.18, to: 0.82 },
+        scale: { from: 0.8, to: 1.35 },
+        duration: 160 + (index % 4) * 40,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+      return lamp;
+    });
+    const reachText = this.add.text(width / 2, height * 0.335, '', {
+      fontSize: '24px',
+      color: '#fff1bd',
+      fontStyle: 'bold',
+      fontFamily: '"Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", "Yu Gothic", Arial, sans-serif',
+      stroke: '#9f1239',
+      strokeThickness: 6,
+    }).setOrigin(0.5).setDepth(40).setAlpha(0);
+
+    const spinEvents: Phaser.Time.TimerEvent[] = slots.map((slot, slotIndex) => {
+      return this.time.addEvent({
+        delay: 76 + slotIndex * 14,
+        repeat: 16 + slotIndex * 5,
+        callback: () => {
+          const nextKey = symbolKeys[Phaser.Math.Between(0, symbolKeys.length - 1)];
+          const symbol = slot.getData('symbol') as Phaser.GameObjects.Image | Phaser.GameObjects.Star | undefined;
+          if (symbol && 'setTexture' in symbol && this.textures.exists(nextKey)) {
+            symbol.setTexture(nextKey);
+            symbol.setDisplaySize(48, 48);
+          }
+          slot.setScale(0.92 + Math.random() * 0.12);
+        },
+      });
+    });
+
+    this.time.delayedCall(560, () => {
+      spinEvents[0]?.remove(false);
+      const symbol = slots[0].getData('symbol') as Phaser.GameObjects.Image | undefined;
+      if (symbol && this.textures.exists(resultSymbolKey)) {
+        symbol.setTexture(resultSymbolKey);
+        symbol.setDisplaySize(48, 48);
+      }
+      this.playTone(620, 0.07, 0.025);
+      this.spawnBurst(slots[0].x, slots[0].y, reward.color, 14);
+    });
+
+    this.time.delayedCall(910, () => {
+      spinEvents[1]?.remove(false);
+      const symbol = slots[1].getData('symbol') as Phaser.GameObjects.Image | undefined;
+      if (symbol && this.textures.exists(resultSymbolKey)) {
+        symbol.setTexture(resultSymbolKey);
+        symbol.setDisplaySize(48, 48);
+      }
+      reachText.setText('リーチ!');
+      reachText.setAlpha(1);
+      reachText.setScale(0.6);
+      this.tweens.add({ targets: reachText, scale: 1.18, duration: 240, ease: 'Back.easeOut' });
+      this.tweens.add({ targets: [veil, flash], alpha: '+=0.08', duration: 100, yoyo: true, repeat: 4 });
+      this.cameras.main.shake(240, 0.0035);
+      this.playTone(740, 0.09, 0.03);
+      this.spawnBurst(width / 2, slotY, 0xfff0b3, 20);
+    });
+
+    this.time.delayedCall(1420, () => {
+      spinEvents[2]?.remove(false);
+      const detail = this.applyBerrySlotReward(rewardIndex, reward.color);
+      title.setText(`${reward.super ? '超大当たり ' : ''}${reward.title}!`);
+      slots.forEach((slot) => {
+        const symbol = slot.getData('symbol') as Phaser.GameObjects.Image | undefined;
+        if (symbol && this.textures.exists(resultSymbolKey)) {
+          symbol.setTexture(resultSymbolKey);
+          symbol.setDisplaySize(48, 48);
+          symbol.setTint(reward.color);
+        }
+      });
+      const sub = this.add.text(width / 2, height * 0.365, `${detail}  x${this.berrySlotChain}`, {
+        fontSize: '12px',
+        color: '#fff7d6',
+        fontStyle: 'bold',
+        fontFamily: 'Arial, sans-serif',
+        stroke: '#5b0b12',
+        strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(36);
+      this.spawnBurst(this.player.x, this.player.y - 40, reward.color, reward.super ? 56 : 38);
+      this.spawnBurst(width / 2, slotY, reward.super ? 0xffffff : 0xfff0b3, reward.super ? 56 : 32);
+      this.playRareSound();
+      this.cameras.main.shake(reward.super ? 620 : 360, reward.super ? 0.009 : 0.0055);
+      this.tweens.add({ targets: slots, scale: 1.22, duration: 150, yoyo: true, repeat: 3, ease: 'Back.easeInOut' });
+      this.tweens.add({ targets: lamps, alpha: 0.95, scale: 1.55, duration: 110, yoyo: true, repeat: 6, ease: 'Sine.easeInOut' });
+      this.tweens.add({
+        targets: [veil, flash, panel, title, reachText, sub, ...slots, ...lamps],
+        alpha: 0,
+        y: '-=28',
+        delay: 980,
+        duration: 520,
+        ease: 'Cubic.easeIn',
+        onComplete: () => {
+          veil.destroy();
+          flash.destroy();
+          panel.destroy();
+          title.destroy();
+          reachText.destroy();
+          sub.destroy();
+          slots.forEach((slot) => slot.destroy());
+          lamps.forEach((lamp) => lamp.destroy());
+          this.berrySlotLocked = false;
+        },
+      });
+    });
+  }
+
+  private getBerrySlotRewards(): Array<{ title: string; sub: string; color: number; symbolKey: string; super?: boolean }> {
+    return [
+      { title: '苺ブースト', sub: '攻撃/連射/必殺', color: 0xff4770, symbolKey: 'slotSymbolStrawberry' },
+      { title: '練乳バリア', sub: 'HP/盾/レベル', color: 0xfff0b3, symbolKey: 'slotSymbolCream' },
+      { title: '種マシンガン', sub: 'ブキ/会心/磁力', color: 0x8ce99a, symbolKey: 'slotSymbolSeed' },
+      { title: '横撃ち祭', sub: '横から苺弾幕', color: 0xff4770, symbolKey: 'slotSymbolFan', super: true },
+      { title: '七光り苺', sub: '全能力大幅UP', color: 0xff174d, symbolKey: 'slotSymbolSeven', super: true },
+      { title: '王冠ラッシュ', sub: 'ブキ数爆増', color: 0xfacc15, symbolKey: 'slotSymbolCrown', super: true },
+      { title: '花火連射', sub: '連射と爆発強化', color: 0xfb923c, symbolKey: 'slotSymbolFireworks', super: true },
+      { title: '金ベル祝福', sub: 'HP/盾/メダル', color: 0xfff0b3, symbolKey: 'slotSymbolBell', super: true },
+      { title: '苺クリティカル', sub: '会心大幅UP', color: 0xff8fa3, symbolKey: 'slotSymbolStrawberry', super: true },
+      { title: '練乳オーバー', sub: '必殺即満タン', color: 0xfff7d6, symbolKey: 'slotSymbolCream', super: true },
+      { title: '種ドリル', sub: '貫通/攻撃UP', color: 0xf7c85b, symbolKey: 'slotSymbolSeed', super: true },
+      { title: '扇舞結界', sub: '盾と横撃ち', color: 0x8ce99a, symbolKey: 'slotSymbolFan', super: true },
+      { title: 'クラウン進化', sub: '進化段階UP', color: 0xfacc15, symbolKey: 'slotSymbolCrown', super: true },
+      { title: 'フィーバー延長', sub: '苺ちゃん再点火', color: 0xff4770, symbolKey: 'slotSymbolSeven', super: true },
+      { title: '爆裂花火', sub: '画面攻撃', color: 0xfb923c, symbolKey: 'slotSymbolFireworks', super: true },
+      { title: '黄金磁力', sub: '磁力/回収/強化', color: 0xfff0b3, symbolKey: 'slotSymbolBell', super: true },
+      { title: '苺王政', sub: '全体超強化', color: 0xff174d, symbolKey: 'slotSymbolCrown', super: true },
+      { title: '夢見七揃い', sub: '超万能大当たり', color: 0xffffff, symbolKey: 'slotSymbolSeven', super: true },
+    ];
+  }
+
+  private getBerrySlotSymbolKey(rewardIndex: number): string {
+    return this.getBerrySlotRewards()[rewardIndex]?.symbolKey ?? 'slotSymbolStrawberry';
+  }
+
+  private applyBerrySlotReward(rewardIndex: number, color: number): string {
+    const previousStats = { ...this.stats, modules: [...this.stats.modules] };
+    const previousHp = this.playerHp;
+    const chainBonus = Math.min(4, Math.floor(this.berrySlotChain / 3));
+    let detail = '';
+    if (rewardIndex === 0) {
+      this.stats = { ...this.stats, power: this.stats.power + 3 + chainBonus, fireRate: this.stats.fireRate + 0.12, synergy: this.stats.synergy + 1 };
+      this.specialCharge = clamp(this.specialCharge + 18, 0, 100);
+      detail = `攻撃+${3 + chainBonus} 連射+ 必殺+18`;
+    } else if (rewardIndex === 1) {
+      this.playerHp += 1;
+      this.stats = { ...this.stats, shield: this.stats.shield + 2 + chainBonus, level: this.stats.level + 1 };
+      this.specialCharge = clamp(this.specialCharge + 10, 0, 100);
+      detail = `HP+1 盾+${2 + chainBonus} Lv+1`;
+    } else if (rewardIndex === 2) {
+      this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 4 + chainBonus, critRate: Math.min(0.72, this.stats.critRate + 0.018), synergy: this.stats.synergy + 2 };
+      this.magnetTimer = Math.max(this.magnetTimer, 1800);
+      detail = `ブキ+${4 + chainBonus} 会心+ 磁力`;
+    } else {
+      detail = this.applySuperBerrySlotReward(rewardIndex, chainBonus);
+    }
+    this.showStatGainFeedback(previousStats, previousHp, { label: '苺SLOT', kind: 'fusion', value: 1, color, good: true });
+    this.showFlash(detail, '#fff7d6', 200, 246);
+    return detail;
+  }
+
+  private applySuperBerrySlotReward(rewardIndex: number, chainBonus: number): string {
+    switch (rewardIndex) {
+      case 3:
+        this.sideAttackTimer = Math.max(this.sideAttackTimer, 9800);
+        this.stats = { ...this.stats, power: this.stats.power + 5 + chainBonus, fireRate: this.stats.fireRate + 0.2 };
+        return `横攻撃10s 攻撃+${5 + chainBonus}`;
+      case 4:
+        this.stats = { ...this.stats, power: this.stats.power + 7, weaponCount: this.stats.weaponCount + 7, level: this.stats.level + 3, synergy: this.stats.synergy + 4 };
+        this.specialCharge = 100;
+        return '攻撃+7 ブキ+7 Lv+3 必殺MAX';
+      case 5:
+        this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 15 + chainBonus, synergy: this.stats.synergy + 3 };
+        return `ブキ+${15 + chainBonus} シナジー+3`;
+      case 6:
+        this.stats = { ...this.stats, fireRate: this.stats.fireRate + 0.36, power: this.stats.power + 3 };
+        this.strawberryFeverTimer = Math.max(this.strawberryFeverTimer, 6500);
+        return '連射大UP 花火追撃';
+      case 7:
+        this.playerHp += 3;
+        this.medalCount += 12;
+        this.stats = { ...this.stats, shield: this.stats.shield + 8 + chainBonus };
+        return `HP+3 盾+${8 + chainBonus} メダル+12`;
+      case 8:
+        this.stats = { ...this.stats, critRate: Math.min(0.78, this.stats.critRate + 0.08), power: this.stats.power + 4 };
+        return '会心超UP 攻撃+4';
+      case 9:
+        this.specialCharge = 100;
+        this.specialCooldown = 0;
+        this.stats = { ...this.stats, synergy: this.stats.synergy + 5 };
+        return '必殺MAX CT解除 シナジー+5';
+      case 10:
+        this.stats = { ...this.stats, pierce: this.stats.pierce + 3, power: this.stats.power + 6 + chainBonus };
+        return `貫通+3 攻撃+${6 + chainBonus}`;
+      case 11:
+        this.sideAttackTimer = Math.max(this.sideAttackTimer, 7200);
+        this.stats = { ...this.stats, shield: this.stats.shield + 5, fireRate: this.stats.fireRate + 0.16 };
+        return '横攻撃7s 盾+5 連射+';
+      case 12:
+        this.evolutionCount += 1;
+        this.stats = { ...this.stats, tier: this.stats.tier + 1, level: this.stats.level + 4, power: this.stats.power + 4 };
+        return '進化+1 Lv+4 攻撃+4';
+      case 13:
+        this.superIchigoActive = true;
+        this.superIchigoTimer = Math.max(this.superIchigoTimer, 9000);
+        this.superIchigoCooldown = Math.min(this.superIchigoCooldown, SUPER_ICHIGO_COOLDOWN);
+        this.createSuperIchigoBackdrop();
+        return '苺ちゃん9s 再点火';
+      case 14:
+        this.damageAllEnemies(90 + this.stats.power * 8, 0xfff0b3);
+        this.stats = { ...this.stats, power: this.stats.power + 4 };
+        return '画面攻撃 攻撃+4';
+      case 15:
+        this.magnetTimer = Math.max(this.magnetTimer, 9800);
+        this.stats = { ...this.stats, weaponCount: this.stats.weaponCount + 8, synergy: this.stats.synergy + 4 };
+        return '磁力10s ブキ+8 シナジー+4';
+      case 16:
+        this.stats = { ...this.stats, power: this.stats.power + 6, level: this.stats.level + 4, weaponCount: this.stats.weaponCount + 10, shield: this.stats.shield + 6, synergy: this.stats.synergy + 5 };
+        this.playerHp += 2;
+        return '全体超強化 HP+2';
+      case 17:
+      default:
+        this.sideAttackTimer = Math.max(this.sideAttackTimer, 12_000);
+        this.stats = { ...this.stats, power: this.stats.power + 8, level: this.stats.level + 5, weaponCount: this.stats.weaponCount + 12, pierce: this.stats.pierce + 2, synergy: this.stats.synergy + 6 };
+        this.specialCharge = 100;
+        return '横攻撃12s 全能力大当たり';
+    }
+  }
+
+  private updateBerrySlotBonusAttacks(delta: number): void {
+    if (this.sideAttackTimer > 0) {
+      this.sideAttackPulseTimer += delta;
+      if (this.sideAttackPulseTimer >= 360) {
+        this.sideAttackPulseTimer = 0;
+        this.fireSideStrawberryAttack();
+      }
+    }
+
+    if (this.strawberryFeverTimer > 0 && Math.random() < delta * 0.0028) {
+      const x = Phaser.Math.Between(72, 328);
+      const y = Phaser.Math.Between(120, 560);
+      this.spawnBurst(x, y, 0xfff0b3, 22);
+      this.damageEnemiesNear(x, y, 78, Math.max(8, Math.round(this.stats.power * 1.8)), 0xfff0b3);
+    }
+  }
+
+  private fireSideStrawberryAttack(): void {
+    const fromLeft = Phaser.Math.Between(0, 1) === 0;
+    const y = Phaser.Math.Between(118, 580);
+    const color = fromLeft ? 0xff4770 : 0xfff0b3;
+    const beam = this.add.rectangle(fromLeft ? -40 : 440, y, 112, 14, color, 0.72).setDepth(15);
+    beam.setBlendMode(Phaser.BlendModes.ADD);
+    const shine = this.add.rectangle(fromLeft ? -68 : 468, y, 66, 5, 0xffffff, 0.7).setDepth(16);
+    shine.setBlendMode(Phaser.BlendModes.ADD);
+    this.tweens.add({
+      targets: [beam, shine],
+      x: fromLeft ? 440 : -40,
+      alpha: 0,
+      duration: 420,
+      ease: 'Cubic.easeOut',
+      onComplete: () => {
+        beam.destroy();
+        shine.destroy();
+      },
+    });
+    this.damageEnemiesInHorizontalBand(y, 46, Math.max(12, Math.round(this.stats.power * 2.8 + this.stats.level * 1.4)), color);
+    if (this.boss) {
+      const bossBody = this.boss.body as Phaser.Physics.Arcade.Body | undefined;
+      const bossY = bossBody ? bossBody.center.y : this.boss.y + 40;
+      if (Math.abs(bossY - y) < 118) {
+        this.bossHp -= Math.max(8, Math.round(this.stats.power * 1.9));
+        this.spawnHitEffect(this.boss.x, y, color);
+        if (this.bossHp <= 0) {
+          this.hitBoss(new Bullet(this, this.boss.x, this.boss.y, color, 'pierce'));
+        }
+      }
+    }
+    this.playTone(fromLeft ? 680 : 760, 0.04, 0.018);
+  }
+
+  private damageEnemiesInHorizontalBand(y: number, halfHeight: number, damage: number, color: number): void {
+    const enemies = this.enemies.getChildren().filter((child) => child.active) as Enemy[];
+    enemies.forEach((enemy) => {
+      if (Math.abs(enemy.y - y) > halfHeight) {
+        return;
+      }
+      this.spawnHitEffect(enemy.x, enemy.y, color);
+      if (enemy.damage(damage)) {
+        this.spawnBurst(enemy.x, enemy.y, color, 18);
+        enemy.destroy();
+      }
+    });
+  }
+
+  private damageEnemiesNear(x: number, y: number, radius: number, damage: number, color: number): void {
+    const enemies = this.enemies.getChildren().filter((child) => child.active) as Enemy[];
+    enemies.forEach((enemy) => {
+      if (Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y) > radius) {
+        return;
+      }
+      this.spawnHitEffect(enemy.x, enemy.y, color);
+      if (enemy.damage(damage)) {
+        this.spawnBurst(enemy.x, enemy.y, color, 18);
+        enemy.destroy();
+      }
+    });
+  }
+
+  private damageAllEnemies(damage: number, color: number): void {
+    const enemies = this.enemies.getChildren().filter((child) => child.active) as Enemy[];
+    enemies.forEach((enemy) => {
+      this.spawnHitEffect(enemy.x, enemy.y, color);
+      if (enemy.damage(damage)) {
+        this.spawnBurst(enemy.x, enemy.y, color, 20);
+        enemy.destroy();
+      }
+    });
+    if (this.boss) {
+      this.bossHp -= Math.round(damage * 1.4);
+      this.spawnBurst(this.boss.x, this.boss.y, color, 36);
+      if (this.bossHp <= 0) {
+        this.hitBoss(new Bullet(this, this.boss.x, this.boss.y, color, 'pierce'));
+      }
+    }
+  }
+
   private hitEnemy(bulletObject: Bullet, enemyObject: Enemy): void {
+    if (!bulletObject.active || !enemyObject.active) {
+      return;
+    }
+    bulletObject.setData('lastHitEnemy', enemyObject);
     const critical = Math.random() < this.stats.critRate;
     const damage = Math.max(1, Math.round(this.getInternalAttackScore(0.65) * getWeaponPowerMultiplier(this.stats) * 0.72 * (critical ? 1.65 : 1)));
     this.spawnHitEffect(bulletObject.x, bulletObject.y, critical ? 0xffffff : 0xfef08a);
@@ -2691,6 +3447,7 @@ export default class GameScene extends Phaser.Scene {
           this.showFlash(`${this.rareEventKills}/${this.rareEvent.targetKills}`, '#fef08a', 200, 168);
         }
       } else {
+        this.addBerrySlotCombo(enemyObject);
         this.grantEnemyDefeatReward(enemyObject);
       }
       enemyObject.destroy();
