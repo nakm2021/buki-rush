@@ -5,12 +5,19 @@ export type BulletShape = 'orb' | 'bow' | 'slash' | 'rocket' | 'guard' | 'skull'
 export class Bullet extends Phaser.GameObjects.Container {
   private speed = 420;
 
-  constructor(scene: Phaser.Scene, x: number, y: number, color = 0x67e8f9, shape: BulletShape = 'orb') {
+  constructor(scene: Phaser.Scene, x: number, y: number, color = 0x67e8f9, shape: BulletShape = 'orb', simplified = false) {
     super(scene, x, y);
-    this.add(this.createShape(scene, color, shape));
+    this.add(simplified ? this.createLiteShape(scene, color, shape) : this.createShape(scene, color, shape));
     scene.add.existing(this);
     scene.physics.add.existing(this);
     this.configureBody(shape);
+  }
+
+  private createLiteShape(scene: Phaser.Scene, color: number, shape: BulletShape): Phaser.GameObjects.GameObject[] {
+    if (shape === 'rocket' || shape === 'pierce' || shape === 'slash') {
+      return [scene.add.rectangle(0, 0, shape === 'slash' ? 7 : 9, shape === 'slash' ? 30 : 24, color, 0.94)];
+    }
+    return [scene.add.circle(0, 0, shape === 'guard' ? 8 : 6, color, 0.94)];
   }
 
   public update(_time: number, delta: number): void {

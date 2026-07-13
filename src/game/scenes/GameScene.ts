@@ -4,7 +4,7 @@ import { Bullet, type BulletShape } from '../objects/Bullet';
 import { Enemy } from '../objects/Enemy';
 import { GatePair } from '../objects/GatePair';
 import { PlayerWeapon } from '../objects/PlayerWeapon';
-import { getBossAssetByLoop, getBossTheme, getDeferredImageAssets, getRandomBossAsset, type BossTheme, type ImageAsset } from '../systems/AssetCatalog';
+import { getBossAsset, getBossAssetByLoop, getBossTheme, getDeferredImageAssets, getRandomBossAsset, getWeaponAssetKeys, type BossTheme, type ImageAsset } from '../systems/AssetCatalog';
 import { findEnemyVariant } from '../systems/EnemyCatalog';
 import { PlayerInputController } from '../systems/PlayerInputController';
 import { rollRareRushEvent, type RareRushEvent } from '../systems/RareEventCatalog';
@@ -229,6 +229,11 @@ export default class GameScene extends Phaser.Scene {
   private debugHudTimer = 0;
   private lastFrameDelta = 16.7;
   private statusPanelTimer = 0;
+  private sceneryTimer = 0;
+  private secretRailChargeMs = 0;
+  private secretRailBoostMs = 0;
+  private secretRailCooldownMs = 0;
+  private secret777Granted = false;
   private maxVisibleWeaponParts = 40;
   private maxVisibleSquadUnits = 64;
   private maxActivePlayerBullets = 122;
@@ -258,6 +263,8 @@ export default class GameScene extends Phaser.Scene {
     this.playerBody.setAllowGravity(false);
     this.playerBody.setCollideWorldBounds(true);
     this.playerBody.setBounce(0, 0);
+    this.player.setWeaponSkin(this.lockedWeaponSkinKey);
+    this.releaseUnusedWeaponTextures();
 
     this.bullets = this.add.group();
     this.gates = this.add.group();
@@ -403,6 +410,11 @@ export default class GameScene extends Phaser.Scene {
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
     this.statusPanelTimer = 0;
+    this.sceneryTimer = 0;
+    this.secretRailChargeMs = 0;
+    this.secretRailBoostMs = 0;
+    this.secretRailCooldownMs = 0;
+    this.secret777Granted = false;
     this.deferredAssetQueue = [];
     this.deferredAssetLoading = false;
     this.pauseOverlay = undefined;
@@ -513,6 +525,7 @@ export default class GameScene extends Phaser.Scene {
     this.updateEnemyStatuses(smoothDelta);
     this.updateEnemyTactics(smoothDelta);
     this.updateMovement(smoothDelta);
+    this.updateSecretFeatures(smoothDelta);
     this.updateSpeedLines(smoothDelta);
     this.updateBullets(smoothDelta);
     this.updateSpecialCharge(smoothDelta);
@@ -524,7 +537,11 @@ export default class GameScene extends Phaser.Scene {
     this.moveFlowingObjects(smoothDelta);
     this.updateMagnetPull(smoothDelta);
     this.updateBossBackdrop(smoothDelta);
-    this.updateStageBackground();
+    this.sceneryTimer -= smoothDelta;
+    if (this.sceneryTimer <= 0) {
+      this.sceneryTimer = this.performanceMode ? 50 : 16;
+      this.updateStageBackground();
+    }
     this.updateBossBar();
     this.statusPanelTimer -= smoothDelta;
     if (this.statusPanelTimer <= 0) {
@@ -542,6 +559,40 @@ export default class GameScene extends Phaser.Scene {
     }
 
     this.updateWeaponParts(smoothDelta);
+  }
+
+  private releaseUnusedWeaponTextures(): void {
+    getWeaponAssetKeys().forEach((key) => {
+      if (key !== this.lockedWeaponSkinKey && key !== 'weaponAnime' && this.textures.exists(key)) {
+        this.textures.remove(key);
+      }
+    });
+  }
+
+  private updateSecretFeatures(delta: number): void {
+    if (!this.secret777Granted && this.distance >= 777) {
+      this.secret777Granted = true;
+      this.stats = { ...this.stats, power: this.stats.power + 7, pierce: this.stats.pierce + 1, shield: this.stats.shield + 1 };
+      this.specialCharge = clamp(this.specialCharge + 77, 0, 100);
+      this.showFlash('777 SECRET LINE', '#fef08a', 200, 250);
+      this.playTone(777, 0.12, 0.04);
+    }
+
+    if (this.starterCategoryId !== 'cannon-barrage' || this.lockedWeaponSkinKey !== 'weaponShinkansenRailCannon') return;
+    this.secretRailBoostMs = Math.max(0, this.secretRailBoostMs - delta);
+    this.secretRailCooldownMs = Math.max(0, this.secretRailCooldownMs - delta);
+    const onCentralLine = Math.abs(this.player.x - 200) < 13 && this.player.y > 500;
+    this.secretRailChargeMs = onCentralLine && this.secretRailCooldownMs <= 0
+      ? this.secretRailChargeMs + delta
+      : Math.max(0, this.secretRailChargeMs - delta * 1.8);
+    if (this.secretRailChargeMs >= 2400) {
+      this.secretRailChargeMs = 0;
+      this.secretRailBoostMs = 6000;
+      this.secretRailCooldownMs = 12000;
+      this.specialCharge = clamp(this.specialCharge + 35, 0, 100);
+      this.showFlash('SECRET: EXPRESS MODE', '#a5f3fc', 200, this.player.y - 110);
+      this.cameras.main.flash(180, 34, 211, 238, false);
+    }
   }
 
   private drawTrack(width: number, height: number): void {
@@ -1502,12 +1553,16 @@ export default class GameScene extends Phaser.Scene {
     for (let i = 0; i < shotCount; i++) {
       const offset = i - center;
       const color = i % 3 === 0 ? colors.bullet : i % 3 === 1 ? colors.primary : colors.secondary;
-      const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color, bulletShape);
+      const bullet = new Bullet(this, this.player.x + offset * 10, this.player.y - 44, color, bulletShape, this.performanceMode);
       bullet.setDepth(2);
       bullet.setVelocity(440 + this.stats.power * 22 + this.stats.synergy * 4 + (hasStormArray ? 80 : 0) + (bossDefenseMode ? 70 : 0));
       bullet.setScale((this.stats.modules.includes('focus') ? 1.28 : 1) + (hasZeroLance ? 0.18 : 0) + (hasKrakenAnchor ? 0.28 : 0) + (bossDefenseMode ? 0.16 : 0));
       bullet.setData('damage', clashPower + (hasKrakenAnchor ? 1 : 0) + (usesSlashShot ? 1 : 0));
       bullet.setData('pierceLeft', pierceLeft + (bossDefenseMode ? 1 : 0) + (hasZeroLance ? 1 : 0) + (hasKrakenAnchor && i % 3 === 0 ? 1 : 0));
+      if (this.secretRailBoostMs > 0) {
+        bullet.setData('damage', Number(bullet.getData('damage')) + 3);
+        bullet.setData('pierceLeft', Number(bullet.getData('pierceLeft')) + 2);
+      }
       const shotStatus = this.getPlayerShotStatus();
       if (shotStatus && Math.random() < shotStatus.chance) {
         bullet.setData('statusEffect', shotStatus.effect);
@@ -1555,7 +1610,7 @@ export default class GameScene extends Phaser.Scene {
       return;
     }
 
-    const shard = new Bullet(this, x, y, color, shape);
+    const shard = new Bullet(this, x, y, color, shape, this.performanceMode);
     shard.setDepth(2);
     shard.setScale(scale);
     shard.setVelocity(Math.abs(vy));
@@ -3867,7 +3922,10 @@ export default class GameScene extends Phaser.Scene {
   private spawnBoss(): void {
     this.bossMaxHp = createBossHp(this.bossLoopIndex, this.getBossPowerPressure());
     this.bossHp = this.bossMaxHp;
-    const bossAsset = getRandomBossAsset(this.bossLoopIndex, this.defeatedBossKeys.slice(-2));
+    const takesHiddenMountainRoute = this.lockedWeaponSkinKey === 'weaponShinkansenRailCannon' && this.bossLoopIndex === 2;
+    const bossAsset = takesHiddenMountainRoute
+      ? getBossAsset('bossMountainDeity')
+      : getRandomBossAsset(this.bossLoopIndex, this.defeatedBossKeys.slice(-2));
     this.currentBossTheme = getBossTheme(bossAsset.key);
     this.boss = new Boss(this, 200, -130, this.bossHp, bossAsset.key);
     this.boss.setDepth(2);

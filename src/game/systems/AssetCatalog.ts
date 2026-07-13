@@ -28,6 +28,7 @@ export interface BossTheme {
 }
 
 export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
+  { key: 'weaponShinkansenRailCannon', path: 'assets/optimized/weapon-shinkansen-rail-cannon.png', match: { elements: ['thunder'], archetypes: ['rail', 'chrono'] } },
   { key: 'weaponAnime', path: 'assets/optimized/weapon-anime.png' },
   { key: 'weaponRunnerEvolved', path: 'assets/optimized/weapon-runner-evolved.png', match: { archetypes: ['blaster'] } },
   { key: 'weaponPhoenix', path: 'assets/optimized/weapon-phoenix.png', match: { elements: ['fire'], rarities: ['mythic'] } },
@@ -101,6 +102,7 @@ export const WEAPON_IMAGE_ASSETS: WeaponImageAsset[] = [
 ];
 
 export const BOSS_IMAGE_ASSETS: BossImageAsset[] = [
+  { key: 'bossMountainDeity', path: 'assets/optimized/boss-mountain-deity.png', width: 360, height: 530, minLoop: 2 },
   { key: 'bossDragon', path: 'assets/generated/boss-dragon.png', width: 386, height: 748 },
   { key: 'bossTitan', path: 'assets/generated/boss-titan.png', width: 360, height: 520 },
   { key: 'bossHydra', path: 'assets/generated/boss-hydra.png', width: 390, height: 590 },
@@ -320,6 +322,7 @@ export function getBossAsset(key: string): BossImageAsset {
 }
 
 const BOSS_THEMES: BossTheme[] = [
+  { key: 'bossMountainDeity', primary: 0x475569, secondary: 0xdc2626, accent: 0xf0abfc, darkness: 0x0f172a },
   { key: 'bossDragon', primary: 0xef4444, secondary: 0xfb923c, accent: 0xfef3c7, darkness: 0x180812 },
   { key: 'bossTitan', primary: 0x94a3b8, secondary: 0xfacc15, accent: 0xf8fafc, darkness: 0x111827 },
   { key: 'bossHydra', primary: 0x22c55e, secondary: 0x38bdf8, accent: 0xccfbf1, darkness: 0x052e16 },
