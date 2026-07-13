@@ -15,6 +15,10 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   private readonly evolutionSparks: Phaser.GameObjects.Arc[];
   private readonly animeSprites = new Map<string, Phaser.GameObjects.Image>();
   private evolutionStage = 0;
+  private currentSkinKey = '';
+  private palettePrimary = -1;
+  private paletteSecondary = -1;
+  private evolutionSignature = '';
 
   constructor(scene: Phaser.Scene, x: number, y: number) {
     super(scene, x, y);
@@ -59,17 +63,7 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
       spark.setVisible(false);
       spark.setBlendMode(Phaser.BlendModes.ADD);
     });
-    getWeaponAssetKeys().forEach((key, index) => {
-      if (!scene.textures.exists(key)) {
-        return;
-      }
-      const sprite = scene.add.image(0, -20, key).setDisplaySize(104, 190).setAlpha(index === 0 ? 0.98 : 0);
-      sprite.setVisible(index === 0);
-      this.animeSprites.set(key, sprite);
-    });
-
     this.add([this.evolutionHalo, ...this.evolutionWings, this.glow, this.backGlow, leftWing, rightWing, grip, leftBarrel, rightBarrel, this.barrel, this.muzzle, this.core, ...this.energyCells, ...this.evolutionSparks]);
-    this.animeSprites.forEach((sprite) => this.add(sprite));
     scene.add.existing(this);
     scene.physics.add.existing(this);
     const body = this.body as Phaser.Physics.Arcade.Body;
@@ -89,6 +83,11 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   }
 
   public setPalette(primary: number, secondary: number): void {
+    if (primary === this.palettePrimary && secondary === this.paletteSecondary) {
+      return;
+    }
+    this.palettePrimary = primary;
+    this.paletteSecondary = secondary;
     this.core.setFillStyle(primary, 0.98);
     this.barrel.setFillStyle(primary, 0.96);
     this.sideBarrels.forEach((barrel) => barrel.setFillStyle(secondary, 0.95));
@@ -104,6 +103,11 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   }
 
   public setEvolutionStage(stage: number, primary: number, secondary: number, aura: number): void {
+    const signature = `${stage}:${primary}:${secondary}:${aura}`;
+    if (signature === this.evolutionSignature) {
+      return;
+    }
+    this.evolutionSignature = signature;
     this.evolutionStage = Math.max(0, stage);
     const visible = this.evolutionStage >= 2;
     const power = Math.min(6, this.evolutionStage);
@@ -131,13 +135,21 @@ export class PlayerWeapon extends Phaser.GameObjects.Container {
   }
 
   public setWeaponSkin(key: string): void {
-    if (this.animeSprites.size === 0) {
+    if (key === this.currentSkinKey) {
       return;
     }
-    const selectedKey = this.animeSprites.has(key) ? key : getWeaponAssetKeys()[0];
-    this.animeSprites.forEach((sprite, spriteKey) => {
-      sprite.setVisible(spriteKey === selectedKey);
-      sprite.setAlpha(spriteKey === selectedKey ? 1 : 0);
-    });
+    const fallbackKey = getWeaponAssetKeys().find((assetKey) => this.scene.textures.exists(assetKey));
+    const selectedKey = this.scene.textures.exists(key) ? key : fallbackKey;
+    if (!selectedKey) return;
+
+    this.animeSprites.forEach((sprite) => sprite.destroy());
+    this.animeSprites.clear();
+    const sprite = this.scene.add.image(0, -20, selectedKey).setDisplaySize(104, 190);
+    if (this.palettePrimary >= 0 && this.paletteSecondary >= 0) {
+      sprite.setTint(this.palettePrimary, this.paletteSecondary, this.palettePrimary, this.paletteSecondary);
+    }
+    this.animeSprites.set(selectedKey, sprite);
+    this.add(sprite);
+    this.currentSkinKey = key;
   }
 }

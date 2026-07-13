@@ -1,4 +1,4 @@
-const CACHE_VERSION = 'buki-rush-v3';
+const CACHE_VERSION = 'buki-rush-v4';
 const APP_SHELL_CACHE = `${CACHE_VERSION}-shell`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 const BASE_PATH = '/buki-rush/';

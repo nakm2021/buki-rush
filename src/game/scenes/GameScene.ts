@@ -228,6 +228,7 @@ export default class GameScene extends Phaser.Scene {
   private debugHudText?: Phaser.GameObjects.Text;
   private debugHudTimer = 0;
   private lastFrameDelta = 16.7;
+  private statusPanelTimer = 0;
   private maxVisibleWeaponParts = 40;
   private maxVisibleSquadUnits = 64;
   private maxActivePlayerBullets = 122;
@@ -274,7 +275,8 @@ export default class GameScene extends Phaser.Scene {
 
     this.physics.add.overlap(this.player, this.gates, (_player, gateObject) => this.handleGateCollision(gateObject as Phaser.GameObjects.Container), undefined, this);
     this.physics.add.overlap(this.player, this.enemies, (_player, enemyObject) => this.handleEnemyCollision(enemyObject as Enemy), undefined, this);
-    this.physics.add.overlap(this.bullets, this.enemies, (bulletObject, enemyObject) => this.hitEnemy(bulletObject as Bullet, enemyObject as Enemy), undefined, this);
+    // Player bullets use swept collision below. Registering an Arcade overlap as well
+    // made every bullet/enemy pair get tested twice, which is especially costly on iOS.
     this.physics.add.overlap(this.bullets, this.bossProjectiles, (bulletObject, projectileObject) => this.resolveProjectileClash(bulletObject as Bullet, projectileObject as Phaser.GameObjects.GameObject), undefined, this);
     this.physics.add.overlap(this.player, this.bossProjectiles, (_player, projectile) => this.handleBossProjectileCollision(projectile as Phaser.GameObjects.GameObject), undefined, this);
   }
@@ -400,6 +402,7 @@ export default class GameScene extends Phaser.Scene {
     this.debugHudText = undefined;
     this.debugHudTimer = 0;
     this.lastFrameDelta = 16.7;
+    this.statusPanelTimer = 0;
     this.deferredAssetQueue = [];
     this.deferredAssetLoading = false;
     this.pauseOverlay = undefined;
@@ -416,7 +419,7 @@ export default class GameScene extends Phaser.Scene {
 
   private applyRenderBudget(): void {
     const base = this.renderQuality === 'lite'
-      ? { parts: 8, units: 12, bullets: 58, shots: 6, fire: 118 }
+      ? { parts: 6, units: 8, bullets: 42, shots: 4, fire: 138 }
       : this.renderQuality === 'standard'
         ? { parts: 28, units: 42, bullets: 92, shots: 10, fire: 70 }
         : { parts: 52, units: 76, bullets: 140, shots: 14, fire: 48 };
@@ -523,7 +526,11 @@ export default class GameScene extends Phaser.Scene {
     this.updateBossBackdrop(smoothDelta);
     this.updateStageBackground();
     this.updateBossBar();
-    this.updateStatusPanel();
+    this.statusPanelTimer -= smoothDelta;
+    if (this.statusPanelTimer <= 0) {
+      this.statusPanelTimer = this.performanceMode ? 120 : 66;
+      this.updateStatusPanel();
+    }
     this.updateDebugHud(smoothDelta);
 
     const weaponPressure = Math.min(this.stats.weaponCount, this.renderQuality === 'lite' ? 24 : this.renderQuality === 'standard' ? 46 : 68);
@@ -3870,7 +3877,7 @@ export default class GameScene extends Phaser.Scene {
     this.bossPatternIndex = this.bossLoopIndex;
     this.bossSpawnStartedAt = this.stageTimer;
     this.grantFirstBossPrep();
-    this.physics.add.overlap(this.bullets, this.boss, (bulletObject) => this.hitBoss(bulletObject as Phaser.GameObjects.GameObject), undefined, this);
+    // Boss hits are also handled by the swept collision pass in updateBullets().
     this.physics.add.overlap(this.player, this.boss, () => this.finish('GAME OVER'), undefined, this);
 
     this.bossHpBar = this.add.rectangle(200, 218, 188, 16, 0x450a12, 0.92);

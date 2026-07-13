@@ -7,20 +7,24 @@ import ResultScene from './game/scenes/ResultScene';
 import TitleScene from './game/scenes/TitleScene';
 import WeaponSelectScene from './game/scenes/WeaponSelectScene';
 
+const userAgent = navigator.userAgent.toLowerCase();
+const isIos = /iphone|ipad|ipod/.test(userAgent)
+  || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
   width: 400,
   height: 720,
   parent: 'app',
   backgroundColor: '#020617',
-  antialias: true,
-  roundPixels: false,
+  antialias: !isIos,
+  roundPixels: isIos,
   fps: {
     target: 60,
     smoothStep: true,
   },
   render: {
-    antialias: true,
+    antialias: !isIos,
     pixelArt: false,
     powerPreference: 'high-performance',
   },
